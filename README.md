@@ -8,7 +8,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/research <movie title>` — create a source-tracking research worksheet before writing
 - `/auto <movie title>` — search public Wikipedia article summaries and source links without an API key
 - `/draft <movie title>` followed by a new line of your checked research notes — create a chapter-by-chapter draft worksheet
-- `/draft3 <movie title>` followed by a new line of your checked research notes — create three separate YouTube planning worksheets (Part 1, Part 2, Part 3)
+- `/draft3 <movie title>` — create three YouTube planning worksheets using the latest matching `/auto` result, or supply checked notes on following lines
 - `/platform youtube|tiktok|facebook` — select the publishing platform
 - `/duration <minutes>` — choose a duration valid for the selected platform
 - `/settings` — show the current user's selections
@@ -38,6 +38,15 @@ Use `/auto Avatar` to search English Wikipedia for up to three article summaries
 
 ## Research notes to recap draft
 Use `/draft Avatar` and put your checked notes on the following lines in the same Telegram message. The bot preserves those notes and organizes prompts into chapters for the selected platform and duration. It does not write a finished factual narrative, independently verify notes, browse the web, or invent missing plot details. Keep source references with your notes and review the result before publishing.
+
+## Auto research to three-part draft
+
+1. Send `/auto Avatar` to find up to three public Wikipedia article leads.
+2. NEXORA temporarily keeps that result in the current Telegram user session.
+3. Send `/draft3 Avatar` (same movie title) to place the saved research result into the three YouTube worksheets.
+4. You can still send `/draft3 Avatar` followed by your own checked notes; those notes take priority over the saved result.
+
+The saved result is matched by movie title and is only kept in the bot's in-memory Telegram session. It can be lost if the service restarts or the session is reset. A no-results lookup is not saved. Wikipedia excerpts and related search results are research leads, not verified plot facts; review the links and confirm details against the film and reliable sources before publishing. This feature does not connect ChatGPT or generate a finished recap script.
 
 ## Daily automatic research (5:00 AM Thailand time)
 The `.github/workflows/daily-auto.yml` workflow runs daily at 22:00 UTC (05:00 Asia/Bangkok on the following local date). It chooses one title per day from a built-in rotation, runs the free Wikipedia source lookup, and sends the research leads plus a three-part YouTube planning structure to the configured Telegram chat. The three parts are planning sections, not three finished scripts or videos.
