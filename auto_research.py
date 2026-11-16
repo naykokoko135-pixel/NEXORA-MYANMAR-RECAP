@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 API_URL = "https://en.wikipedia.org/w/api.php"
 USER_AGENT = "NEXORA-Myanmar-Recap/1.0 (public research lookup)"
 MAX_RESULTS = 3
+SEARCH_LIMIT = 8
 MAX_EXCERPT_CHARS = 650
 
 
@@ -30,7 +31,7 @@ def search_movie_sources(topic: str) -> str:
         "generator": "search",
         "gsrsearch": title + " film movie",
         "gsrnamespace": 0,
-        "gsrlimit": MAX_RESULTS,
+        "gsrlimit": SEARCH_LIMIT,
         "prop": "extracts|info",
         "exintro": 1,
         "explaintext": 1,
@@ -57,6 +58,26 @@ def search_movie_sources(topic: str) -> str:
             "ကိုက်ညီသော Wikipedia ဆောင်းပါး မတွေ့ပါ။ အမည်စာလုံးပေါင်းကို စစ်ပါ။"
         )
 
+    def normalized(value: str) -> str:
+        value = value.casefold().strip()
+        if " (" in value:
+            value = value.split(" (", 1)[0]
+        return " ".join(value.split())
+
+    pages = sorted(
+        pages,
+        key=lambda page: (
+            normalized(str(page.get("title", ""))) != normalized(title),
+            str(page.get("title", "")).casefold(),
+        ),
+    )
+    exact_pages = [
+        page for page in pages
+        if normalized(str(page.get("title", ""))) == normalized(title)
+    ]
+    related_pages = [page for page in pages if page not in exact_pages]
+    selected_pages = exact_pages[:1] + related_pages[:MAX_RESULTS - min(1, len(exact_pages))]
+
     lines = [
         f"🔎 NEXORA Auto Research — {title}",
         "",
@@ -64,7 +85,7 @@ def search_movie_sources(topic: str) -> str:
         "အတည်ပြုထားသော ဇာတ်လမ်းအကျဉ်း မဟုတ်ပါ။",
         "",
     ]
-    for index, page in enumerate(pages[:MAX_RESULTS], start=1):
+    for index, page in enumerate(selected_pages, start=1):
         page_title = str(page.get("title", "Untitled"))
         extract = " ".join(str(page.get("extract", "")).split())
         if len(extract) > MAX_EXCERPT_CHARS:
@@ -72,8 +93,9 @@ def search_movie_sources(topic: str) -> str:
         url = page.get("fullurl") or (
             "https://en.wikipedia.org/wiki/" + page_title.replace(" ", "_")
         )
+        match_label = "အမည်ကိုက်ညီသော ရလဒ်" if page in exact_pages else "ဆက်စပ်ရလဒ် — အမည်/ဇာတ်ကားကို ပြန်စစ်ပါ"
         lines.extend([
-            f"{index}. {page_title}",
+            f"{index}. {page_title} ({match_label})",
             extract or "အကျဉ်းချုပ် မရရှိပါ။",
             f"Source: {url}",
             "",
