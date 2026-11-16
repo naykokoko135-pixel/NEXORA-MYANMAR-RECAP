@@ -1,4 +1,3 @@
-import asyncio
 import hmac
 import logging
 import os
