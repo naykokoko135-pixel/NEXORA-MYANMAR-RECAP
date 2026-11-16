@@ -37,6 +37,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "မင်္ဂလာပါ။ NEXORA Myanmar Recap Bot ပါ။\n\n"
             "/status - စနစ်အခြေအနေ\n"
+            "/chatid - Daily Auto ပို့မည့် Chat ID ကြည့်ရန်\n"
             "/create <ခေါင်းစဉ်> - Free Recap template\n"
             "/research <ဇာတ်ကားအမည်> - Source စစ်ဆေးရန် worksheet\n"
             "/auto <ဇာတ်ကားအမည်> - အခမဲ့ ရင်းမြစ်ရှာရန်\n"
@@ -50,13 +51,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+async def chatid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the current Telegram chat ID for daily delivery setup."""
+    if not update.effective_chat or not update.message:
+        return
+    await update.message.reply_text(
+        "နေ့စဉ် Auto ပို့ရန် Chat ID:\n"
+        f"{update.effective_chat.id}\n\n"
+        "ဒီနံပါတ်ကို GitHub Repository Settings > Secrets and variables > Actions "
+        "တွင် TELEGRAM_CHAT_ID အဖြစ် သိမ်းပါ။ Token သို့မဟုတ် Chat ID ကို အများသိအောင် မမျှဝေပါနှင့်။"
+    )
+
+
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(
             "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
             "AI API: မချိတ်ထားပါ (အခပေး API မသုံးပါ)\n"
             "လုပ်ဆောင်နိုင်မှု: Auto research lookup + Platform/Duration Presets + Free Recap template + SRT export\n"
-            "Video rendering / scheduled queue / social auto-upload: မပါဝင်သေးပါ။"
+            "Daily Auto: GitHub Actions မှ မနက် ၅ နာရီ (ထိုင်းစံတော်ချိန်) Research ပို့နိုင်သည်။\n"
+            "Video rendering / social auto-upload: မပါဝင်သေးပါ။"
         )
 
 
@@ -252,6 +266,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app = Application.builder().token(TOKEN).build()
     telegram_app.add_handler(CommandHandler("start", start))
     telegram_app.add_handler(CommandHandler("status", status))
+    telegram_app.add_handler(CommandHandler("chatid", chatid_cmd))
     telegram_app.add_handler(CommandHandler("create", create))
     telegram_app.add_handler(CommandHandler("research", research_cmd))
     telegram_app.add_handler(CommandHandler("auto", auto_research_cmd))

@@ -3,7 +3,7 @@
 A free Telegram bot for Burmese recap-writing worksheets and English subtitle SRT export.
 
 ## Commands
-- `/start`, `/status`, `/help`
+- `/start`, `/status`, `/chatid`, `/help`
 - `/create <topic>` — create a recap worksheet using the selected presets
 - `/research <movie title>` — create a source-tracking research worksheet before writing
 - `/auto <movie title>` — search public Wikipedia article summaries and source links without an API key
@@ -29,6 +29,18 @@ Use `/auto Avatar` to search English Wikipedia for up to three article summaries
 
 ## Research notes to recap draft
 Use `/draft Avatar` and put your checked notes on the following lines in the same Telegram message. The bot preserves those notes and organizes prompts into chapters for the selected platform and duration. It does not write a finished factual narrative, independently verify notes, browse the web, or invent missing plot details. Keep source references with your notes and review the result before publishing.
+
+## Daily automatic research (5:00 AM Thailand time)
+The `.github/workflows/daily-auto.yml` workflow runs daily at 22:00 UTC (05:00 Asia/Bangkok on the following local date). It chooses one title per day from a built-in rotation, runs the free Wikipedia source lookup, and sends the research leads plus a three-part YouTube planning structure to the configured Telegram chat. The three parts are planning sections, not three finished scripts or videos.
+
+To enable delivery:
+1. In Telegram, open your NEXORA bot and send `/chatid`. Copy the numeric chat ID shown.
+2. In GitHub, open **Settings > Secrets and variables > Actions > New repository secret**.
+3. Add `TELEGRAM_BOT_TOKEN` (the current bot token) and `TELEGRAM_CHAT_ID` (the chat ID from `/chatid`).
+4. In **Actions**, enable workflows if GitHub asks, then use **Daily NEXORA Auto Research > Run workflow** once to test. The scheduled run is daily at 05:00 Thailand time.
+5. Do not paste tokens into chat, code, commits, or screenshots. If a token was exposed, revoke it in BotFather and update both Render and GitHub secrets.
+
+GitHub's scheduled workflow can start a little later than the exact minute. The bot's Render Free web service does not need to stay awake for the GitHub Actions job.
 
 ## Important limitations
 - `/auto` automates initial public-source discovery only; it does not create a complete verified plot summary or finished recap script.
