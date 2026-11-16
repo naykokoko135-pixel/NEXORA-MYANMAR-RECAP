@@ -227,6 +227,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Commands:\n/start\n/status\n/create <topic>\n/mode free|ai\n/srt\n/platform youtube|tiktok|facebook\n/duration <minutes>\n/settings\n/help\n\n"
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60\n"
             "TikTok: 1-3, 3-5\nFacebook: 3-5, 5-7, 8-10, 10-15\n\n"
+            "/auto သည် Wikipedia မှ source lead များရှာပေးသည်၊ အချက်အလက်ကို ကိုယ်တိုင်ပြန်စစ်ပါ။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော English စာသားမှ .srt ဖိုင်ထုတ်နိုင်သည်။"
         )
