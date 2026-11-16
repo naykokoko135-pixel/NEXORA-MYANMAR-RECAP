@@ -7,12 +7,21 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/create <topic>` — create a recap worksheet using the selected presets
 - `/research <movie title>` — create a source-tracking research worksheet before writing
 - `/auto <movie title>` — search public Wikipedia article summaries and source links without an API key
-- `/draft <movie title>` followed by a new line of your checked research notes — create a chapter-by-chapter draft worksheet using only those notes
+- `/draft <movie title>` followed by a new line of your checked research notes — create a chapter-by-chapter draft worksheet
+- `/draft3 <movie title>` followed by a new line of your checked research notes — create three separate YouTube planning worksheets (Part 1, Part 2, Part 3)
 - `/platform youtube|tiktok|facebook` — select the publishing platform
 - `/duration <minutes>` — choose a duration valid for the selected platform
 - `/settings` — show the current user's selections
 - `/mode free|ai` — choose a mode label; AI provider is not connected
 - `/srt` — convert timestamped English subtitle lines into an SRT file
+
+## Three-part YouTube worksheets
+Use `/draft3 <movie title>` and put your checked research notes on the following lines in the same Telegram message. NEXORA creates three distinct planning worksheets:
+1. Part 1 — introduction, setting, and main characters
+2. Part 2 — central problem, conflict, and turning points
+3. Part 3 — climax, ending, and original commentary
+
+The selected YouTube duration is divided approximately across the three parts. These are editable planning worksheets, not three finished scripts or videos. The bot only uses the notes supplied by the creator; it does not invent missing plot facts or independently verify them. Check all notes against the film and reliable sources before publishing.
 
 ## Platform duration presets
 - YouTube: `8-10`, `12-15`, `15-20`, `20-30`, `30-45`, `45-60` minutes. Default: `15-20`.
