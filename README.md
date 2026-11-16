@@ -1,37 +1,34 @@
 # NEXORA Myanmar Recap Bot — Free Template Build
 
-A free Telegram bot that creates a Burmese recap outline template without requiring any paid or external AI API.
+A free Telegram bot for Burmese recap-writing worksheets and English subtitle SRT export.
 
-## Features
-- Telegram commands: `/start`, `/status`, `/create <topic>`, `/help`
-- Burmese recap outline template with intro, topic summary, analysis, conclusion, and CTA
-- Telegram webhook and FastAPI health endpoint
-- No Grok, Gemini, OpenAI, or other AI API key required
+## Commands
+- `/start`, `/status`, `/help`
+- `/create <topic>` — create a recap worksheet using the selected presets
+- `/platform youtube|tiktok|facebook` — select the publishing platform
+- `/duration 1-3|3-5|5-7|8-10|12-15` — choose a target duration in minutes
+- `/settings` — show the current user's selections
+- `/mode free|ai` — choose a mode label; AI provider is not connected
+- `/srt` — convert timestamped English subtitle lines into an SRT file
 
-## Not included
-- AI-generated plot summaries (the bot does not call an AI API)
-- Text-to-speech or automatic video rendering
-- Daily five-video queue or persistent storage
-- Automatic publishing to YouTube, TikTok, or Facebook
+Defaults are YouTube and 5–7 minutes. Platform and duration selections are stored in Telegram's per-user session data and may reset when the service restarts.
 
-## Deploy free on Render
-1. Connect this repository to Render using **New + > Blueprint**.
-2. Choose the Free web service plan.
+## Important limitations
+- This is a writing worksheet, not automatic factual movie research or AI plot generation.
+- English subtitles must be translated and checked by the user; SRT export does not translate.
+- No video rendering, text-to-speech, scheduled queue, or automatic social publishing.
+- The AI mode does not call an AI service and does not trigger paid fallback.
+- Free hosting may sleep or restart; per-user session selections are not permanent storage.
+
+## Deploy
+1. Connect the repository to Render using **New + > Blueprint**.
+2. Select the Free web service plan.
 3. Add `TELEGRAM_BOT_TOKEN` in Render Environment.
-4. Render Blueprint generates `TELEGRAM_WEBHOOK_SECRET` automatically.
-5. Deploy. Render supplies `RENDER_EXTERNAL_URL`; the bot registers its webhook at startup.
-6. Open the service URL and check that it returns an online status.
-7. In Telegram, send `/start`, `/status`, then `/create <topic>`.
+4. Let the Blueprint generate `TELEGRAM_WEBHOOK_SECRET`.
+5. Deploy and check the service URL and Telegram `/status`.
 
-## Free-plan limitations
-- Render Free web services sleep after 15 minutes without inbound traffic and may take about a minute to wake up.
-- Free services have ephemeral local storage; do not rely on local files for permanent storage.
-- Telegram bot API use does not require an AI API subscription, but the hosting provider's free limits still apply.
-
-## Safe and lawful use
-- Never put your Telegram bot token in GitHub, chat messages, or screenshots.
-- The bot does not need an AI API key.
-- Use source material you own, have permission to use, or that is public domain.
-- Write original commentary; do not copy scripts, dialogue, or another creator's recap.
-- Review content and obtain permission for footage before publishing.
-- Keep a human review step before uploading any content.
+## Safe use
+- Never put bot tokens or secrets in GitHub, chat messages, or screenshots.
+- Use footage, images, music, and source material that you own, have permission to use, or are licensed to use.
+- Write original commentary and verify movie facts before publishing.
+- Keep a human review step before uploading.
