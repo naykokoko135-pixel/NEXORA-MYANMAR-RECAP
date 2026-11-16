@@ -1,14 +1,16 @@
 services:
-  - type: worker
+  - type: web
     name: nexora-myanmar-recap-bot
     runtime: python
-    plan: starter
+    plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python bot.py
+    startCommand: uvicorn bot:web_app --host 0.0.0.0 --port $PORT
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
-      - key: XAI_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
-      - key: XAI_MODEL
-        value: grok-4.7
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: TELEGRAM_WEBHOOK_SECRET
+        generateValue: true
