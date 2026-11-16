@@ -1,11 +1,14 @@
 import hmac
+from io import BytesIO
 import logging
 import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Request
-from telegram import Update
+from telegram import InputFile, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
+
+from srt_builder import build_srt
 
 from script_writer import generate_recap_outline
 
@@ -30,7 +33,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "မင်္ဂလာပါ။ NEXORA Myanmar Recap Bot ပါ။\n\n"
             "/status - စနစ်အခြေအနေ\n"
-            "/create <ခေါင်းစဉ်> - Recap template + English subtitle worksheet\n"
+            "/create <ခေါင်းစဉ်> - Free Recap template\n"
+            "/mode free|ai - Mode ရွေးရန်\n"
+            "/srt - English စာတန်းထိုး SRT ဖိုင်ထုတ်ရန်\n"
             "/help - အကူအညီ"
         )
 
@@ -39,8 +44,8 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(
             "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
-            "AI API: မချိတ်ထားပါ (API အသုံးပြုခ $0)\n"
-            "လုပ်ဆောင်နိုင်မှု: Recap outline template + Telegram bot\n"
+            "AI API: မချိတ်ထားပါ (အခပေး API မသုံးပါ)\n"
+            "လုပ်ဆောင်နိုင်မှု: Free Recap template + SRT export\n"
             "Video rendering / scheduled queue / social auto-upload: မပါဝင်သေးပါ။"
         )
 
@@ -58,6 +63,46 @@ async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for start_at in range(0, len(outline), 3900):
         await update.message.reply_text(outline[start_at:start_at + 3900])
 
+
+async def mode_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    choice = context.args[0].lower() if context.args else ""
+    if choice not in {"free", "ai"}:
+        await update.message.reply_text("အသုံးပြုပုံ: /mode free သို့မဟုတ် /mode ai")
+        return
+    context.user_data["mode"] = choice
+    if choice == "ai":
+        await update.message.reply_text(
+            "AI Mode ကို ရွေးထားပါတယ်။ လက်ရှိမှာ သတ်မှတ်ချက်နှင့်ကိုက်ညီသော AI ဝန်ဆောင်မှု မချိတ်ထားသေးပါ။ "
+            "အခပေး API ကို အလိုအလျောက် မသုံးပါ။ /create ကို Free Builder ဖြင့် ဆက်လုပ်နိုင်ပါတယ်။"
+        )
+    else:
+        await update.message.reply_text("Free Mode ဖွင့်ပြီးပါပြီ။ API key မလိုပါ။")
+
+
+async def srt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+    raw = update.message.text.partition("\n")[2].strip()
+    if not raw:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /srt ပြီးနောက် စာကြောင်းတစ်ကြောင်းစီ ထည့်ပါ။\n"
+            "00:00:00,000 --> 00:00:05,000 | Welcome to the story.\n"
+            "00:00:05,000 --> 00:00:10,000 | The journey begins."
+        )
+        return
+    try:
+        srt_text = build_srt(raw)
+    except ValueError as exc:
+        await update.message.reply_text(f"စာတန်းထိုးပုံစံ မမှန်ပါ: {exc}")
+        return
+    file_obj = BytesIO(srt_text.encode("utf-8-sig"))
+    file_obj.name = "nexora_english_subtitles.srt"
+    await update.message.reply_document(
+        document=InputFile(file_obj, filename=file_obj.name),
+        caption="NEXORA English Subtitle SRT ဖိုင်"
+    )
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
@@ -88,6 +133,8 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("start", start))
     telegram_app.add_handler(CommandHandler("status", status))
     telegram_app.add_handler(CommandHandler("create", create))
+    telegram_app.add_handler(CommandHandler("mode", mode_cmd))
+    telegram_app.add_handler(CommandHandler("srt", srt_cmd))
     telegram_app.add_handler(CommandHandler("help", help_cmd))
     telegram_app.add_error_handler(on_telegram_error)
 
