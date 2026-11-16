@@ -37,7 +37,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - English စာတန်းထိုး SRT ဖိုင်ထုတ်ရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
-            "/duration 3-5|5-7|8-10|12-15 - ကြာချိန်ရွေးရန်\n"
+            "/duration 1-3|3-5|5-7|8-10|12-15 - ကြာချိန်ရွေးရန်\n"
             "/settings - လက်ရှိရွေးချယ်မှုကြည့်ရန်\n"
             "/help - အကူအညီ"
         )
@@ -62,7 +62,9 @@ async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "အသုံးပြုပုံ: /create ဇာတ်ကားအမည် သို့မဟုတ် အကြောင်းအရာ"
         )
         return
-    platform = context.user_data.get("platform", "youtube")\n    duration = context.user_data.get("duration", "5-7")\n    outline = generate_recap_outline(topic, platform=platform, duration=duration)
+    platform = context.user_data.get("platform", "youtube")
+    duration = context.user_data.get("duration", "5-7")
+    outline = generate_recap_outline(topic, platform=platform, duration=duration)
     for start_at in range(0, len(outline), 3900):
         await update.message.reply_text(outline[start_at:start_at + 3900])
 
@@ -152,7 +154,7 @@ async def srt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(
-            "Commands:\n/start\n/status\n/create <topic>\n/mode free|ai\n/srt\n/help\n\n"
+            "Commands:\n/start\n/status\n/create <topic>\n/mode free|ai\n/srt\n/platform youtube|tiktok|facebook\n/duration 1-3|3-5|5-7|8-10|12-15\n/settings\n/help\n\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော English စာသားမှ .srt ဖိုင်ထုတ်နိုင်သည်။"
         )
@@ -179,7 +181,10 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("status", status))
     telegram_app.add_handler(CommandHandler("create", create))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
-    telegram_app.add_handler(CommandHandler("srt", srt_cmd))\n    telegram_app.add_handler(CommandHandler("platform", platform_cmd))\n    telegram_app.add_handler(CommandHandler("duration", duration_cmd))\n    telegram_app.add_handler(CommandHandler("settings", settings_cmd))
+    telegram_app.add_handler(CommandHandler("srt", srt_cmd))
+    telegram_app.add_handler(CommandHandler("platform", platform_cmd))
+    telegram_app.add_handler(CommandHandler("duration", duration_cmd))
+    telegram_app.add_handler(CommandHandler("settings", settings_cmd))
     telegram_app.add_handler(CommandHandler("help", help_cmd))
     telegram_app.add_error_handler(on_telegram_error)
 
