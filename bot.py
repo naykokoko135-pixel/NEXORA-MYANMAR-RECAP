@@ -10,7 +10,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from srt_builder import build_srt
 
-from script_writer import generate_recap_outline
+from script_writer import generate_recap_outline, PLATFORM_NAMES, DURATION_PRESETS
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -36,6 +36,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/create <ခေါင်းစဉ်> - Free Recap template\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - English စာတန်းထိုး SRT ဖိုင်ထုတ်ရန်\n"
+            "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
+            "/duration 3-5|5-7|8-10|12-15 - ကြာချိန်ရွေးရန်\n"
+            "/settings - လက်ရှိရွေးချယ်မှုကြည့်ရန်\n"
             "/help - အကူအညီ"
         )
 
@@ -45,7 +48,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
             "AI API: မချိတ်ထားပါ (အခပေး API မသုံးပါ)\n"
-            "လုပ်ဆောင်နိုင်မှု: Free Recap template + SRT export\n"
+            "လုပ်ဆောင်နိုင်မှု: Platform/Duration Presets + Free Recap template + SRT export\n"
             "Video rendering / scheduled queue / social auto-upload: မပါဝင်သေးပါ။"
         )
 
@@ -59,10 +62,52 @@ async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "အသုံးပြုပုံ: /create ဇာတ်ကားအမည် သို့မဟုတ် အကြောင်းအရာ"
         )
         return
-    outline = generate_recap_outline(topic)
+    platform = context.user_data.get("platform", "youtube")\n    duration = context.user_data.get("duration", "5-7")\n    outline = generate_recap_outline(topic, platform=platform, duration=duration)
     for start_at in range(0, len(outline), 3900):
         await update.message.reply_text(outline[start_at:start_at + 3900])
 
+
+
+async def platform_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    choice = context.args[0].lower() if context.args else ""
+    if choice not in PLATFORM_NAMES:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /platform youtube | tiktok | facebook"
+        )
+        return
+    context.user_data["platform"] = choice
+    await update.message.reply_text(
+        f"Platform ကို {PLATFORM_NAMES[choice]} အဖြစ် ရွေးပြီးပါပြီ။"
+    )
+
+
+async def duration_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    choice = context.args[0] if context.args else ""
+    if choice not in DURATION_PRESETS:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /duration 3-5\nရနိုင်သောကြာချိန်: 1-3, 3-5, 5-7, 8-10, 12-15"
+        )
+        return
+    context.user_data["duration"] = choice
+    await update.message.reply_text(
+        f"ရည်မှန်းကြာချိန် {choice} မိနစ်ကို ရွေးပြီးပါပြီ။"
+    )
+
+
+async def settings_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    platform = context.user_data.get("platform", "youtube")
+    duration = context.user_data.get("duration", "5-7")
+    await update.message.reply_text(
+        f"လက်ရှိရွေးချယ်မှု\nPlatform: {PLATFORM_NAMES[platform]}\n"
+        f"ကြာချိန်: {duration} မိနစ်\n"
+        "ပြောင်းရန် /platform နှင့် /duration ကို အသုံးပြုပါ။"
+    )
 
 async def mode_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
@@ -134,7 +179,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("status", status))
     telegram_app.add_handler(CommandHandler("create", create))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
-    telegram_app.add_handler(CommandHandler("srt", srt_cmd))
+    telegram_app.add_handler(CommandHandler("srt", srt_cmd))\n    telegram_app.add_handler(CommandHandler("platform", platform_cmd))\n    telegram_app.add_handler(CommandHandler("duration", duration_cmd))\n    telegram_app.add_handler(CommandHandler("settings", settings_cmd))
     telegram_app.add_handler(CommandHandler("help", help_cmd))
     telegram_app.add_error_handler(on_telegram_error)
 
