@@ -1,9 +1,18 @@
 import json
 import unittest
 from io import BytesIO
+from urllib.error import URLError
 from unittest.mock import patch
 
 from auto_research import search_movie_sources, ResearchLookupError
+
+
+class Response(BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class AutoResearchTests(unittest.TestCase):
@@ -18,19 +27,11 @@ class AutoResearchTests(unittest.TestCase):
                 }]
             }
         }
-
-        class Response(BytesIO):
-            def __enter__(self):
-                return self
-            def __exit__(self, *args):
-                self.close()
-
         mock_urlopen.return_value = Response(json.dumps(payload).encode("utf-8"))
         result = search_movie_sources("Avatar")
         self.assertIn("Avatar (2009 film)", result)
         self.assertIn("https://en.wikipedia.org/wiki/Avatar_(2009_film)", result)
         self.assertIn("အတည်ပြုထားသော ဇာတ်လမ်းအကျဉ်း မဟုတ်ပါ", result)
-
 
     @patch("auto_research.urlopen")
     def test_prioritizes_exact_title_over_sequels(self, mock_urlopen):
@@ -41,18 +42,35 @@ class AutoResearchTests(unittest.TestCase):
                 {"title": "Avatar (2009 film)", "extract": "Original film.", "fullurl": "https://example.com/avatar"},
             ]}
         }
-
-        class Response(BytesIO):
-            def __enter__(self):
-                return self
-            def __exit__(self, *args):
-                self.close()
-
         mock_urlopen.return_value = Response(json.dumps(payload).encode("utf-8"))
         result = search_movie_sources("Avatar")
         self.assertLess(result.index("Avatar (2009 film)"), result.index("Avatar: The Way of Water"))
         self.assertIn("အမည်ကိုက်ညီသော ရလဒ်", result)
         self.assertIn("ဆက်စပ်ရလဒ်", result)
+
+    @patch("auto_research.urlopen")
+    def test_uses_rest_fallback_when_action_api_fails(self, mock_urlopen):
+        rest_payload = {
+            "pages": [{
+                "title": "Avatar",
+                "key": "Avatar",
+                "excerpt": "Avatar is a science fiction film.",
+            }]
+        }
+        mock_urlopen.side_effect = [
+            URLError("primary unavailable"),
+            Response(json.dumps(rest_payload).encode("utf-8")),
+        ]
+        result = search_movie_sources("Avatar")
+        self.assertIn("Avatar", result)
+        self.assertIn("https://en.wikipedia.org/wiki/Avatar", result)
+        self.assertEqual(mock_urlopen.call_count, 2)
+
+    @patch("auto_research.urlopen")
+    def test_reports_both_sources_unavailable(self, mock_urlopen):
+        mock_urlopen.side_effect = URLError("offline")
+        with self.assertRaises(ResearchLookupError):
+            search_movie_sources("Avatar")
 
     def test_rejects_empty_title(self):
         with self.assertRaises(ResearchLookupError):
@@ -60,12 +78,6 @@ class AutoResearchTests(unittest.TestCase):
 
     @patch("auto_research.urlopen")
     def test_handles_no_results(self, mock_urlopen):
-        class Response(BytesIO):
-            def __enter__(self):
-                return self
-            def __exit__(self, *args):
-                self.close()
-
         mock_urlopen.return_value = Response(b'{"query":{"pages":[]}}')
         self.assertIn("မတွေ့ပါ", search_movie_sources("Unknown film title"))
 
