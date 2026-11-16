@@ -74,15 +74,19 @@ Platform: {PLATFORM_NAMES[platform]}
 [ ] မူရင်း dialogue၊ screenplay သို့မဟုတ် အခြားသူ၏ recap ကို မကူးထားပါ။
 [ ] အသုံးပြုမည့် ပုံ၊ footage နှင့် music အတွက် အသုံးပြုခွင့်ရှိသည်။
 
-နောက်တစ်ဆင့်: အခန်းတစ်ခုစီကို ကိုယ်ပိုင်စကားဖြင့် ပြည့်စုံအောင် ရေးပြီး အချက်အလက်နှင့် subtitle ကို လူကိုယ်တိုင် ပြန်စစ်ဆေးပါ。
+နောက်တစ်ဆင့်: အခန်းတစ်ခုစီကို ကိုယ်ပိုင်စကားဖြင့် ပြည့်စုံအောင် ရေးပြီး အချက်အလက်နှင့် subtitle ကို လူကိုယ်တိုင် ပြန်စစ်ဆေးပါ။
 """
 
 
 def generate_three_part_draft_worksheets(topic: str, notes: str, duration: str = "15-20") -> str:
     """Create three distinct YouTube planning worksheets from creator-checked notes."""
     title, clean_notes = _clean_inputs(topic, notes)
-    total_minutes = DURATION_PRESETS[duration] if duration in PLATFORM_DURATIONS["youtube"] else DURATION_PRESETS[DEFAULT_DURATIONS["youtube"]]
-    part_minutes = max(1, round(total_minutes / 3))
+    if duration not in PLATFORM_DURATIONS["youtube"]:
+        duration = DEFAULT_DURATIONS["youtube"]
+    lower_minutes, upper_minutes = (int(value) for value in duration.split("-", maxsplit=1))
+    part_minutes = (lower_minutes + upper_minutes) / 6
+    part_label = f"{part_minutes:g}"
+    total_label = DURATION_PRESETS[duration]
     sections = [
         (
             "PART 1 — မိတ်ဆက်၊ နောက်ခံနှင့် ဇာတ်ကောင်များ",
@@ -101,10 +105,10 @@ def generate_three_part_draft_worksheets(topic: str, notes: str, duration: str =
         ),
     ]
     parts = []
-    for index, (heading, prompt, focus) in enumerate(sections, start=1):
+    for heading, prompt, focus in sections:
         parts.append(
             f"━━━━━━━━━━━━━━━━━━\n🎬 {heading}\n"
-            f"ရည်မှန်းချိန်: ခန့်မှန်း {part_minutes} မိနစ် (စုစုပေါင်း {total_minutes} မိနစ် worksheet)\n"
+            f"ရည်မှန်းချိန်: ခန့်မှန်း {part_label} မိနစ် (စုစုပေါင်း {total_label} မိနစ် worksheet)\n"
             f"ရေးရန်: {prompt}\n"
             f"အဓိကထားရန်: {focus}\n"
             "- Source မှ အတည်ပြုထားသောအချက်: [ထည့်ရန်]\n"
@@ -114,7 +118,7 @@ def generate_three_part_draft_worksheets(topic: str, notes: str, duration: str =
         )
     return (
         f"📝 NEXORA — YouTube သုံးပိုင်းခွဲ Draft Worksheets\n"
-        f"ခေါင်းစဉ်: {title}\nစုစုပေါင်းရည်မှန်းချိန်: {total_minutes} မိနစ်\n\n"
+        f"ခေါင်းစဉ်: {title}\nစုစုပေါင်းရည်မှန်းချိန်: {total_label} မိနစ်\n\n"
         "မှတ်ချက်: အောက်ပါသည် ဇာတ်ညွှန်းအပြည့်မဟုတ်ဘဲ သီးခြားဖြည့်စွက်ရန် Worksheet သုံးခုဖြစ်သည်။ "
         "သင်ပေးထားသော Research Notes ကိုသာ အခြေခံပြီး NEXORA က ဇာတ်လမ်းအသစ် မဖန်တီးပါ။\n\n"
         "၁။ မျှဝေထားသော Research Notes\n" + clean_notes + "\n\n"
