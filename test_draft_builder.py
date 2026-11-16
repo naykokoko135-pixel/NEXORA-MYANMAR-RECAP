@@ -1,6 +1,6 @@
 import unittest
 
-from draft_builder import generate_draft_worksheet
+from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 
 
 class DraftBuilderTests(unittest.TestCase):
@@ -25,6 +25,27 @@ class DraftBuilderTests(unittest.TestCase):
         )
         self.assertIn("အပိုင်း ၃", result)
         self.assertNotIn("အခန်း ၅", result)
+
+    def test_three_part_worksheets_are_distinct(self):
+        result = generate_three_part_draft_worksheets(
+            "Avatar", "Checked note: the story is set on Pandora.", duration="15-20"
+        )
+        self.assertIn("PART 1", result)
+        self.assertIn("PART 2", result)
+        self.assertIn("PART 3", result)
+        self.assertIn("ဇာတ်လမ်းစတင်ရာ", result)
+        self.assertIn("အဓိကပြဿနာ", result)
+        self.assertIn("Climax", result)
+        self.assertIn("Checked note: the story is set on Pandora.", result)
+        self.assertIn("စုစုပေါင်းရည်မှန်းချိန်: ၁၅–၂၀ မိနစ်", result)
+
+    def test_three_part_requires_notes(self):
+        with self.assertRaises(ValueError):
+            generate_three_part_draft_worksheets("Avatar", "")
+
+    def test_three_part_rejects_oversized_notes(self):
+        with self.assertRaises(ValueError):
+            generate_three_part_draft_worksheets("Avatar", "x" * 10001)
 
 
 if __name__ == "__main__":
