@@ -1,15 +1,17 @@
-"""Free public-source discovery using the MediaWiki API.
+"""Free public-source discovery using Wikimedia's free search APIs.
 
 Returns short article excerpts and links as research leads. It does not verify
 facts or generate a plot summary. No API key or third-party package is needed.
 """
 import json
+import re
 from urllib.error import URLError, HTTPError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 from urllib.request import Request, urlopen
 
 API_URL = "https://en.wikipedia.org/w/api.php"
-USER_AGENT = "NEXORA-Myanmar-Recap/1.0 (public research lookup)"
+REST_SEARCH_URL = "https://en.wikipedia.org/w/rest.php/v1/search/page"
+USER_AGENT = "NEXORA-Myanmar-Recap/1.1 (free public research lookup)"
 MAX_RESULTS = 3
 SEARCH_LIMIT = 8
 MAX_EXCERPT_CHARS = 650
@@ -19,13 +21,16 @@ class ResearchLookupError(Exception):
     """Raised when the public source lookup cannot be completed."""
 
 
-def search_movie_sources(topic: str) -> str:
-    title = " ".join((topic or "").split()).strip()
-    if not title:
-        raise ResearchLookupError("ဇာတ်ကားအမည် ထည့်ပေးပါ။")
-    if len(title) > 120:
-        raise ResearchLookupError("ရှာဖွေမည့်အမည်သည် စာလုံး ၁၂၀ ထက် မရှည်ရပါ။")
+def _request_json(url: str) -> dict:
+    request = Request(
+        url,
+        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+    )
+    with urlopen(request, timeout=15) as response:
+        return json.loads(response.read().decode("utf-8"))
 
+
+def _search_mediawiki(title: str) -> list:
     params = {
         "action": "query",
         "generator": "search",
@@ -39,19 +44,50 @@ def search_movie_sources(topic: str) -> str:
         "format": "json",
         "formatversion": 2,
     }
-    request = Request(
-        API_URL + "?" + urlencode(params),
-        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
-    )
-    try:
-        with urlopen(request, timeout=12) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
-        raise ResearchLookupError(
-            "အများပြည်သူသုံး ရင်းမြစ်ကို လောလောဆယ် မရယူနိုင်ပါ။ ခဏနေမှ ပြန်စမ်းပါ။"
-        ) from exc
+    payload = _request_json(API_URL + "?" + urlencode(params))
+    return payload.get("query", {}).get("pages", [])
 
-    pages = payload.get("query", {}).get("pages", [])
+
+def _search_rest(title: str) -> list:
+    """Fallback to Wikimedia's REST search when the Action API is unavailable."""
+    params = urlencode({"q": title + " film movie", "limit": SEARCH_LIMIT})
+    payload = _request_json(REST_SEARCH_URL + "?" + params)
+    pages = []
+    for item in payload.get("pages", []):
+        page_key = str(item.get("key", ""))
+        page_title = str(item.get("title", "Untitled"))
+        excerpt = re.sub(r"<[^>]+>", "", str(item.get("excerpt", "")))
+        pages.append({
+            "title": page_title,
+            "extract": excerpt,
+            "fullurl": "https://en.wikipedia.org/wiki/" + quote(page_key or page_title.replace(" ", "_"), safe="()_"),
+        })
+    return pages
+
+
+def search_movie_sources(topic: str) -> str:
+    title = " ".join((topic or "").split()).strip()
+    if not title:
+        raise ResearchLookupError("ဇာတ်ကားအမည် ထည့်ပေးပါ။")
+    if len(title) > 120:
+        raise ResearchLookupError("ရှာဖွေမည့်အမည်သည် စာလုံး ၁၂၀ ထက် မရှည်ရပါ။")
+
+    errors = []
+    pages = []
+    for search_function in (_search_mediawiki, _search_rest):
+        try:
+            pages = search_function(title)
+            if pages:
+                break
+        except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError) as exc:
+            errors.append(type(exc).__name__)
+
+    if not pages and len(errors) == 2:
+        raise ResearchLookupError(
+            "Wikipedia ရှာဖွေရေးလမ်းကြောင်း ၂ ခုလုံးကို မချိတ်ဆက်နိုင်ပါ။ "
+            "Render Logs ကို စစ်ဆေးရန် လိုအပ်ပါသည်။"
+        )
+
     if not pages:
         return (
             f"🔎 NEXORA Auto Research — {title}\n\n"
