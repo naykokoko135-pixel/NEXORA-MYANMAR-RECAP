@@ -113,7 +113,7 @@ def generate_three_part_draft_worksheets(topic: str, notes: str, duration: str =
     for heading, prompt, focus in sections:
         parts.append(
             f"━━━━━━━━━━━━━━━━━━\n🎬 {heading}\n"
-            f"ရည်မှန်းချိန်: ခန့်မှန်း {part_label} မိနစ် (စုစုပေါင်း {total_label} မိနစ် worksheet)\n"
+            f"ရည်မှန်းချိန်: အပိုင်းတစ်ခုလျှင် {part_label} မိနစ်ခန့် (စုစုပေါင်း {total_label} မိနစ်)\n"
             f"ရေးရန်: {prompt}\n"
             f"အဓိကထားရန်: {focus}\n"
             "- Source မှ အတည်ပြုထားသောအချက်: [ထည့်ရန်]\n"
