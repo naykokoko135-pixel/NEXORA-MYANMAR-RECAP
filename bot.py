@@ -2,7 +2,7 @@ import os
 import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-from ai.script_writer import generate_recap_outline
+from script_writer import generate_recap_outline
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
