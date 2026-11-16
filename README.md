@@ -1,36 +1,36 @@
-# NEXORA Myanmar Recap Bot - Starter v1
+# NEXORA Myanmar Recap Bot - Grok integration
 
 ## Included
 - Telegram bot polling
 - `/start`, `/status`, `/create`, `/help`
-- OpenAI-powered Burmese recap outline generator
+- Grok-powered Burmese recap commentary outline generator
 - Render background worker blueprint
 - Safe placeholders for video and publishing integrations
 
 ## Not included yet
-- Grok API calls (XAI key is reserved for the next integration)
-- Text-to-speech / FFmpeg rendering
-- daily five-video queue and scheduler
+- Text-to-speech / FFmpeg video rendering
+- Daily five-video queue and scheduler
 - TikTok, Facebook, YouTube upload integrations
-- persistent database / storage
+- Persistent database / storage
 
-Do not describe this starter as a complete automatic video factory.
+Do not describe this build as a complete automatic video factory.
 
-## Deploy to Render
-1. Upload this project to a private GitHub repository.
-2. In Render, choose **New + > Blueprint** and connect that repository.
-3. Render reads `render.yaml`. Create the worker.
-4. In the worker's Environment settings, add:
-   - `TELEGRAM_BOT_TOKEN`
-   - `OPENAI_API_KEY`
-   - `XAI_API_KEY` (not used until Grok integration is added)
-5. Deploy and inspect the logs for `Starting NEXORA Telegram bot polling`.
-6. Open your Telegram bot and send `/start`, then `/status`.
+## Configure and deploy on Render
+1. Connect this GitHub repository to Render using **New + > Blueprint**.
+2. Render reads `render.yaml` and creates the background worker.
+3. In the worker's Environment settings, add:
+   - `TELEGRAM_BOT_TOKEN`: your Telegram bot token
+   - `XAI_API_KEY`: your existing xAI API key
+   - `XAI_MODEL`: defaults to `grok-4.7`; change only if your console shows a different enabled model
+4. Deploy and inspect logs for `Starting NEXORA Telegram bot polling`.
+5. In Telegram, send `/start`, then `/status`.
+6. Test with `/create [topic]`.
 
 ## Important
-- Never paste tokens or API keys into Telegram chats, GitHub, or this conversation.
-- Use only authorized accounts and platform APIs.
-- Movie/series recap scripts must be original commentary based on lawful source material.
-  Do not copy scripts, dialogue, or use unlicensed movie footage.
+- Never paste tokens or API keys into Telegram chats, GitHub, screenshots, or this conversation.
+- Enter secrets only in Render's Environment settings.
+- The xAI API is usage-billed; check the console's billing and available balance before making requests.
+- Use only authorized accounts and lawful source material.
+- Recap scripts must be original commentary. Do not copy scripts, dialogue, or use unlicensed footage.
 - Keep a human approval step before publishing.
-- Platform upload eligibility, duration limits, and API permissions vary by account and platform.
+- Video rendering, scheduling, and social uploads are not implemented in this version.
