@@ -9,6 +9,7 @@ from telegram import InputFile, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 from srt_builder import build_srt
+from research_builder import generate_research_worksheet
 
 from script_writer import (generate_recap_outline, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 
@@ -34,6 +35,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "မင်္ဂလာပါ။ NEXORA Myanmar Recap Bot ပါ။\n\n"
             "/status - စနစ်အခြေအနေ\n"
             "/create <ခေါင်းစဉ်> - Free Recap template\n"
+            "/research <ဇာတ်ကားအမည်> - Source စစ်ဆေးရန် worksheet\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - English စာတန်းထိုး SRT ဖိုင်ထုတ်ရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
@@ -52,6 +54,18 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "လုပ်ဆောင်နိုင်မှု: Platform/Duration Presets + Free Recap template + SRT export\n"
             "Video rendering / scheduled queue / social auto-upload: မပါဝင်သေးပါ။"
         )
+
+
+async def research_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    topic = " ".join(context.args).strip()
+    if not topic:
+        await update.message.reply_text("အသုံးပြုပုံ: /research ဇာတ်ကားအမည်")
+        return
+    worksheet = generate_research_worksheet(topic)
+    for start_at in range(0, len(worksheet), 3900):
+        await update.message.reply_text(worksheet[start_at:start_at + 3900])
 
 
 async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -194,6 +208,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("start", start))
     telegram_app.add_handler(CommandHandler("status", status))
     telegram_app.add_handler(CommandHandler("create", create))
+    telegram_app.add_handler(CommandHandler("research", research_cmd))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
