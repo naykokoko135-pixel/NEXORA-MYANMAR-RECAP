@@ -9,6 +9,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/auto <movie title>` — search public Wikipedia article summaries and source links without an API key
 - `/draft <movie title>` followed by a new line of your checked research notes — create a chapter-by-chapter draft worksheet
 - `/draft3 <movie title>` — create three YouTube planning worksheets using the latest matching `/auto` result, or supply checked notes on following lines
+- `/voiceover <movie title>` followed by checked notes — export a Burmese voice-over draft as a `.txt` file
 - `/platform youtube|tiktok|facebook` — select the publishing platform
 - `/duration <minutes>` — choose a duration valid for the selected platform
 - `/settings` — show the current user's selections
@@ -47,6 +48,22 @@ Use `/draft Avatar` and put your checked notes on the following lines in the sam
 4. You can still send `/draft3 Avatar` followed by your own checked notes; those notes take priority over the saved result.
 
 The saved result is matched by movie title and is only kept in the bot's in-memory Telegram session. It can be lost if the service restarts or the session is reset. A no-results lookup is not saved. Wikipedia excerpts and related search results are research leads, not verified plot facts; review the links and confirm details against the film and reliable sources before publishing. This feature does not connect ChatGPT or generate a finished recap script.
+
+
+## Voice-over draft export
+
+Send `/voiceover Avatar` and put your film-checked notes on the following lines. NEXORA formats those exact notes into a simple Burmese voice-over draft and sends a UTF-8 text file that can be edited on a phone. It adds only generic opening/closing wording; it does not invent plot events, expand sparse notes into a full 15–20 minute script, verify facts, translate, or connect to an AI provider. Add enough detailed, checked notes and your own commentary before recording.
+
+Example:
+
+```text
+/voiceover Avatar
+Jake arrives on Pandora.
+Jake meets Neytiri.
+[Add each verified event and its source.]
+```
+
+This feature is a free deterministic formatter and does not require an API key.
 
 ## Daily automatic research (5:00 AM Thailand time)
 The `.github/workflows/daily-auto.yml` workflow runs daily at 22:00 UTC (05:00 Asia/Bangkok on the following local date). It chooses one title per day from a built-in rotation, runs the free Wikipedia source lookup, and sends the research leads plus a three-part YouTube planning structure to the configured Telegram chat. The three parts are planning sections, not three finished scripts or videos.
