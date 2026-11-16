@@ -1,3 +1,4 @@
+import asyncio
 import hmac
 from io import BytesIO
 import logging
@@ -11,6 +12,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from srt_builder import build_srt
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet
+from auto_research import search_movie_sources, ResearchLookupError
 
 from script_writer import (generate_recap_outline, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 
@@ -37,6 +39,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/status - စနစ်အခြေအနေ\n"
             "/create <ခေါင်းစဉ်> - Free Recap template\n"
             "/research <ဇာတ်ကားအမည်> - Source စစ်ဆေးရန် worksheet\n"
+            "/auto <ဇာတ်ကားအမည်> - အခမဲ့ ရင်းမြစ်ရှာရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - English စာတန်းထိုး SRT ဖိုင်ထုတ်ရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
@@ -52,7 +55,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
             "AI API: မချိတ်ထားပါ (အခပေး API မသုံးပါ)\n"
-            "လုပ်ဆောင်နိုင်မှု: Platform/Duration Presets + Free Recap template + SRT export\n"
+            "လုပ်ဆောင်နိုင်မှု: Auto research lookup + Platform/Duration Presets + Free Recap template + SRT export\n"
             "Video rendering / scheduled queue / social auto-upload: မပါဝင်သေးပါ။"
         )
 
@@ -67,6 +70,24 @@ async def research_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     worksheet = generate_research_worksheet(topic)
     for start_at in range(0, len(worksheet), 3900):
         await update.message.reply_text(worksheet[start_at:start_at + 3900])
+
+
+
+async def auto_research_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    topic = " ".join(context.args).strip()
+    if not topic:
+        await update.message.reply_text("အသုံးပြုပုံ: /auto Avatar")
+        return
+    await update.message.reply_text("အခမဲ့ အများပြည်သူသုံး ရင်းမြစ်ကို ရှာဖွေနေပါတယ်...")
+    try:
+        result = await asyncio.to_thread(search_movie_sources, topic)
+    except ResearchLookupError as exc:
+        await update.message.reply_text(f"ရှာဖွေမှု မအောင်မြင်ပါ: {exc}")
+        return
+    for start_at in range(0, len(result), 3900):
+        await update.message.reply_text(result[start_at:start_at + 3900])
 
 
 async def draft_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -232,6 +253,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("status", status))
     telegram_app.add_handler(CommandHandler("create", create))
     telegram_app.add_handler(CommandHandler("research", research_cmd))
+    telegram_app.add_handler(CommandHandler("auto", auto_research_cmd))
     telegram_app.add_handler(CommandHandler("draft", draft_cmd))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
