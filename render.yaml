@@ -8,9 +8,7 @@ services:
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: OPENAI_MODEL
-        value: gpt-4.1-mini
       - key: XAI_API_KEY
         sync: false
+      - key: XAI_MODEL
+        value: grok-4.7
