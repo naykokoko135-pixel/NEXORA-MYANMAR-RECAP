@@ -72,7 +72,7 @@ async def research_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def draft_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
-    first_line, separator, notes = update.message.text.partition("\\n")
+    first_line, separator, notes = update.message.text.partition("\n")
     parts = first_line.split(maxsplit=1)
     topic = parts[1].strip() if len(parts) > 1 else ""
     if not topic or not separator or not notes.strip():
