@@ -12,6 +12,9 @@ def _clean_inputs(topic: str, notes: str) -> tuple[str, str]:
     clean_notes = (notes or "").strip()
     if not clean_notes:
         raise ValueError("Research မှတ်စု မပါသေးပါ။ /draft Avatar ပြီးနောက် စာကြောင်းအသစ်မှ မှတ်စုများ ထည့်ပါ။")
+    placeholder_markers = ("ဒီမှာထည့်ပါ", "[ထည့်ရန်]", "research notes တွေ ဒီမှာ", "notes here")
+    if any(marker.casefold() in clean_notes.casefold() for marker in placeholder_markers):
+        raise ValueError("နမူနာ Placeholder စာသားပဲ ဖြစ်နေပါတယ်။ ဇာတ်ကားနဲ့ တိုက်စစ်ထားတဲ့ အချက်အလက်နဲ့ Source မှတ်စုအစစ်တွေ ထည့်ပါ။")
     if len(clean_notes) > 10000:
         raise ValueError("မှတ်စုသည် ရှည်လွန်းနေပါသည်။ ၁၀,၀၀၀ အက္ခရာအောက် ခွဲပို့ပါ။")
     return title, clean_notes
@@ -84,8 +87,10 @@ def generate_three_part_draft_worksheets(topic: str, notes: str, duration: str =
     if duration not in PLATFORM_DURATIONS["youtube"]:
         duration = DEFAULT_DURATIONS["youtube"]
     lower_minutes, upper_minutes = (int(value) for value in duration.split("-", maxsplit=1))
-    part_minutes = (lower_minutes + upper_minutes) / 6
-    part_label = f"{part_minutes:g}"
+    part_low = (lower_minutes + 2) // 3
+    part_high = (upper_minutes + 2) // 3
+    digits = str.maketrans("0123456789", "၀၁၂၃၄၅၆၇၈၉")
+    part_label = f"{part_low}–{part_high}".translate(digits)
     total_label = DURATION_PRESETS[duration]
     sections = [
         (
