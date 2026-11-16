@@ -10,6 +10,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from srt_builder import build_srt
 from research_builder import generate_research_worksheet
+from draft_builder import generate_draft_worksheet
 
 from script_writer import (generate_recap_outline, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 
@@ -64,6 +65,28 @@ async def research_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("အသုံးပြုပုံ: /research ဇာတ်ကားအမည်")
         return
     worksheet = generate_research_worksheet(topic)
+    for start_at in range(0, len(worksheet), 3900):
+        await update.message.reply_text(worksheet[start_at:start_at + 3900])
+
+
+async def draft_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+    first_line, separator, notes = update.message.text.partition("\\n")
+    parts = first_line.split(maxsplit=1)
+    topic = parts[1].strip() if len(parts) > 1 else ""
+    if not topic or not separator or not notes.strip():
+        await update.message.reply_text(
+            "အသုံးပြုပုံ:\\n/draft Avatar\\nပြီးနောက် စာကြောင်းအသစ်မှ စစ်ဆေးထားသော Research Notes များ ထည့်ပါ။"
+        )
+        return
+    platform = context.user_data.get("platform", "youtube")
+    duration = context.user_data.get("duration", DEFAULT_DURATIONS[platform])
+    try:
+        worksheet = generate_draft_worksheet(topic, notes, platform=platform, duration=duration)
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
     for start_at in range(0, len(worksheet), 3900):
         await update.message.reply_text(worksheet[start_at:start_at + 3900])
 
@@ -209,6 +232,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("status", status))
     telegram_app.add_handler(CommandHandler("create", create))
     telegram_app.add_handler(CommandHandler("research", research_cmd))
+    telegram_app.add_handler(CommandHandler("draft", draft_cmd))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
