@@ -1,38 +1,41 @@
-import os
-from openai import AsyncOpenAI
+def generate_recap_outline(topic: str) -> str:
+    """Build a copyright-aware Burmese recap outline without a paid or age-restricted AI API."""
+    safe_topic = topic.strip() or "[ခေါင်းစဉ်]"
+    return f"""🎬 NEXORA Myanmar Recap — Script Template
 
-async def generate_recap_outline(topic: str) -> str:
-    """
-    Generates an original Burmese-language recap commentary outline.
-    Use only licensed, public-domain, or user-provided source material.
-    Avoid scene-by-scene retellings that substitute for the original work.
-    """
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is missing")
+ခေါင်းစဉ်: {safe_topic}
 
-    client = AsyncOpenAI(api_key=api_key)
-    prompt = f"""
-သင်သည် မြန်မာဘာသာ Recap အယ်ဒီတာဖြစ်သည်။
-ခေါင်းစဉ်/အကြောင်းအရာ: {topic}
+⚠️ Spoiler Warning
+ဤဗီဒီယိုတွင် ဇာတ်လမ်းအကြောင်းအရာအချို့ ပါဝင်နိုင်သည်။
 
-အောက်ပါပုံစံဖြင့် မူရင်းသုံးသပ်ချက်နှင့် အကျဉ်းချုပ် outline ရေးပါ။
-- မြန်မာဘာသာ၊ သဘာဝကျသော အမျိုးသား narration အတွက် သင့်တော်သော စာသား
-- Spoiler warning ထည့်ပါ
-- အဓိကဇာတ်ကောင်၊ အကြောင်းအရာ၊ theme နှင့် ကိုယ်ပိုင်သုံးသပ်ချက်ကို ဖော်ပြပါ
-- မသိသော အချက်အလက်များကို မဖန်တီးပါနှင့်
-- ဇာတ်ဝင်ခန်းတစ်ခန်းချင်းစီကို အသေးစိတ်ပြန်မရေးပါနှင့်
-- မူပိုင်ခွင့်ရှိသော ဇာတ်ညွှန်း၊ dialogue သို့မဟုတ် footage ကို မကူးယူပါနှင့်
-- အချက်အလက်စစ်ဆေးရန် လိုအပ်သည့်နေရာများကို [VERIFY] ဟု မှတ်သားပါ
-- 30–45 မိနစ် video အတွက် အပိုင်းခွဲ outline၊ intro၊ commentary၊ conclusion နှင့် CTA ပေးပါ
-- source material သို့မဟုတ် အသုံးပြုခွင့် မသေချာပါက ထိုအချက်ကို ရှင်းလင်းဖော်ပြပါ
+၁။ Intro / Hook (30–60 စက္ကန့်)
+ဒီဇာတ်လမ်းကို ဘာကြောင့် စိတ်ဝင်စားဖို့ကောင်းသလဲ။
+[ကိုယ်ပိုင်စကားဖြင့် စတင်မိတ်ဆက်ရန်]
+
+၂။ အခြေခံအကြောင်းအရာ
+ဇာတ်လမ်း၏ နောက်ခံနှင့် အဓိကအယူအဆကို ကိုယ်ပိုင်စကားဖြင့် ရှင်းပြရန်။
+[အသုံးပြုခွင့်ရှိသော source မှ အချက်အလက်ဖြည့်ရန်]
+
+၃။ ဇာတ်ကောင် / အဓိကအယူအဆ သုံးသပ်ချက်
+အဓိကဇာတ်ကောင်၏ ရည်ရွယ်ချက်၊ ဆုံးဖြတ်ချက်နှင့် ပြောင်းလဲမှုကို သုံးသပ်ရန်။
+[အတည်ပြုထားသော အချက်အလက်သာ ထည့်ရန်]
+
+၄။ Theme နှင့် ကိုယ်ပိုင်သုံးသပ်ချက်
+ဇာတ်လမ်းက ပေးလိုသော အတွေးအခေါ်၊ သင်ခန်းစာနှင့် ကိုယ်ပိုင်အမြင်။
+
+၅။ အားသာချက် / အားနည်းချက်
+ဇာတ်ညွှန်း၊ သရုပ်ဆောင်မှု၊ တင်ဆက်ပုံတို့အပေါ် ကိုယ်ပိုင်သုံးသပ်ချက်။
+
+၆။ Conclusion
+အဓိကအချက်များကို အတိုချုပ်ပြီး ကြည့်ရှုသူအတွက် မေးခွန်းတစ်ခု ချန်ထားရန်။
+
+၇။ CTA
+ကြိုက်နှစ်သက်ပါက Like, Comment, Follow/Subscribe လုပ်ရန် ဖိတ်ခေါ်ရန်။
+
+မှတ်ချက်:
+- [ ] အတွင်းရှိနေရာများကို ကိုယ်တိုင်ဖြည့်ပါ။
+- မသိသော plot details မခန့်မှန်းပါနှင့်။
+- မူပိုင်ခွင့်ရှိသော dialogue၊ script သို့မဟုတ် အခြားသူ၏ recap ကို မကူးယူပါနှင့်။
+- မူရင်းရုပ်ရှင်ကို အစားထိုးနိုင်လောက်အောင် ဇာတ်ဝင်ခန်းတိုင်းကို မပြန်ရေးပါနှင့်။
+- အသုံးပြုခွင့်ရှိသော footage နှင့် ကိုယ်ပိုင် commentary ကိုသာ အသုံးပြုပါ။
 """
-    response = await client.chat.completions.create(
-        model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
-        messages=[
-            {"role": "system", "content": "You write original, factual Burmese film commentary and recap outlines."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.6,
-    )
-    return response.choices[0].message.content or "Outline မရရှိပါ။"

@@ -1,8 +1,14 @@
-import os
+import asyncio
+import hmac
 import logging
+import os
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Header, HTTPException, Request
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-from ai.script_writer import generate_recap_outline
+
+from script_writer import generate_recap_outline
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -11,58 +17,108 @@ logging.basicConfig(
 log = logging.getLogger("nexora")
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET")
+PUBLIC_URL = os.getenv("RENDER_EXTERNAL_URL")
+telegram_app: Application | None = None
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "မင်္ဂလာပါ။ NEXORA Myanmar Recap Bot ပါ။\n\n"
         "/status - စနစ်အခြေအနေ\n"
-        "/create - Recap အကြမ်းဖျဉ်းတစ်ခု ပြင်ဆင်ရန်\n"
+        "/create <ခေါင်းစဉ်> - Recap script template ပြုလုပ်ရန်\n"
         "/help - အကူအညီ"
     )
 
+
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    configured = all(os.getenv(k) for k in ("OPENAI_API_KEY", "XAI_API_KEY"))
     await update.message.reply_text(
         "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
-        f"AI API keys configured: {'Yes' if configured else 'Not yet'}\n"
-        "Video rendering / social publishing: နောက်အဆင့်တွင် ချိတ်ဆက်ရပါမည်။"
+        "AI API: မချိတ်ထားပါ (API အသုံးပြုခ $0)\n"
+        "လုပ်ဆောင်နိုင်မှု: Recap outline template + Telegram bot\n"
+        "Video rendering / scheduled queue / social auto-upload: မပါဝင်သေးပါ။"
     )
+
 
 async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
     topic = " ".join(context.args).strip()
     if not topic:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /create ဇာတ်ကား သို့မဟုတ် ဇာတ်လမ်းအမည်\n"
-            "ခွင့်ပြုထားသော source/ကိုယ်ပိုင်အကြောင်းအရာကိုသာ အသုံးပြုပါ။"
+            "အသုံးပြုပုံ: /create ဇာတ်ကားအမည် သို့မဟုတ် အကြောင်းအရာ"
         )
         return
-    await update.message.reply_text("အကြောင်းအရာကို စီစဉ်နေပါတယ်...")
-    try:
-        outline = await generate_recap_outline(topic)
-        await update.message.reply_text(outline[:3900])
-    except Exception as exc:
-        log.exception("Recap outline generation failed")
-        await update.message.reply_text(
-            "Script service မရသေးပါ။ API Key နှင့် configuration ကို စစ်ဆေးပါ။"
-        )
+    outline = generate_recap_outline(topic)
+    for start_at in range(0, len(outline), 3900):
+        await update.message.reply_text(outline[start_at:start_at + 3900])
+
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Commands:\n/start\n/status\n/create <topic>\n/help\n\n"
-        "လက်ရှိ build သည် bot + script-outline prototype ဖြစ်သည်။ "
-        "အလိုအလျောက် video ထုတ်လုပ်ခြင်းနှင့် တင်ခြင်းကို မချိတ်ဆက်ရသေးပါ။"
+        "ဤ Free build တွင် AI API မလိုပါ။ /create သည် ကိုယ်တိုင်ဖြည့်စွက်ရန် "
+        "Recap template ကို ထုတ်ပေးသည်။"
     )
 
-def main():
+
+@asynccontextmanager
+async def lifespan(web_app: FastAPI):
+    global telegram_app
     if not TOKEN:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is missing")
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("status", status))
-    app.add_handler(CommandHandler("create", create))
-    app.add_handler(CommandHandler("help", help_cmd))
-    log.info("Starting NEXORA Telegram bot polling")
-    app.run_polling(drop_pending_updates=True)
+    if not WEBHOOK_SECRET:
+        raise RuntimeError("TELEGRAM_WEBHOOK_SECRET is missing")
+    if not PUBLIC_URL:
+        raise RuntimeError("RENDER_EXTERNAL_URL is missing")
 
-if __name__ == "__main__":
-    main()
+    telegram_app = Application.builder().token(TOKEN).build()
+    telegram_app.add_handler(CommandHandler("start", start))
+    telegram_app.add_handler(CommandHandler("status", status))
+    telegram_app.add_handler(CommandHandler("create", create))
+    telegram_app.add_handler(CommandHandler("help", help_cmd))
+
+    await telegram_app.initialize()
+    await telegram_app.start()
+    await telegram_app.bot.set_webhook(
+        url=f"{PUBLIC_URL.rstrip('/')}/telegram-webhook",
+        secret_token=WEBHOOK_SECRET,
+        allowed_updates=Update.ALL_TYPES,
+        drop_pending_updates=True,
+    )
+    log.info("NEXORA Telegram webhook started")
+    try:
+        yield
+    finally:
+        await telegram_app.bot.delete_webhook()
+        await telegram_app.stop()
+        await telegram_app.shutdown()
+        telegram_app = None
+
+
+web_app = FastAPI(title="NEXORA Myanmar Recap Bot", lifespan=lifespan)
+
+
+@web_app.get("/")
+async def home():
+    return {"app": "NEXORA Myanmar Recap Bot", "status": "online"}
+
+
+@web_app.get("/health")
+async def health():
+    return {"status": "ok", "telegram": telegram_app is not None}
+
+
+@web_app.post("/telegram-webhook")
+async def telegram_webhook(
+    request: Request,
+    x_telegram_bot_api_secret_token: str | None = Header(default=None),
+):
+    if not WEBHOOK_SECRET or not hmac.compare_digest(
+        x_telegram_bot_api_secret_token or "", WEBHOOK_SECRET
+    ):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if telegram_app is None:
+        raise HTTPException(status_code=503, detail="Bot is starting")
+    payload = await request.json()
+    update = Update.de_json(payload, telegram_app.bot)
+    await telegram_app.update_queue.put(update)
+    return {"ok": True}
