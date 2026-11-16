@@ -1,8 +1,41 @@
-"""Gemini-backed Burmese recap script generation is implemented in bot.py.
+def generate_recap_outline(topic: str) -> str:
+    """Build a copyright-aware Burmese recap outline without a paid or age-restricted AI API."""
+    safe_topic = topic.strip() or "[ခေါင်းစဉ်]"
+    return f"""🎬 NEXORA Myanmar Recap — Script Template
 
-This module remains as a small import-compatible wrapper for future integrations.
+ခေါင်းစဉ်: {safe_topic}
+
+⚠️ Spoiler Warning
+ဤဗီဒီယိုတွင် ဇာတ်လမ်းအကြောင်းအရာအချို့ ပါဝင်နိုင်သည်။
+
+၁။ Intro / Hook (30–60 စက္ကန့်)
+ဒီဇာတ်လမ်းကို ဘာကြောင့် စိတ်ဝင်စားဖို့ကောင်းသလဲ။
+[ကိုယ်ပိုင်စကားဖြင့် စတင်မိတ်ဆက်ရန်]
+
+၂။ အခြေခံအကြောင်းအရာ
+ဇာတ်လမ်း၏ နောက်ခံနှင့် အဓိကအယူအဆကို ကိုယ်ပိုင်စကားဖြင့် ရှင်းပြရန်။
+[အသုံးပြုခွင့်ရှိသော source မှ အချက်အလက်ဖြည့်ရန်]
+
+၃။ ဇာတ်ကောင် / အဓိကအယူအဆ သုံးသပ်ချက်
+အဓိကဇာတ်ကောင်၏ ရည်ရွယ်ချက်၊ ဆုံးဖြတ်ချက်နှင့် ပြောင်းလဲမှုကို သုံးသပ်ရန်။
+[အတည်ပြုထားသော အချက်အလက်သာ ထည့်ရန်]
+
+၄။ Theme နှင့် ကိုယ်ပိုင်သုံးသပ်ချက်
+ဇာတ်လမ်းက ပေးလိုသော အတွေးအခေါ်၊ သင်ခန်းစာနှင့် ကိုယ်ပိုင်အမြင်။
+
+၅။ အားသာချက် / အားနည်းချက်
+ဇာတ်ညွှန်း၊ သရုပ်ဆောင်မှု၊ တင်ဆက်ပုံတို့အပေါ် ကိုယ်ပိုင်သုံးသပ်ချက်။
+
+၆။ Conclusion
+အဓိကအချက်များကို အတိုချုပ်ပြီး ကြည့်ရှုသူအတွက် မေးခွန်းတစ်ခု ချန်ထားရန်။
+
+၇။ CTA
+ကြိုက်နှစ်သက်ပါက Like, Comment, Follow/Subscribe လုပ်ရန် ဖိတ်ခေါ်ရန်။
+
+မှတ်ချက်:
+- [ ] အတွင်းရှိနေရာများကို ကိုယ်တိုင်ဖြည့်ပါ။
+- မသိသော plot details မခန့်မှန်းပါနှင့်။
+- မူပိုင်ခွင့်ရှိသော dialogue၊ script သို့မဟုတ် အခြားသူ၏ recap ကို မကူးယူပါနှင့်။
+- မူရင်းရုပ်ရှင်ကို အစားထိုးနိုင်လောက်အောင် ဇာတ်ဝင်ခန်းတိုင်းကို မပြန်ရေးပါနှင့်။
+- အသုံးပြုခွင့်ရှိသော footage နှင့် ကိုယ်ပိုင် commentary ကိုသာ အသုံးပြုပါ။
 """
-from bot import generate_recap
-
-async def generate_recap_outline(topic: str) -> str:
-    return await generate_recap(topic)
