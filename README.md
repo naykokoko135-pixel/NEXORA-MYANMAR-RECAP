@@ -19,7 +19,10 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 
 YouTube long-form worksheets include chapter-based story development, character/background prompts, plot progression, turning points, climax, ending, and review. Duration presets guide the outline; they do not automatically write a timed or fact-checked script. Platform and duration selections are stored in Telegram's per-user session data and may reset when the service restarts.
 
-## Movie research workflow\nUse `/research <movie title>` to record release details, plot checkpoints, uncertain facts, and two source references. This command creates an offline worksheet only; it does not browse the web, verify sources, or generate factual plot summaries. Review your notes against reliable sources before using them in a recap.\n\n## Important limitations
+## Movie research workflow
+Use `/research <movie title>` to record release details, plot checkpoints, uncertain facts, and two source references. This command creates an offline worksheet only; it does not browse the web, verify sources, or generate factual plot summaries. Review your notes against reliable sources before using them in a recap.
+
+## Important limitations
 - This is a writing worksheet, not automatic factual movie research or AI plot generation.
 - English subtitles must be translated and checked by the user; SRT export does not translate.
 - No video rendering, text-to-speech, scheduled queue, or automatic social publishing.
