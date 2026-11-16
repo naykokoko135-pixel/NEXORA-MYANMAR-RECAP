@@ -1,4 +1,3 @@
-import asyncio
 import hmac
 import logging
 import os
@@ -16,6 +15,10 @@ logging.basicConfig(
 )
 log = logging.getLogger("nexora")
 
+# HTTPX logs full Telegram API URLs at INFO level; those URLs contain the bot token.
+# Keep request URLs out of Render logs.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET")
 PUBLIC_URL = os.getenv("RENDER_EXTERNAL_URL")
@@ -23,24 +26,28 @@ telegram_app: Application | None = None
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "မင်္ဂလာပါ။ NEXORA Myanmar Recap Bot ပါ။\n\n"
-        "/status - စနစ်အခြေအနေ\n"
-        "/create <ခေါင်းစဉ်> - Recap script template ပြုလုပ်ရန်\n"
-        "/help - အကူအညီ"
-    )
+    if update.message:
+        await update.message.reply_text(
+            "မင်္ဂလာပါ။ NEXORA Myanmar Recap Bot ပါ။\n\n"
+            "/status - စနစ်အခြေအနေ\n"
+            "/create <ခေါင်းစဉ်> - Recap script template ပြုလုပ်ရန်\n"
+            "/help - အကူအညီ"
+        )
 
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
-        "AI API: မချိတ်ထားပါ (API အသုံးပြုခ $0)\n"
-        "လုပ်ဆောင်နိုင်မှု: Recap outline template + Telegram bot\n"
-        "Video rendering / scheduled queue / social auto-upload: မပါဝင်သေးပါ။"
-    )
+    if update.message:
+        await update.message.reply_text(
+            "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
+            "AI API: မချိတ်ထားပါ (API အသုံးပြုခ $0)\n"
+            "လုပ်ဆောင်နိုင်မှု: Recap outline template + Telegram bot\n"
+            "Video rendering / scheduled queue / social auto-upload: မပါဝင်သေးပါ။"
+        )
 
 
 async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
     topic = " ".join(context.args).strip()
     if not topic:
         await update.message.reply_text(
@@ -53,11 +60,18 @@ async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Commands:\n/start\n/status\n/create <topic>\n/help\n\n"
-        "ဤ Free build တွင် AI API မလိုပါ။ /create သည် ကိုယ်တိုင်ဖြည့်စွက်ရန် "
-        "Recap template ကို ထုတ်ပေးသည်။"
-    )
+    if update.message:
+        await update.message.reply_text(
+            "Commands:\n/start\n/status\n/create <topic>\n/help\n\n"
+            "ဤ Free build တွင် AI API မလိုပါ။ /create သည် ကိုယ်တိုင်ဖြည့်စွက်ရန် "
+            "Recap template ကို ထုတ်ပေးသည်။"
+        )
+
+
+async def on_telegram_error(update: object, context: ContextTypes.DEFAULT_TYPE):
+    # Do not log exception text: request errors can contain credential-bearing URLs.
+    error_name = type(context.error).__name__ if context.error else "UnknownError"
+    log.error("Telegram update handler failed (%s)", error_name)
 
 
 @asynccontextmanager
@@ -75,20 +89,22 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("status", status))
     telegram_app.add_handler(CommandHandler("create", create))
     telegram_app.add_handler(CommandHandler("help", help_cmd))
+    telegram_app.add_error_handler(on_telegram_error)
 
     await telegram_app.initialize()
     await telegram_app.start()
-    await telegram_app.bot.set_webhook(
-        url=f"{PUBLIC_URL.rstrip('/')}/telegram-webhook",
-        secret_token=WEBHOOK_SECRET,
-        allowed_updates=Update.ALL_TYPES,
-        drop_pending_updates=True,
-    )
-    log.info("NEXORA Telegram webhook started")
     try:
+        await telegram_app.bot.set_webhook(
+            url=f"{PUBLIC_URL.rstrip('/')}/telegram-webhook",
+            secret_token=WEBHOOK_SECRET,
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=False,
+        )
+        log.info("NEXORA Telegram webhook started")
         yield
     finally:
-        await telegram_app.bot.delete_webhook()
+        # Keep the Telegram webhook registered when Render stops or sleeps the service.
+        # Telegram can retry pending updates after the service starts again.
         await telegram_app.stop()
         await telegram_app.shutdown()
         telegram_app = None
