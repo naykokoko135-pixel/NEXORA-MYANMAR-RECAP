@@ -6,6 +6,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/start`, `/status`, `/help`
 - `/create <topic>` — create a recap worksheet using the selected presets
 - `/research <movie title>` — create a source-tracking research worksheet before writing
+- `/draft <movie title>` followed by a new line of your checked research notes — create a chapter-by-chapter draft worksheet using only those notes
 - `/platform youtube|tiktok|facebook` — select the publishing platform
 - `/duration <minutes>` — choose a duration valid for the selected platform
 - `/settings` — show the current user's selections
@@ -21,6 +22,9 @@ YouTube long-form worksheets include chapter-based story development, character/
 
 ## Movie research workflow
 Use `/research <movie title>` to record release details, plot checkpoints, uncertain facts, and two source references. This command creates an offline worksheet only; it does not browse the web, verify sources, or generate factual plot summaries. Review your notes against reliable sources before using them in a recap.
+
+## Research notes to recap draft
+Use `/draft Avatar` and put your checked notes on the following lines in the same Telegram message. The bot preserves those notes and organizes prompts into chapters for the selected platform and duration. It does not write a finished factual narrative, independently verify notes, browse the web, or invent missing plot details. Keep source references with your notes and review the result before publishing.
 
 ## Important limitations
 - This is a writing worksheet, not automatic factual movie research or AI plot generation.
