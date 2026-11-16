@@ -89,8 +89,8 @@ async def platform_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["duration"] = DEFAULT_DURATIONS[choice]
     options = ", ".join(PLATFORM_DURATIONS[choice])
     await update.message.reply_text(
-        f"Platform ကို {PLATFORM_NAMES[choice]} အဖြစ် ရွေးပြီးပါပြီ။\\n"
-        f"ရနိုင်သောကြာချိန်: {options}\\n"
+        f"Platform ကို {PLATFORM_NAMES[choice]} အဖြစ် ရွေးပြီးပါပြီ။\n"
+        f"ရနိုင်သောကြာချိန်: {options}\n"
         f"Default: {DEFAULT_DURATIONS[choice]} မိနစ်"
     )
 
@@ -103,7 +103,7 @@ async def duration_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if choice not in PLATFORM_DURATIONS[platform]:
         options = ", ".join(PLATFORM_DURATIONS[platform])
         await update.message.reply_text(
-            f"အသုံးပြုပုံ: /duration 15-20\\n{PLATFORM_NAMES[platform]} အတွက် ရနိုင်သောကြာချိန်: {options}"
+            f"အသုံးပြုပုံ: /duration 15-20\n{PLATFORM_NAMES[platform]} အတွက် ရနိုင်သောကြာချိန်: {options}"
         )
         return
     context.user_data["duration"] = choice
