@@ -21,11 +21,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    configured = all(os.getenv(k) for k in ("OPENAI_API_KEY", "XAI_API_KEY"))
+    configured = bool(os.getenv("OPENAI_API_KEY"))
     await update.message.reply_text(
         "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
-        f"AI API keys configured: {'Yes' if configured else 'Not yet'}\n"
-        "Video rendering / social publishing: နောက်အဆင့်တွင် ချိတ်ဆက်ရပါမည်။"
+        f"OpenAI API key configured: {'Yes' if configured else 'Not yet'}\n"
+        "Grok integration / video rendering / social publishing: နောက်အဆင့်တွင် ချိတ်ဆက်ရပါမည်။"
     )
 
 async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
