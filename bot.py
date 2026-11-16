@@ -14,6 +14,7 @@ from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
 from research_draft import matching_cached_research
+from voiceover_builder import generate_voiceover_draft
 
 from script_writer import (generate_recap_outline, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 
@@ -171,6 +172,35 @@ async def draft3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(worksheet[start_at:start_at + 3900])
 
 
+async def voiceover_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Format creator-checked notes as a downloadable Burmese voice-over draft."""
+    if not update.message or not update.message.text:
+        return
+    first_line, separator, notes = update.message.text.partition("\n")
+    parts = first_line.split(maxsplit=1)
+    topic = parts[1].strip() if len(parts) > 1 else ""
+    if not topic or not separator or not notes.strip():
+        await update.message.reply_text(
+            "အသုံးပြုပုံ:\n/voiceover Avatar\n"
+            "ပြီးနောက် ဇာတ်ကားနဲ့ ပြန်စစ်ထားတဲ့ ဖြစ်ရပ်များကို စာကြောင်းတစ်ကြောင်းစီ ထည့်ပါ။"
+        )
+        return
+    try:
+        draft = generate_voiceover_draft(topic, notes)
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    file_obj = BytesIO(draft.encode("utf-8-sig"))
+    file_obj.name = "nexora_voiceover_draft.txt"
+    await update.message.reply_document(
+        document=InputFile(file_obj, filename=file_obj.name),
+        caption=(
+            "Voice-over မူကြမ်းဖိုင်ပါ။ သင်ပေးထားသော Notes ကိုသာ စီစဉ်ထားပြီး "
+            "AI ရေးသားခြင်း သို့မဟုတ် Fact-check လုပ်ခြင်း မဟုတ်ပါ။"
+        ),
+    )
+
+
 async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
@@ -320,6 +350,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("auto", auto_research_cmd))
     telegram_app.add_handler(CommandHandler("draft", draft_cmd))
     telegram_app.add_handler(CommandHandler("draft3", draft3_cmd))
+    telegram_app.add_handler(CommandHandler("voiceover", voiceover_cmd))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
