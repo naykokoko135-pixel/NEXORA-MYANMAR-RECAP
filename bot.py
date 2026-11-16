@@ -107,9 +107,9 @@ async def srt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(
-            "Commands:\n/start\n/status\n/create <topic>\n/help\n\n"
-            "ဤ Free build တွင် AI API မလိုပါ။ /create သည် ကိုယ်တိုင်ဖြည့်စွက်ရန် "
-            "Recap template နှင့် English subtitle worksheet ကို ထုတ်ပေးသည်။"
+            "Commands:\n/start\n/status\n/create <topic>\n/mode free|ai\n/srt\n/help\n\n"
+            "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
+            "/srt ဖြင့် timestamp ပါသော English စာသားမှ .srt ဖိုင်ထုတ်နိုင်သည်။"
         )
 
 
