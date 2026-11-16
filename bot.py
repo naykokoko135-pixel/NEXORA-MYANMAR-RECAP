@@ -12,6 +12,7 @@ log = logging.getLogger("nexora")
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "မင်္ဂလာပါ။ NEXORA Myanmar Recap Bot ပါ။\n\n"
@@ -20,13 +21,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/help - အကူအညီ"
     )
 
+
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    configured = bool(os.getenv("OPENAI_API_KEY"))
+    grok_configured = bool(os.getenv("XAI_API_KEY"))
+    model = os.getenv("XAI_MODEL", "grok-4.7")
     await update.message.reply_text(
         "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
-        f"OpenAI API key configured: {'Yes' if configured else 'Not yet'}\n"
-        "Grok integration / video rendering / social publishing: နောက်အဆင့်တွင် ချိတ်ဆက်ရပါမည်။"
+        f"Grok API key configured: {'Yes' if grok_configured else 'Not yet'}\n"
+        f"Grok model: {model if grok_configured else 'မချိတ်ဆက်ရသေးပါ'}\n"
+        "လက်ရှိလုပ်ဆောင်နိုင်မှု: Telegram commands + Grok recap outline\n"
+        "Video rendering / scheduled queue / social publishing: မချိတ်ဆက်ရသေးပါ။"
     )
+
 
 async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
     topic = " ".join(context.args).strip()
@@ -36,22 +42,26 @@ async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "ခွင့်ပြုထားသော source/ကိုယ်ပိုင်အကြောင်းအရာကိုသာ အသုံးပြုပါ။"
         )
         return
-    await update.message.reply_text("အကြောင်းအရာကို စီစဉ်နေပါတယ်...")
+
+    await update.message.reply_text("Grok နဲ့ အကြောင်းအရာကို စီစဉ်နေပါတယ်...")
     try:
         outline = await generate_recap_outline(topic)
         await update.message.reply_text(outline[:3900])
-    except Exception as exc:
-        log.exception("Recap outline generation failed")
+    except Exception:
+        log.exception("Grok recap outline generation failed")
         await update.message.reply_text(
-            "Script service မရသေးပါ။ API Key နှင့် configuration ကို စစ်ဆေးပါ။"
+            "Grok Script service မရသေးပါ။ Render ရှိ XAI_API_KEY နှင့် "
+            "XAI_MODEL configuration ကို စစ်ဆေးပါ။"
         )
+
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Commands:\n/start\n/status\n/create <topic>\n/help\n\n"
-        "လက်ရှိ build သည် bot + script-outline prototype ဖြစ်သည်။ "
+        "လက်ရှိ build သည် Telegram bot + Grok script-outline prototype ဖြစ်သည်။ "
         "အလိုအလျောက် video ထုတ်လုပ်ခြင်းနှင့် တင်ခြင်းကို မချိတ်ဆက်ရသေးပါ။"
     )
+
 
 def main():
     if not TOKEN:
@@ -63,6 +73,7 @@ def main():
     app.add_handler(CommandHandler("help", help_cmd))
     log.info("Starting NEXORA Telegram bot polling")
     app.run_polling(drop_pending_updates=True)
+
 
 if __name__ == "__main__":
     main()
