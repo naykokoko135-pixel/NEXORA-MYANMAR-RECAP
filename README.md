@@ -6,12 +6,17 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/start`, `/status`, `/help`
 - `/create <topic>` — create a recap worksheet using the selected presets
 - `/platform youtube|tiktok|facebook` — select the publishing platform
-- `/duration 1-3|3-5|5-7|8-10|12-15` — choose a target duration in minutes
+- `/duration <minutes>` — choose a duration valid for the selected platform
 - `/settings` — show the current user's selections
 - `/mode free|ai` — choose a mode label; AI provider is not connected
 - `/srt` — convert timestamped English subtitle lines into an SRT file
 
-Defaults are YouTube and 5–7 minutes. Platform and duration selections are stored in Telegram's per-user session data and may reset when the service restarts.
+## Platform duration presets
+- YouTube: `8-10`, `12-15`, `15-20`, `20-30`, `30-45`, `45-60` minutes. Default: `15-20`.
+- TikTok: `1-3`, `3-5` minutes. Default: `1-3`.
+- Facebook: `3-5`, `5-7`, `8-10`, `10-15` minutes. Default: `5-7`.
+
+YouTube long-form worksheets include chapter-based story development, character/background prompts, plot progression, turning points, climax, ending, and review. Duration presets guide the outline; they do not automatically write a timed or fact-checked script. Platform and duration selections are stored in Telegram's per-user session data and may reset when the service restarts.
 
 ## Important limitations
 - This is a writing worksheet, not automatic factual movie research or AI plot generation.
