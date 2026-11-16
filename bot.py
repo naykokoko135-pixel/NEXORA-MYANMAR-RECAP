@@ -77,7 +77,7 @@ async def draft_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     topic = parts[1].strip() if len(parts) > 1 else ""
     if not topic or not separator or not notes.strip():
         await update.message.reply_text(
-            "အသုံးပြုပုံ:\\n/draft Avatar\\nပြီးနောက် စာကြောင်းအသစ်မှ စစ်ဆေးထားသော Research Notes များ ထည့်ပါ။"
+            "အသုံးပြုပုံ:\n/draft Avatar\nပြီးနောက် စာကြောင်းအသစ်မှ စစ်ဆေးထားသော Research Notes များ ထည့်ပါ။"
         )
         return
     platform = context.user_data.get("platform", "youtube")
