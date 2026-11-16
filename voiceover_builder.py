@@ -87,3 +87,33 @@ def generate_voiceover_draft(title: str, notes: str) -> str:
         "- ကိုယ်ပိုင်သုံးသပ်ချက်ကို ဇာတ်လမ်းအချက်အလက်မှ ခွဲခြားပါ။\n"
         "- အသုံးပြုမည့် ရုပ်ပုံ၊ ဗီဒီယိုနှင့် အသံများအတွက် လိုအပ်သော ခွင့်ပြုချက် ရှိစေပါ။\n"
     )
+
+
+
+def generate_voiceover_part_files(title: str, notes: str) -> list[str]:
+    """Return three separate text drafts, preserving all supplied notes."""
+    combined = generate_voiceover_draft(title, notes)
+    safe_title = " ".join((title or "").split()).strip()
+    headings = (
+        "PART 1 — မိတ်ဆက်၊ နောက်ခံနှင့် ဇာတ်ကောင်များ",
+        "PART 2 — အဓိကပြဿနာနှင့် ပဋိပက္ခ",
+        "PART 3 — Climax၊ အဆုံးသတ်နှင့် သုံးသပ်ချက်",
+    )
+    starts = [combined.find(heading) for heading in headings]
+    if any(position < 0 for position in starts):
+        raise ValueError("Voice-over အပိုင်း ၃ ပိုင်း ခွဲမရပါ။ Notes ကို ပြန်စစ်ပါ။")
+    ending = combined.find("\n\nနိဂုံးချုပ်", starts[-1])
+    if ending < 0:
+        ending = len(combined)
+    sections = []
+    for index, position in enumerate(starts):
+        stop = starts[index + 1] if index < 2 else ending
+        sections.append(combined[position:stop].strip())
+    warning = (
+        "မှတ်ချက်: စစ်ဆေးထားသော Notes ကိုသာ စီစဉ်ထားခြင်းဖြစ်ပြီး "
+        "AI ရေးသားမှု သို့မဟုတ် Fact-check မဟုတ်ပါ။\n\n"
+    )
+    return [
+        f"NEXORA — {safe_title} — PART {index}/3\n\n{warning}{section}\n"
+        for index, section in enumerate(sections, start=1)
+    ]

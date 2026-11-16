@@ -1,6 +1,6 @@
 import unittest
 
-from voiceover_builder import generate_voiceover_draft
+from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
 
 
 class VoiceoverBuilderTests(unittest.TestCase):
@@ -25,6 +25,16 @@ class VoiceoverBuilderTests(unittest.TestCase):
         for fact in self.notes.splitlines():
             self.assertIn(fact, result)
         self.assertIn("Avatar", result)
+
+    def test_creates_three_separate_files_and_preserves_every_fact(self):
+        files = generate_voiceover_part_files("Avatar", self.notes)
+        self.assertEqual(len(files), 3)
+        combined = "\n".join(files)
+        for fact in self.notes.splitlines():
+            self.assertIn(fact, combined)
+        for index, content in enumerate(files, start=1):
+            self.assertIn(f"PART {index}/3", content)
+        self.assertIn("Fact-check မဟုတ်ပါ", combined)
 
     def test_does_not_claim_to_verify_or_invent_facts(self):
         result = generate_voiceover_draft("Avatar", self.notes)
