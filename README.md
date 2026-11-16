@@ -9,7 +9,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/auto <movie title>` — search public Wikipedia article summaries and source links without an API key
 - `/draft <movie title>` followed by a new line of your checked research notes — create a chapter-by-chapter draft worksheet
 - `/draft3 <movie title>` — create three YouTube planning worksheets using the latest matching `/auto` result, or supply checked notes on following lines
-- `/voiceover <movie title>` followed by checked notes — export a Burmese voice-over draft as a `.txt` file
+- `/voiceover <movie title>` followed by checked notes — export one combined Burmese voice-over draft as a `.txt` file\n- `/voiceover3 <movie title>` followed by checked notes — export three separate part files as `.txt` downloads
 - `/platform youtube|tiktok|facebook` — select the publishing platform
 - `/duration <minutes>` — choose a duration valid for the selected platform
 - `/settings` — show the current user's selections
@@ -96,3 +96,7 @@ GitHub's scheduled workflow can start a little later than the exact minute. The 
 - Use footage, images, music, and source material that you own, have permission to use, or are licensed to use.
 - Write original commentary and verify movie facts before publishing.
 - Keep a human review step before uploading.
+
+
+## Three separate voice-over files
+Send `/voiceover3 <movie title>` followed by at least six creator-checked fact lines. NEXORA exports Part 1, Part 2, and Part 3 as three separate UTF-8 text downloads. The original note order and wording are preserved, with brief generic transitions. This is still a formatter—not an AI scriptwriter, translator, or fact-checker—and it does not guarantee a target runtime.
