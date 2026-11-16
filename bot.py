@@ -13,6 +13,7 @@ from srt_builder import build_srt
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
+from research_draft import matching_cached_research
 
 from script_writer import (generate_recap_outline, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 
@@ -41,6 +42,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/create <ခေါင်းစဉ်> - Free Recap template\n"
             "/research <ဇာတ်ကားအမည်> - Source စစ်ဆေးရန် worksheet\n"
             "/auto <ဇာတ်ကားအမည်> - အခမဲ့ ရင်းမြစ်ရှာရန်\n"
+            "ပြီးနောက် /draft3 <ဇာတ်ကားအမည်> - ရှာထားသော Notes ကို အလိုအလျောက်သုံးရန်\n"
             "/draft <ဇာတ်ကားအမည်> - Research Notes မှ Draft worksheet\n"
             "/draft3 <ဇာတ်ကားအမည်> - YouTube သုံးပိုင်း Draft worksheets\n"
             "/mode free|ai - Mode ရွေးရန်\n"
@@ -102,6 +104,13 @@ async def auto_research_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ResearchLookupError as exc:
         await update.message.reply_text(f"ရှာဖွေမှု မအောင်မြင်ပါ: {exc}")
         return
+    if "ကိုက်ညီသော Wikipedia ဆောင်းပါး မတွေ့ပါ" not in result:
+        context.user_data["last_auto_research_title"] = topic
+        context.user_data["last_auto_research_result"] = result
+        await update.message.reply_text(
+            "Research ရလဒ်ကို ဒီ Telegram session အတွက် သိမ်းထားပါပြီ။ "
+            "အခု /draft3 " + topic + " လို့ပို့ပြီး Worksheet သုံးပိုင်းထုတ်နိုင်ပါတယ်။"
+        )
     for start_at in range(0, len(result), 3900):
         await update.message.reply_text(result[start_at:start_at + 3900])
 
@@ -135,11 +144,23 @@ async def draft3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     first_line, separator, notes = update.message.text.partition("\n")
     parts = first_line.split(maxsplit=1)
     topic = parts[1].strip() if len(parts) > 1 else ""
-    if not topic or not separator or not notes.strip():
-        await update.message.reply_text(
-            "အသုံးပြုပုံ:\n/draft3 Avatar\nပြီးနောက် စာကြောင်းအသစ်မှ စစ်ဆေးထားသော Research Notes များ ထည့်ပါ။"
-        )
+    if not topic:
+        await update.message.reply_text("အသုံးပြုပုံ: /draft3 Avatar")
         return
+    if not (separator and notes.strip()):
+        notes = matching_cached_research(
+            topic,
+            context.user_data.get("last_auto_research_title", ""),
+            context.user_data.get("last_auto_research_result", ""),
+        )
+        if not notes:
+            await update.message.reply_text(
+                "ဒီဇာတ်ကားအတွက် Auto Research မတွေ့သေးပါ။ အရင် /auto Avatar ပို့ပါ။ "
+                "ပြီးရင် /draft3 Avatar လို့ ပို့ပါ။ သို့မဟုတ် /draft3 နောက်တစ်ကြောင်းမှာ "
+                "စစ်ဆေးထားသော Research Notes ကို တိုက်ရိုက်ထည့်နိုင်ပါတယ်။"
+            )
+            return
+        await update.message.reply_text("သိမ်းထားသော Auto Research ကို Draft ထဲ ထည့်နေပါတယ်...")
     duration = context.user_data.get("duration", DEFAULT_DURATIONS["youtube"])
     try:
         worksheet = generate_three_part_draft_worksheets(topic, notes, duration=duration)
@@ -268,6 +289,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/auto သည် Wikipedia မှ source lead များရှာပေးသည်၊ အချက်အလက်ကို ကိုယ်တိုင်ပြန်စစ်ပါ။\n"
             "/draft သည် ပေးထားသော Research Notes ကို worksheet အဖြစ် စီစဉ်ပေးသည်။\n"
             "/draft3 သည် YouTube အတွက် သီးခြား worksheet သုံးခု ထုတ်ပေးသည်။\n"
+            "/auto Avatar ပြီးနောက် /draft3 Avatar ပို့လျှင် ရှာထားသော Notes ကို အလိုအလျောက် ထည့်ပေးသည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော English စာသားမှ .srt ဖိုင်ထုတ်နိုင်သည်။"
         )
