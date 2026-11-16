@@ -38,7 +38,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/srt - English စာတန်းထိုး SRT ဖိုင်ထုတ်ရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
-            "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60 မိနစ်"
+            "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60 မိနစ်\n"
             "/settings - လက်ရှိရွေးချယ်မှုကြည့်ရန်\n"
             "/help - အကူအညီ"
         )
