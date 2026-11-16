@@ -94,15 +94,15 @@ def generate_voiceover_part_files(title: str, notes: str) -> list[str]:
     """Return three separate text drafts, preserving all supplied notes."""
     combined = generate_voiceover_draft(title, notes)
     safe_title = " ".join((title or "").split()).strip()
-    divider = "\\n\\n━━━━━━━━━━━━━━━━━━\\n\\n"
+    divider = "\n\n━━━━━━━━━━━━━━━━━━\n\n"
     sections = combined.split(divider)
     if len(sections) != 3:
         raise ValueError("Voice-over အပိုင်း ၃ ပိုင်း ခွဲမရပါ။ Notes ကို ပြန်စစ်ပါ။")
     warning = (
         "မှတ်ချက်: စစ်ဆေးထားသော Notes ကိုသာ စီစဉ်ထားခြင်းဖြစ်ပြီး "
-        "AI ရေးသားမှု သို့မဟုတ် Fact-check မဟုတ်ပါ။\\n\\n"
+        "AI ရေးသားမှု သို့မဟုတ် Fact-check မဟုတ်ပါ။\n\n"
     )
     return [
-        f"NEXORA — {safe_title} — PART {index}/3\\n\\n{warning}{section.strip()}\\n"
+        f"NEXORA — {safe_title} — PART {index}/3\n\n{warning}{section.strip()}\n"
         for index, section in enumerate(sections, start=1)
     ]

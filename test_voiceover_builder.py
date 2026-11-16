@@ -29,7 +29,7 @@ class VoiceoverBuilderTests(unittest.TestCase):
     def test_creates_three_separate_files_and_preserves_every_fact(self):
         files = generate_voiceover_part_files("Avatar", self.notes)
         self.assertEqual(len(files), 3)
-        combined = "\\n".join(files)
+        combined = "\n".join(files)
         for fact in self.notes.splitlines():
             self.assertIn(fact, combined)
         for index, content in enumerate(files, start=1):

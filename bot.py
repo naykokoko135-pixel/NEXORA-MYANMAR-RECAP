@@ -205,12 +205,12 @@ async def voiceover3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Export the three voice-over sections as separate downloadable text files."""
     if not update.message or not update.message.text:
         return
-    first_line, separator, notes = update.message.text.partition("\\n")
+    first_line, separator, notes = update.message.text.partition("\n")
     parts = first_line.split(maxsplit=1)
     topic = parts[1].strip() if len(parts) > 1 else ""
     if not topic or not separator or not notes.strip():
         await update.message.reply_text(
-            "အသုံးပြုပုံ:\\n/voiceover3 Avatar\\n"
+            "အသုံးပြုပုံ:\n/voiceover3 Avatar\n"
             "ပြီးနောက် ဇာတ်ကားနဲ့ ပြန်စစ်ထားတဲ့ ဖြစ်ရပ်များကို စာကြောင်းတစ်ကြောင်းစီ ထည့်ပါ။"
         )
         return
