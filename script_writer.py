@@ -28,8 +28,9 @@ def generate_recap_outline(topic: str, platform: str = "youtube", duration: str 
     return f"""🎬 NEXORA Myanmar Recap — Free Script Builder
 
 ခေါင်းစဉ်: {safe_topic}
+Platform: {PLATFORM_NAMES[platform]}
 ပုံစံ: Detailed Cinematic Recap
-ရည်မှန်းချိန်: ၅–၇ မိနစ် (လိုသလို ပြင်နိုင်သည်)
+ရည်မှန်းချိန်: {DURATION_PRESETS[duration]} မိနစ်
 
 ━━━━━━━━━━━━━━━━━━
 ⚠️ SPOILER WARNING
@@ -76,6 +77,9 @@ def generate_recap_outline(topic: str, platform: str = "youtube", duration: str 
 နောက်ထပ် Recap တွေအတွက် Follow လုပ်ထားနိုင်ပါတယ်။”
 
 ━━━━━━━━━━━━━━━━━━
+📱 PLATFORM အလိုက် အကြံပြုချက်
+{PLATFORM_GUIDES[platform]}
+
 🎞️ VISUAL & EDITING PLAN
 - Scene 1: ကိုယ်ပိုင်ဖန်တီးထားသော Title Card
 - Scene 2: ခေါင်းစဉ်နှင့် သက်ဆိုင်သည့် ခွင့်ပြုချက်ရှိသော ပုံ/ဗီဒီယို
