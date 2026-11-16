@@ -1,23 +1,32 @@
-"""Turn creator-supplied research notes into a structured recap drafting worksheet.
+"""Turn creator-supplied research notes into structured recap worksheets.
 
-This module does not invent plot details, browse the web, or generate a finished
-narrative. It preserves the supplied notes and gives the creator a chapter plan.
+These helpers do not invent plot details, browse the web, or generate a finished
+narrative. They preserve supplied notes and provide chapter prompts.
 """
 
 from script_writer import PLATFORM_NAMES, PLATFORM_DURATIONS, DEFAULT_DURATIONS, DURATION_PRESETS
 
 
-def generate_draft_worksheet(topic: str, notes: str, platform: str = "youtube", duration: str = "15-20") -> str:
+def _clean_inputs(topic: str, notes: str) -> tuple[str, str]:
     title = " ".join((topic or "").split()).strip() or "[ဇာတ်ကားအမည်]"
     clean_notes = (notes or "").strip()
     if not clean_notes:
         raise ValueError("Research မှတ်စု မပါသေးပါ။ /draft Avatar ပြီးနောက် စာကြောင်းအသစ်မှ မှတ်စုများ ထည့်ပါ။")
     if len(clean_notes) > 10000:
         raise ValueError("မှတ်စုသည် ရှည်လွန်းနေပါသည်။ ၁၀,၀၀၀ အက္ခရာအောက် ခွဲပို့ပါ။")
+    return title, clean_notes
 
+
+def _selected_preset(platform: str, duration: str) -> tuple[str, str]:
     platform = platform if platform in PLATFORM_NAMES else "youtube"
     if duration not in PLATFORM_DURATIONS[platform]:
         duration = DEFAULT_DURATIONS[platform]
+    return platform, duration
+
+
+def generate_draft_worksheet(topic: str, notes: str, platform: str = "youtube", duration: str = "15-20") -> str:
+    title, clean_notes = _clean_inputs(topic, notes)
+    platform, duration = _selected_preset(platform, duration)
 
     if platform == "youtube":
         chapters = [
@@ -65,5 +74,50 @@ Platform: {PLATFORM_NAMES[platform]}
 [ ] မူရင်း dialogue၊ screenplay သို့မဟုတ် အခြားသူ၏ recap ကို မကူးထားပါ။
 [ ] အသုံးပြုမည့် ပုံ၊ footage နှင့် music အတွက် အသုံးပြုခွင့်ရှိသည်။
 
-နောက်တစ်ဆင့်: အခန်းတစ်ခုစီကို ကိုယ်ပိုင်စကားဖြင့် ပြည့်စုံအောင် ရေးပြီး အချက်အလက်နှင့် subtitle ကို လူကိုယ်တိုင် ပြန်စစ်ဆေးပါ။
+နောက်တစ်ဆင့်: အခန်းတစ်ခုစီကို ကိုယ်ပိုင်စကားဖြင့် ပြည့်စုံအောင် ရေးပြီး အချက်အလက်နှင့် subtitle ကို လူကိုယ်တိုင် ပြန်စစ်ဆေးပါ。
 """
+
+
+def generate_three_part_draft_worksheets(topic: str, notes: str, duration: str = "15-20") -> str:
+    """Create three distinct YouTube planning worksheets from creator-checked notes."""
+    title, clean_notes = _clean_inputs(topic, notes)
+    total_minutes = DURATION_PRESETS[duration] if duration in PLATFORM_DURATIONS["youtube"] else DURATION_PRESETS[DEFAULT_DURATIONS["youtube"]]
+    part_minutes = max(1, round(total_minutes / 3))
+    sections = [
+        (
+            "PART 1 — မိတ်ဆက်၊ နောက်ခံနှင့် ဇာတ်ကောင်များ",
+            "ဇာတ်လမ်းစတင်ရာ နေရာ/အချိန်၊ အဓိကဇာတ်ကောင်များ၊ သူတို့၏ ရည်ရွယ်ချက်နှင့် အစပြုအခြေအနေကို ကိုယ်ပိုင်စကားဖြင့် မိတ်ဆက်ပါ။",
+            "ဇာတ်လမ်းနောက်ခံ၊ ဇာတ်ကောင်အမည်/ရည်ရွယ်ချက်၊ အစပြုဖြစ်ရပ်",
+        ),
+        (
+            "PART 2 — အဓိကပြဿနာနှင့် ပဋိပက္ခ",
+            "အဓိကပြဿနာ ဘယ်လိုဖြစ်လာသည်၊ ဇာတ်ကောင်များ၏ ဆုံးဖြတ်ချက်များနှင့် အကျိုးဆက်များကို အကြောင်းရင်း-အကျိုးဆက်အလိုက် ဆက်စပ်ရေးပါ။",
+            "အတည်ပြုထားသော ဖြစ်ရပ်များ၊ ပဋိပက္ခ၊ အလှည့်အပြောင်းများ",
+        ),
+        (
+            "PART 3 — Climax၊ အဆုံးသတ်နှင့် ကိုယ်ပိုင်သုံးသပ်ချက်",
+            "နောက်ဆုံးပဋိပက္ခ၏ ဖြေရှင်းပုံ၊ ဇာတ်ကောင်များ၏ ပြောင်းလဲမှုနှင့် ကိုယ်ပိုင်သုံးသပ်ချက်ကို ရေးပါ။ မသေချာသည့်အချက်ကို မခန့်မှန်းပါနှင့်။",
+            "Climax၊ အဆုံးသတ်၊ ဇာတ်ကောင်ရလဒ်နှင့် သုံးသပ်ချက်",
+        ),
+    ]
+    parts = []
+    for index, (heading, prompt, focus) in enumerate(sections, start=1):
+        parts.append(
+            f"━━━━━━━━━━━━━━━━━━\n🎬 {heading}\n"
+            f"ရည်မှန်းချိန်: ခန့်မှန်း {part_minutes} မိနစ် (စုစုပေါင်း {total_minutes} မိနစ် worksheet)\n"
+            f"ရေးရန်: {prompt}\n"
+            f"အဓိကထားရန်: {focus}\n"
+            "- Source မှ အတည်ပြုထားသောအချက်: [ထည့်ရန်]\n"
+            "- ကိုယ်ပိုင်ရှင်းပြချက်/သုံးသပ်ချက်: [ထည့်ရန်]\n"
+            "- နောက် Part သို့ ဆက်စပ်ချက်: [ထည့်ရန်]\n"
+            "- မသေချာသောအချက်နှင့် စစ်ဆေးရမည့် Source: [ထည့်ရန်]"
+        )
+    return (
+        f"📝 NEXORA — YouTube သုံးပိုင်းခွဲ Draft Worksheets\n"
+        f"ခေါင်းစဉ်: {title}\nစုစုပေါင်းရည်မှန်းချိန်: {total_minutes} မိနစ်\n\n"
+        "မှတ်ချက်: အောက်ပါသည် ဇာတ်ညွှန်းအပြည့်မဟုတ်ဘဲ သီးခြားဖြည့်စွက်ရန် Worksheet သုံးခုဖြစ်သည်။ "
+        "သင်ပေးထားသော Research Notes ကိုသာ အခြေခံပြီး NEXORA က ဇာတ်လမ်းအသစ် မဖန်တီးပါ။\n\n"
+        "၁။ မျှဝေထားသော Research Notes\n" + clean_notes + "\n\n"
+        + "\n\n".join(parts)
+        + "\n\nမထုတ်ဝေမီ ဇာတ်ကားနှင့် Source များကို ပြန်စစ်ပြီး ကိုယ်ပိုင်ဝေဖန်သုံးသပ်ချက် ထည့်ပါ။"
+    )
