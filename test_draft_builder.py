@@ -47,6 +47,19 @@ class DraftBuilderTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             generate_three_part_draft_worksheets("Avatar", "x" * 10001)
 
+    def test_rejects_placeholder_instead_of_real_research_notes(self):
+        with self.assertRaisesRegex(ValueError, "Placeholder"):
+            generate_three_part_draft_worksheets(
+                "Avatar", "ဇာတ်ကားနဲ့တိုက်စစ်ထားတဲ့ Research Notes တွေ ဒီမှာထည့်ပါ။"
+            )
+
+    def test_duration_is_rounded_to_readable_range(self):
+        result = generate_three_part_draft_worksheets(
+            "Avatar", "Verified creator note.", duration="15-20"
+        )
+        self.assertIn("အပိုင်းတစ်ခုလျှင် ၅–၇ မိနစ်ခန့်", result)
+        self.assertNotIn("5.83333", result)
+
 
 if __name__ == "__main__":
     unittest.main()
