@@ -11,7 +11,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from srt_builder import build_srt
 from research_builder import generate_research_worksheet
-from draft_builder import generate_draft_worksheet
+from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
 
 from script_writer import (generate_recap_outline, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
@@ -41,6 +41,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/create <ခေါင်းစဉ်> - Free Recap template\n"
             "/research <ဇာတ်ကားအမည်> - Source စစ်ဆေးရန် worksheet\n"
             "/auto <ဇာတ်ကားအမည်> - အခမဲ့ ရင်းမြစ်ရှာရန်\n"
+            "/draft <ဇာတ်ကားအမည်> - Research Notes မှ Draft worksheet\n"
+            "/draft3 <ဇာတ်ကားအမည်> - YouTube သုံးပိုင်း Draft worksheets\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - English စာတန်းထိုး SRT ဖိုင်ထုတ်ရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
@@ -119,6 +121,28 @@ async def draft_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     duration = context.user_data.get("duration", DEFAULT_DURATIONS[platform])
     try:
         worksheet = generate_draft_worksheet(topic, notes, platform=platform, duration=duration)
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    for start_at in range(0, len(worksheet), 3900):
+        await update.message.reply_text(worksheet[start_at:start_at + 3900])
+
+
+async def draft3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Build three separate YouTube planning worksheets from creator-checked notes."""
+    if not update.message or not update.message.text:
+        return
+    first_line, separator, notes = update.message.text.partition("\n")
+    parts = first_line.split(maxsplit=1)
+    topic = parts[1].strip() if len(parts) > 1 else ""
+    if not topic or not separator or not notes.strip():
+        await update.message.reply_text(
+            "အသုံးပြုပုံ:\n/draft3 Avatar\nပြီးနောက် စာကြောင်းအသစ်မှ စစ်ဆေးထားသော Research Notes များ ထည့်ပါ။"
+        )
+        return
+    duration = context.user_data.get("duration", DEFAULT_DURATIONS["youtube"])
+    try:
+        worksheet = generate_three_part_draft_worksheets(topic, notes, duration=duration)
     except ValueError as exc:
         await update.message.reply_text(str(exc))
         return
@@ -242,6 +266,8 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60\n"
             "TikTok: 1-3, 3-5\nFacebook: 3-5, 5-7, 8-10, 10-15\n\n"
             "/auto သည် Wikipedia မှ source lead များရှာပေးသည်၊ အချက်အလက်ကို ကိုယ်တိုင်ပြန်စစ်ပါ။\n"
+            "/draft သည် ပေးထားသော Research Notes ကို worksheet အဖြစ် စီစဉ်ပေးသည်။\n"
+            "/draft3 သည် YouTube အတွက် သီးခြား worksheet သုံးခု ထုတ်ပေးသည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော English စာသားမှ .srt ဖိုင်ထုတ်နိုင်သည်။"
         )
@@ -271,6 +297,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("research", research_cmd))
     telegram_app.add_handler(CommandHandler("auto", auto_research_cmd))
     telegram_app.add_handler(CommandHandler("draft", draft_cmd))
+    telegram_app.add_handler(CommandHandler("draft3", draft3_cmd))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
