@@ -52,18 +52,17 @@ The saved result is matched by movie title and is only kept in the bot's in-memo
 
 ## Voice-over draft export
 
-Send `/voiceover Avatar` and put your film-checked notes on the following lines. NEXORA formats those exact notes into a simple Burmese voice-over draft and sends a UTF-8 text file that can be edited on a phone. It adds only generic opening/closing wording; it does not invent plot events, expand sparse notes into a full 15–20 minute script, verify facts, translate, or connect to an AI provider. Add enough detailed, checked notes and your own commentary before recording.
+Send `/voiceover Avatar` and put at least six film-checked fact lines on the following lines. NEXORA rejects sparse notes and obvious placeholders instead of exporting an almost-empty draft. It divides the supplied notes, in their original order, into three balanced sections: Part 1 (setting/characters), Part 2 (conflict/turning points), and Part 3 (climax/ending). It adds generic Burmese transitions but preserves creator notes as supplied.
 
 Example:
 
 ```text
 /voiceover Avatar
-Jake arrives on Pandora.
-Jake meets Neytiri.
-[Add each verified event and its source.]
+[At least six checked facts, one per line]
+[Keep them in story order and include source references]
 ```
 
-This feature is a free deterministic formatter and does not require an API key.
+This remains a deterministic free formatter, not an AI writer, translator, or fact-checker. It does not invent missing plot events or guarantee a 15–20 minute runtime. Wikipedia search snippets alone are not enough; review facts against the film and reliable sources, and add original commentary before recording.
 
 ## Daily automatic research (5:00 AM Thailand time)
 The `.github/workflows/daily-auto.yml` workflow runs daily at 22:00 UTC (05:00 Asia/Bangkok on the following local date). It chooses one title per day from a built-in rotation, runs the free Wikipedia source lookup, and sends the research leads plus a three-part YouTube planning structure to the configured Telegram chat. The three parts are planning sections, not three finished scripts or videos.
