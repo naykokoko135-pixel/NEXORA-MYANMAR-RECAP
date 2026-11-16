@@ -30,7 +30,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "မင်္ဂလာပါ။ NEXORA Myanmar Recap Bot ပါ။\n\n"
             "/status - စနစ်အခြေအနေ\n"
-            "/create <ခေါင်းစဉ်> - Recap script template ပြုလုပ်ရန်\n"
+            "/create <ခေါင်းစဉ်> - Recap template + English subtitle worksheet\n"
             "/help - အကူအညီ"
         )
 
@@ -64,7 +64,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "Commands:\n/start\n/status\n/create <topic>\n/help\n\n"
             "ဤ Free build တွင် AI API မလိုပါ။ /create သည် ကိုယ်တိုင်ဖြည့်စွက်ရန် "
-            "Recap template ကို ထုတ်ပေးသည်။"
+            "Recap template နှင့် English subtitle worksheet ကို ထုတ်ပေးသည်။"
         )
 
 
