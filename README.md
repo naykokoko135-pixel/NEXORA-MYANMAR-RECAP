@@ -6,6 +6,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/start`, `/status`, `/help`
 - `/create <topic>` — create a recap worksheet using the selected presets
 - `/research <movie title>` — create a source-tracking research worksheet before writing
+- `/auto <movie title>` — search public Wikipedia article summaries and source links without an API key
 - `/draft <movie title>` followed by a new line of your checked research notes — create a chapter-by-chapter draft worksheet using only those notes
 - `/platform youtube|tiktok|facebook` — select the publishing platform
 - `/duration <minutes>` — choose a duration valid for the selected platform
@@ -23,11 +24,15 @@ YouTube long-form worksheets include chapter-based story development, character/
 ## Movie research workflow
 Use `/research <movie title>` to record release details, plot checkpoints, uncertain facts, and two source references. This command creates an offline worksheet only; it does not browse the web, verify sources, or generate factual plot summaries. Review your notes against reliable sources before using them in a recap.
 
+## Automatic source discovery
+Use `/auto Avatar` to search English Wikipedia for up to three relevant article summaries and source links. The lookup uses the public MediaWiki API and requires no API key or paid AI service. Wikipedia is community-edited, results may be incomplete or unrelated, and this feature does not verify facts against the movie or official sources. Treat results as research leads and cross-check them before writing.
+
 ## Research notes to recap draft
 Use `/draft Avatar` and put your checked notes on the following lines in the same Telegram message. The bot preserves those notes and organizes prompts into chapters for the selected platform and duration. It does not write a finished factual narrative, independently verify notes, browse the web, or invent missing plot details. Keep source references with your notes and review the result before publishing.
 
 ## Important limitations
-- This is a writing worksheet, not automatic factual movie research or AI plot generation.
+- `/auto` automates initial public-source discovery only; it does not create a complete verified plot summary or finished recap script.
+- This is not a connection to the ChatGPT conversation or an AI writing provider.
 - English subtitles must be translated and checked by the user; SRT export does not translate.
 - No video rendering, text-to-speech, scheduled queue, or automatic social publishing.
 - The AI mode does not call an AI service and does not trigger paid fallback.
