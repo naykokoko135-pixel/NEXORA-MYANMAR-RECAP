@@ -21,6 +21,9 @@ class DailyAutoTests(unittest.TestCase):
         self.assertIn("Part 2", result)
         self.assertIn("Part 3", result)
         self.assertIn("ဇာတ်ညွှန်းအပြည့်", result)
+        self.assertIn("လူကြိုက်များမှု (Popularity)", result)
+        self.assertIn("ဇာတ်လမ်းအရ အကောင်းဆုံးဖြစ်မှု", result)
+        self.assertIn("အချက်အလက်မရရှိ", result)
 
     def test_long_message_is_split(self):
         chunks = split_telegram_text("x" * 8000)
