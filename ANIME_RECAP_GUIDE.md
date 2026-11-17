@@ -6,7 +6,7 @@ NEXORA is being prepared for four animation categories:
 3. Cartoon
 4. Donghua
 
-The daily research rotation contains curated titles across all four categories. It is an evergreen candidate catalogue, not a real-time popularity ranking. A title must be checked against current platform interest (recent views, upload date, search interest, and audience response) before being labelled trending or popular. The existing free research lookup provides Wikipedia leads only; it does not measure current views.
+The daily research rotation contains curated titles across all four categories and includes candidates from multiple countries. It is an evergreen candidate catalogue, not a real-time popularity ranking. Selected international titles display a country/region label; other titles must be checked against reliable sources before their origin is stated. A title must be checked against current platform interest (recent views, upload date, search interest, and audience response) before being labelled trending or popular. The existing free research lookup provides Wikipedia leads only; it does not measure current views.
 
 
 ## International coverage
@@ -14,9 +14,11 @@ The daily research rotation contains curated titles across all four categories. 
 NEXORA's four categories are not limited to Myanmar or any single country. Research and recap candidates may come from worldwide releases, including (but not limited to):
 - Japan: anime and animated films
 - China: donghua and 3D animation
-- South Korea: animation and web-animation releases
+- South Korea: Pororo, Larva, Pucca and other animation/web-animation candidates
 - United States and Canada: 3D animation and cartoons
-- Europe and other regions: animated films and series
+- France and the United Kingdom: animated series and films
+- Spain and India: animated films and series
+- Other regions: add candidates after checking their origin and rights information
 
 Country and language are discovery filters, not quality or popularity rankings. Keep the original title, country/region, original language, release year, and the exact film/season/arc in each research worksheet when that information is verifiable. Add Burmese explanations/transliteration for names where useful. Do not infer a title's country from its language or art style; verify it from a reliable source.
 
