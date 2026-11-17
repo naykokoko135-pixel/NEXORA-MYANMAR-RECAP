@@ -60,6 +60,22 @@ class VoiceoverBuilderTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "နေရာလွတ် Template"):
             generate_voiceover_part_files("Avatar", placeholders)
 
+    def test_auto_research_headings_and_sources_do_not_count_as_facts(self):
+        auto_result = "\n".join([
+            "🔎 NEXORA Auto Research — Avatar",
+            "အောက်ပါအချက်များသည် Wikipedia ရှာဖွေမှုမှ ရရှိသော တိုတောင်းသည့် အစိတ်အပိုင်းများသာ ဖြစ်သည်။",
+            "အတည်ပြုထားသော ဇာတ်လမ်းအကျဉ်း မဟုတ်ပါ။",
+            "1. Avatar (အမည်ကိုက်ညီသော ရလဒ်)",
+            "Avatar is a science fiction film.",
+            "Source: https://en.wikipedia.org/wiki/Avatar",
+            "2. Avatar: The Last Airbender (ဆက်စပ်ရလဒ် — အမည်/ဇာတ်ကားကို ပြန်စစ်ပါ)",
+            "An unrelated animated television series.",
+            "Source: https://en.wikipedia.org/wiki/Avatar:_The_Last_Airbender",
+            "နောက်တစ်ဆင့် — Source link များကို ဖွင့်ပြီး ရုပ်ရှင်နှင့် ကိုက်ညီမှုကို စစ်ပါ။",
+        ])
+        with self.assertRaisesRegex(ValueError, "အနည်းဆုံး ၆ ကြောင်း"):
+            generate_voiceover_part_files("Avatar", auto_result)
+
     def test_strips_placeholder_lines_when_real_notes_are_present(self):
         notes = self.notes + "\nအရေးကြီးဖြစ်ရပ် ...\nအဆုံးသတ် ..."
         files = generate_voiceover_part_files("Avatar", notes)

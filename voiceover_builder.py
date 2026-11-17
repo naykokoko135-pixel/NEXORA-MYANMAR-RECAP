@@ -19,6 +19,19 @@ def _clean_notes(notes: str) -> list[str]:
             continue
         if any(line.lower().startswith(marker.lower()) for marker in PLACEHOLDER_MARKERS):
             continue
+        # Search headings and source metadata are not plot facts.
+        lowered = line.casefold()
+        if (
+            lowered.startswith(("source:", "http://", "https://"))
+            or "nexora auto research" in lowered
+            or "wikipedia" in lowered
+            or "အောက်ပါအချက်များသည်" in line
+            or "အတည်ပြုထားသော ဇာတ်လမ်းအကျဉ်း မဟုတ်ပါ" in line
+            or "ဆက်စပ်ရလဒ်" in line
+            or "အမည်ကိုက်ညီသော ရလဒ်" in line
+            or "နောက်တစ်ဆင့်" in line
+        ):
+            continue
         line = re.sub(r"^(?:[-*•✓]|\d+[.)])\s*", "", line).strip()
         # Ignore template labels followed only by ellipses/underscores; these are not facts.
         placeholder_match = re.search(r"(?:\.{2,}|…+|_{2,})\s*$", line)
