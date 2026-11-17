@@ -573,6 +573,22 @@ async def health():
     return {"status": "ok", "telegram": telegram_app is not None}
 
 
+@web_app.get("/chatgpt/bridge-health")
+async def chatgpt_bridge_health():
+    """Expose configuration presence only; never return secret values or chat IDs."""
+    try:
+        chat_id_configured = int(os.getenv("CHATGPT_BRIDGE_CHAT_ID", "")) > 0
+    except ValueError:
+        chat_id_configured = False
+    return {
+        "status": "ok",
+        "telegram": telegram_app is not None,
+        "bridge_api_key_configured": bool(os.getenv("CHATGPT_BRIDGE_API_KEY")),
+        "bridge_chat_id_configured": chat_id_configured,
+        "bridge_ready": bool(os.getenv("CHATGPT_BRIDGE_API_KEY")) and chat_id_configured and telegram_app is not None,
+    }
+
+
 @web_app.post("/telegram-webhook")
 async def telegram_webhook(
     request: Request,
