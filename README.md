@@ -78,11 +78,18 @@ To enable delivery:
 
 GitHub's scheduled workflow can start a little later than the exact minute. The bot's Render Free web service does not need to stay awake for the GitHub Actions job.
 
+
+## Basic MP4 rendering from Telegram
+
+The first rendering step is a simple slideshow: send `/render`, upload 1–12 JPG/PNG/WEBP images and one narration audio file (MP3/M4A/WAV/OGG, up to 20 MB and 10 minutes), then send `/render finish`. NEXORA returns a 720p MP4 with the images timed across the narration. Use `/render cancel` to clear the current session. The media is held in the running bot session and is not a permanent project archive.
+
+This is not automatic text-to-speech, movie-footage generation, AI scene selection, or social auto-upload. Provide images/audio that you own or are licensed to use. Keep a human review step before publishing.
+
 ## Important limitations
 - `/auto` automates initial public-source discovery only; it does not create a complete verified plot summary or finished recap script.
 - This is not a connection to the ChatGPT conversation or an AI writing provider.
 - English subtitles must be translated and checked by the user; SRT export does not translate.
-- No video rendering, text-to-speech, scheduled queue, or automatic social publishing.
+- No automatic text-to-speech, AI scene selection, scheduled video queue, or automatic social publishing.
 - The AI mode does not call an AI service and does not trigger paid fallback.
 - Free hosting may sleep or restart; per-user session selections are not permanent storage.
 
