@@ -20,7 +20,7 @@ class EpisodeSelectionGuideTests(unittest.TestCase):
         plan = generate_all_platform_plan("Pororo")
         self.assertIn("လူကြိုက်များ + အကောင်းဆုံး Episode ရွေးချယ်မှု", plan)
         self.assertIn("Season / Episode", plan)
-        self.assertIn("YouTube", plan)
+        self.assertIn("YOUTUBE", plan)
         self.assertIn("TikTok", plan)
 
 
