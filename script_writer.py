@@ -164,13 +164,48 @@ SRT FORMAT နမူနာ
 """
 
 
+# Known title metadata is intentionally conservative. Unknown titles are never
+# assigned a genre from their name alone.
+TITLE_CLASSIFICATIONS = {
+    "pororo": ("3D Animation / Children's Series", "South Korea"),
+    "pororo the little penguin": ("3D Animation / Children's Series", "South Korea"),
+    "larva": ("3D Animation / Comedy Series", "South Korea"),
+    "pucca": ("Animated Comedy Series", "South Korea"),
+    "the haunted house: the secret of the ghost ball": ("3D Animation / Fantasy Series", "South Korea"),
+    "leafie, a hen into the wild": ("2D Animated Film", "South Korea"),
+    "miraculous: tales of ladybug & cat noir": ("3D CGI Animated Series", "France"),
+    "shaun the sheep": ("Stop-motion Animated Series", "United Kingdom"),
+    "klaus": ("2D Animated Film", "Spain"),
+    "motu patlu": ("3D Animation / Comedy Series", "India"),
+    "chhota bheem": ("2D Animated Children's Series", "India"),
+    "the king's avatar": ("Donghua", "China"),
+    "soul land": ("Donghua / 3D Animation", "China"),
+    "the daily life of the immortal king": ("Donghua", "China"),
+    "battle through the heavens": ("Donghua / 3D Animation", "China"),
+    "perfect world": ("Donghua / 3D Animation", "China"),
+    "link click": ("Donghua", "China"),
+    "heaven official's blessing": ("Donghua", "China"),
+    "fog hill of five elements": ("Donghua", "China"),
+}
+
+
+def classify_recap_title(topic: str) -> tuple[str, str]:
+    """Return verified known category/region or an explicit verification label."""
+    key = " ".join((topic or "").casefold().split()).strip()
+    return TITLE_CLASSIFICATIONS.get(
+        key, ("အမျိုးအစားကို ရင်းမြစ်ဖြင့် အတည်ပြုရန်", "နိုင်ငံ/ဒေသကို ရင်းမြစ်ဖြင့် အတည်ပြုရန်")
+    )
+
+
 def generate_all_platform_plan(topic: str) -> str:
     """Create explicit three-part duration plans for YouTube, Facebook, and TikTok."""
     safe_topic = " ".join((topic or "").split()).strip() or "[ဇာတ်လမ်းအမည်]"
+    category, region = classify_recap_title(safe_topic)
     return f"""🎬 NEXORA — PLATFORM သုံးခုလုံးအတွက် Recap အစီအစဉ်
 
 ခေါင်းစဉ်: {safe_topic}
-အမျိုးအစား: Anime / 3D Animation / Cartoon / Donghua (သက်ဆိုင်ရာကို ရွေးချယ်အတည်ပြုရန်)
+အမျိုးအစား: {category}
+နိုင်ငံ/ဒေသ: {region}
 
 ━━━━━━━━━━━━━━━━━━
 1) YOUTUBE — Long-form Recap
