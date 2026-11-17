@@ -102,3 +102,15 @@ GitHub's scheduled workflow can start a little later than the exact minute. The 
 
 ## Three separate voice-over files
 Send `/voiceover3 <movie title>` followed by at least six creator-checked fact lines. NEXORA exports Part 1, Part 2, and Part 3 as three separate UTF-8 text downloads. The original note order and wording are preserved, with brief generic transitions. This is still a formatter—not an AI scriptwriter, translator, or fact-checker—and it does not guarantee a target runtime.
+
+
+## Automatic privacy-safe GitHub error reports
+NEXORA can create a GitHub Issue automatically when a Telegram update handler raises an unhandled exception.
+
+To enable it:
+1. Create a fine-grained GitHub personal access token restricted to this repository, with **Issues: Read and write** permission only.
+2. In Render, open the NEXORA web service's **Environment** settings and add `GITHUB_ERROR_REPORT_TOKEN` with that token as its value.
+3. Add `GITHUB_REPOSITORY` with value `naykokoko135-pixel/NEXORA-MYANMAR-RECAP` (optional for this repository).
+4. Save changes and let Render redeploy.
+
+The token is stored only in Render Environment; never paste it into Telegram, ChatGPT, GitHub source files, or screenshots. The reporter excludes Telegram message text, user/chat IDs, exception messages, and environment values. Duplicate errors with the same code fingerprint are limited to one report per 10 minutes per running process. If the token is not configured, normal bot operation continues and no GitHub report is sent. This reports unhandled Telegram handler exceptions; it does not automatically diagnose or modify code.
