@@ -197,6 +197,46 @@ def classify_recap_title(topic: str) -> tuple[str, str]:
     )
 
 
+def generate_episode_selection_guide() -> str:
+    """Explain how to shortlist popular and high-quality episodes without inventing metrics."""
+    return """⭐ လူကြိုက်များ + အကောင်းဆုံး Episode ရွေးချယ်မှု
+
+A) လူကြိုက်များမှု (Popularity) — ၁၀၀ မှတ်
+- တရားဝင် Platform/Channel မှ Episode view count နှင့် အချိန်ကာလအလိုက် view တိုးနှုန်း: ၃၀ မှတ်
+- ပရိသတ် engagement (like/comment/share ရရှိနိုင်သည့် အများပြည်သူမြင်နိုင်သောအချက်): ၂၅ မှတ်
+- ယုံကြည်ရသော Episode rating: ၂၅ မှတ်
+- Rating ပေးသူ/မဲအရေအတွက်နှင့် အချက်အလက်ယုံကြည်နိုင်မှု: ၂၀ မှတ်
+
+B) ဇာတ်လမ်းအရ အကောင်းဆုံးဖြစ်မှု (Story Quality) — ၁၀၀ မှတ်
+- ဇာတ်လမ်းအလှည့်အပြောင်းနှင့် အရေးပါမှု: ၂၅ မှတ်
+- ဇာတ်ကောင်ဖွံ့ဖြိုးမှုနှင့် ဆုံးဖြတ်ချက်: ၂၅ မှတ်
+- အစ၊ အလယ်၊ အဆုံး ပြည့်စုံမှု: ၂၀ မှတ်
+- စိတ်ဝင်စားဖွယ် Hook နှင့် payoff: ၂၀ မှတ်
+- ကိုယ်ပိုင်သုံးသပ်ချက်အတွက် အကြောင်းအရာတန်ဖိုး: ၁၀ မှတ်
+
+C) ရွေးချယ်မှုစည်းမျဉ်း
+- လူကြိုက်များမှု Top episodes နှင့် ဇာတ်လမ်းအရ အကောင်းဆုံး episodes ကို သီးခြားစီ စာရင်းထုတ်ပါ။
+- နှစ်မျိုးစလုံးတွင် ထိပ်တန်းရောက်သည့် Episode များကို ပထမဦးစားပေး Recap လုပ်ပါ။
+- Episode တစ်ခုချင်းစီ၏ Season/Episode နံပါတ်၊ အမည်၊ ထုတ်လွှင့်ရက်နှင့် ရင်းမြစ်ကို မှတ်တမ်းတင်ပါ။
+- View count များကို တူညီသော platform နှင့် အချိန်ကာလအတွင်းသာ နှိုင်းယှဉ်ပါ။
+- မရရှိနိုင်သော view/rating/share ကိန်းဂဏန်းကို မဖြည့်ပါနှင့်။ မသိလျှင် “အချက်အလက်မရရှိ” ဟု မှတ်ပါ။
+- တရားဝင်အချက်အလက် မလုံလောက်ပါက လူကြိုက်များမှုအဆင့်ကို “အတည်မပြုရသေး” ဟု ဖော်ပြပါ။
+
+D) Episode တစ်ခုချင်းစီအတွက် Research Worksheet
+- Season / Episode:
+- Episode ခေါင်းစဉ်:
+- တရားဝင်ရင်းမြစ်:
+- View count / စစ်ဆေးသည့်နေ့:
+- Rating / မဲအရေအတွက်:
+- လူကြိုက်များမှုအမှတ်:
+- ဇာတ်လမ်းအရည်အသွေးအမှတ်:
+- ဘာကြောင့် ရွေးချယ်သလဲ:
+- Spoiler အကျဉ်းနှင့် အဓိကဖြစ်ရပ်:
+- Recap အတွက် ကိုယ်ပိုင်သုံးသပ်ချက်:
+
+မှတ်ချက်: ဒီအမှတ်ပေးစနစ်သည် အချက်အလက်ရှိမှသာ အသုံးပြုရန်ဖြစ်ပြီး လက်ရှိအလိုအလျောက် live ranking ရှာဖွေနေခြင်း မဟုတ်ပါ။"""
+
+
 def generate_all_platform_plan(topic: str) -> str:
     """Create explicit three-part duration plans for YouTube, Facebook, and TikTok."""
     safe_topic = " ".join((topic or "").split()).strip() or "[ဇာတ်လမ်းအမည်]"
@@ -206,6 +246,8 @@ def generate_all_platform_plan(topic: str) -> str:
 ခေါင်းစဉ်: {safe_topic}
 အမျိုးအစား: {category}
 နိုင်ငံ/ဒေသ: {region}
+
+{generate_episode_selection_guide()}
 
 ━━━━━━━━━━━━━━━━━━
 1) YOUTUBE — Long-form Recap
