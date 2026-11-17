@@ -441,7 +441,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
     telegram_app.add_handler(CommandHandler("settings", settings_cmd))
     telegram_app.add_handler(CommandHandler("help", help_cmd))
-    telegram_app.add_error_handler(on_telegram_error)
+    telegram_app.add_error_handler(on_telegram_error, block=False)
 
     await telegram_app.initialize()
     await telegram_app.start()

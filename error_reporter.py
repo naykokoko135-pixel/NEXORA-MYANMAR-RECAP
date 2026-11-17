@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 _REPO_DEFAULT = "naykokoko135-pixel/NEXORA-MYANMAR-RECAP"
 _COOLDOWN_SECONDS = 600
 _last_sent: dict[str, float] = {}
+_in_flight: set[str] = set()
 _lock = threading.Lock()
 
 
@@ -29,17 +30,27 @@ def _safe_frame_summary(exc: BaseException) -> str:
 
 
 def _claim_report(key: str) -> bool:
+    """Reserve a fingerprint while sending; suppress active and recently successful reports."""
     now = time.monotonic()
     with _lock:
         previous = _last_sent.get(key)
+        if key in _in_flight:
+            return False
         if previous is not None and now - previous < _COOLDOWN_SECONDS:
             return False
-        _last_sent[key] = now
-        # Bound memory if a process runs for a long time.
+        _in_flight.add(key)
         for old_key, sent_at in list(_last_sent.items()):
             if now - sent_at >= _COOLDOWN_SECONDS:
                 _last_sent.pop(old_key, None)
     return True
+
+
+def _finish_report(key: str, success: bool) -> None:
+    """Release the in-flight reservation and cool down only successful submissions."""
+    with _lock:
+        _in_flight.discard(key)
+        if success:
+            _last_sent[key] = time.monotonic()
 
 
 def report_error_to_github(exc: BaseException, *, update_kind: str = "telegram_update") -> bool:
@@ -58,36 +69,40 @@ def report_error_to_github(exc: BaseException, *, update_kind: str = "telegram_u
     if not _claim_report(fingerprint):
         return False
 
-    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    title = f"[NEXORA Error] {error_type} ({fingerprint})"
-    body = (
-        "Automated privacy-safe error report from the NEXORA Telegram service.\n\n"
-        f"- Time (UTC): {timestamp}\n"
-        f"- Error type: `{error_type}`\n"
-        f"- Handler: `{update_kind}`\n"
-        f"- Fingerprint: `{fingerprint}`\n\n"
-        "### Code locations\n"
-        f"{frames}\n\n"
-        "### Privacy\n"
-        "This report intentionally excludes Telegram message text, user/chat IDs, "
-        "exception messages, environment values, and request URLs.\n"
-    )
-    payload = json.dumps({"title": title, "body": body, "labels": ["bug"]}).encode("utf-8")
-    request = Request(
-        f"https://api.github.com/repos/{repository}/issues",
-        data=payload,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "X-GitHub-Api-Version": "2022-11-28",
-            "Content-Type": "application/json",
-            "User-Agent": "NEXORA-Error-Reporter",
-        },
-        method="POST",
-    )
+    success = False
     try:
+        timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        title = f"[NEXORA Error] {error_type} ({fingerprint})"
+        body = (
+            "Automated privacy-safe error report from the NEXORA Telegram service.\n\n"
+            f"- Time (UTC): {timestamp}\n"
+            f"- Error type: `{error_type}`\n"
+            f"- Handler: `{update_kind}`\n"
+            f"- Fingerprint: `{fingerprint}`\n\n"
+            "### Code locations\n"
+            f"{frames}\n\n"
+            "### Privacy\n"
+            "This report intentionally excludes Telegram message text, user/chat IDs, "
+            "exception messages, environment values, and request URLs.\n"
+        )
+        payload = json.dumps({"title": title, "body": body, "labels": ["bug"]}).encode("utf-8")
+        request = Request(
+            f"https://api.github.com/repos/{repository}/issues",
+            data=payload,
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {token}",
+                "X-GitHub-Api-Version": "2022-11-28",
+                "Content-Type": "application/json",
+                "User-Agent": "NEXORA-Error-Reporter",
+            },
+            method="POST",
+        )
         with urlopen(request, timeout=8) as response:
-            return 200 <= response.status < 300
+            success = 200 <= response.status < 300
+        return success
     except (HTTPError, URLError, TimeoutError, OSError, ValueError):
         # Never log response bodies or request headers; they may contain secrets.
         return False
+    finally:
+        _finish_report(fingerprint, success)
