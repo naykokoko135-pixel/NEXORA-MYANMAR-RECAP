@@ -9,6 +9,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/auto <movie title>` — search public Wikipedia article summaries and source links without an API key
 - `/draft <movie title>` followed by a new line of your checked research notes — create a chapter-by-chapter draft worksheet
 - `/draft3 <movie title>` — create three YouTube planning worksheets using the latest matching `/auto` result, or supply checked notes on following lines
+- `/allplatforms <title>` — show explicit three-part duration plans for YouTube, Facebook, and TikTok
 - `/voiceover <movie title>` followed by checked notes — export one combined Burmese voice-over draft as a `.txt` file\n- `/voiceover3 <movie title>` followed by checked notes — export three separate part files as `.txt` downloads
 - `/platform youtube|tiktok|facebook` — select the publishing platform
 - `/duration <minutes>` — choose a duration valid for the selected platform
@@ -66,8 +67,8 @@ This remains a deterministic free formatter, not an AI writer, translator, or fa
 
 For three separate downloads, use `/voiceover3 Avatar` as the first line and put checked facts on new lines in story order. Do not paste the complete `/auto` result as if it were a script: search headings, related results, and source links are not plot facts, and short Wikipedia excerpts alone will be rejected if fewer than six usable fact lines remain.
 
-## Daily automatic research (5:00 AM Thailand time)
-The `.github/workflows/daily-auto.yml` workflow runs daily at 22:00 UTC (05:00 Asia/Bangkok on the following local date). It chooses one title per day from a built-in rotation, runs the free Wikipedia source lookup, and sends the research leads plus a three-part YouTube planning structure to the configured Telegram chat. The three parts are planning sections, not three finished scripts or videos.
+## Animation categories and three-platform recap plan\n\nThe daily title rotation includes Anime, 3D Animation, Cartoon, and Donghua candidates. Use `/allplatforms <title>` to print the recommended split: YouTube 3 × 8–10 minutes (24–30 minutes total), Facebook 3 × 3–5 minutes (9–15 minutes total), and TikTok 3 × 1–3 minutes (3–9 minutes total). Part 1 covers the hook, world, characters, and setup; Part 2 covers the central conflict and turning points; Part 3 covers the climax/resolution within the stated film/season/arc and original commentary. Create separate edits for each platform.\n\nThe daily list is a curated catalogue, not a live popularity ranking. Check recent views, upload dates, search interest, and audience response before calling a title trending. The bot does not yet automatically measure live trends.\n\n## Daily automatic research (5:00 AM Thailand time)
+The `.github/workflows/daily-auto.yml` workflow runs daily at 22:00 UTC (05:00 Asia/Bangkok on the following local date). It chooses one title per day from a built-in rotation across Anime, 3D Animation, Cartoon, and Donghua, runs the free Wikipedia source lookup, and sends research leads plus explicit YouTube/Facebook/TikTok part durations to the configured Telegram chat. The titles are curated candidates, not a live popularity ranking.
 
 To enable delivery:
 1. In Telegram, open your NEXORA bot and send `/chatid`. Copy the numeric chat ID shown.
