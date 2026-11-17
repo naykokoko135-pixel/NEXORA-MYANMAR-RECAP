@@ -17,6 +17,7 @@ from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
 
 from script_writer import (generate_recap_outline, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
+from error_reporter import report_error_to_github
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -394,8 +395,21 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def on_telegram_error(update: object, context: ContextTypes.DEFAULT_TYPE):
     # Do not log exception text: request errors can contain credential-bearing URLs.
-    error_name = type(context.error).__name__ if context.error else "UnknownError"
+    error = context.error
+    error_name = type(error).__name__ if error else "UnknownError"
     log.error("Telegram update handler failed (%s)", error_name)
+    if error is not None:
+        try:
+            reported = await asyncio.to_thread(
+                report_error_to_github,
+                error,
+                update_kind="telegram_update",
+            )
+            if reported:
+                log.info("Privacy-safe error report created in GitHub Issues")
+        except Exception:
+            # Reporting must never cause another handler failure.
+            log.warning("GitHub error reporting could not be completed")
 
 
 @asynccontextmanager
@@ -427,7 +441,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
     telegram_app.add_handler(CommandHandler("settings", settings_cmd))
     telegram_app.add_handler(CommandHandler("help", help_cmd))
-    telegram_app.add_error_handler(on_telegram_error)
+    telegram_app.add_error_handler(on_telegram_error, block=False)
 
     await telegram_app.initialize()
     await telegram_app.start()
