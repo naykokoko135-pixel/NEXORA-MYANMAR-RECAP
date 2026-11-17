@@ -46,6 +46,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "ပြီးနောက် /draft3 <ဇာတ်ကားအမည်> - ရှာထားသော Notes ကို အလိုအလျောက်သုံးရန်\n"
             "/draft <ဇာတ်ကားအမည်> - Research Notes မှ Draft worksheet\n"
             "/draft3 <ဇာတ်ကားအမည်> - YouTube သုံးပိုင်း Draft worksheets\n"
+            "/voiceover3 <ဇာတ်ကားအမည်> - Notes မှ Voice-over ဖိုင် ၃ ဖိုင်ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - English စာတန်းထိုး SRT ဖိုင်ထုတ်ရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
@@ -73,7 +74,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
             "AI API: မချိတ်ထားပါ (အခပေး API မသုံးပါ)\n"
-            "လုပ်ဆောင်နိုင်မှု: Auto research lookup + Platform/Duration Presets + Free Recap template + SRT export\n"
+            "လုပ်ဆောင်နိုင်မှု: Auto research + Recap worksheets + Voice-over TXT export + SRT export\n"
             "Daily Auto: GitHub Actions မှ မနက် ၅ နာရီ (ထိုင်းစံတော်ချိန်) Research ပို့နိုင်သည်။\n"
             "Video rendering / social auto-upload: မပါဝင်သေးပါ။"
         )
@@ -346,6 +347,8 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/auto သည် Wikipedia မှ source lead များရှာပေးသည်၊ အချက်အလက်ကို ကိုယ်တိုင်ပြန်စစ်ပါ။\n"
             "/draft သည် ပေးထားသော Research Notes ကို worksheet အဖြစ် စီစဉ်ပေးသည်။\n"
             "/draft3 သည် YouTube အတွက် သီးခြား worksheet သုံးခု ထုတ်ပေးသည်။\n"
+            "/voiceover <အမည်> နှင့် /voiceover3 <အမည်> သည် သင်ပေးသော စစ်ဆေးပြီး Notes ကို TXT ဖိုင်အဖြစ် စီစဉ်ပေးသည်။\n"
+            "Voice-over အတွက် ဖြစ်ရပ်မှန် Notes အနည်းဆုံး ၆ ကြောင်း လိုအပ်သည်။\n"
             "/auto Avatar ပြီးနောက် /draft3 Avatar ပို့လျှင် ရှာထားသော Notes ကို အလိုအလျောက် ထည့်ပေးသည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော English စာသားမှ .srt ဖိုင်ထုတ်နိုင်သည်။"
