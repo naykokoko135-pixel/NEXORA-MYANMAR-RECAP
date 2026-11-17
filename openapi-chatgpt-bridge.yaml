@@ -1,0 +1,70 @@
+openapi: 3.1.0
+info:
+  title: NEXORA Telegram Bridge
+  version: 1.0.0
+  description: Secure, allow-listed bridge to the owner's configured private NEXORA Telegram chat.
+servers:
+  - url: https://YOUR-RENDER-SERVICE.onrender.com
+paths:
+  /chatgpt/command:
+    post:
+      operationId: runNexoraCommand
+      summary: Run an allow-listed NEXORA command and deliver its result to Telegram
+      security:
+        - NexoraBridgeKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [command]
+              properties:
+                command:
+                  type: string
+                  enum: [status, help, auto, create, research, draft3, voiceover3, render]
+                argument:
+                  type: string
+                  maxLength: 3500
+      responses:
+        '200':
+          description: Command was accepted and processed by the bot.
+        '401':
+          description: Missing or invalid bridge key.
+        '503':
+          description: Bot or required Render configuration is unavailable.
+  /chatgpt/send-file:
+    post:
+      operationId: sendNexoraFile
+      summary: Send a supported small file to the owner's private Telegram chat
+      security:
+        - NexoraBridgeKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, content_base64]
+              properties:
+                filename:
+                  type: string
+                  maxLength: 100
+                  description: File name ending in mp3, wav, ogg, jpg, jpeg, png, webp, mp4, txt, or srt.
+                content_base64:
+                  type: string
+                  maxLength: 28000000
+                  description: Base64-encoded file, maximum decoded size 20 MB.
+      responses:
+        '200':
+          description: File sent to Telegram.
+        '401':
+          description: Missing or invalid bridge key.
+        '413':
+          description: File is too large.
+components:
+  securitySchemes:
+    NexoraBridgeKey:
+      type: apiKey
+      in: header
+      name: X-Nexora-Bridge-Key
