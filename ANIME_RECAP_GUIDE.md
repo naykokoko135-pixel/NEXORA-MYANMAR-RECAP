@@ -1,33 +1,61 @@
-# NEXORA Anime Recap — YouTube workflow
+# NEXORA — Animation Recap for YouTube, Facebook and TikTok
 
-This profile configures the daily 05:00 Asia/Bangkok research rotation for anime films and series. It does not add an AI provider or automatically create finished scripts/videos.
+NEXORA is being prepared for four animation categories:
+1. Anime
+2. 3D Animation
+3. Cartoon
+4. Donghua
 
-## Recommended YouTube defaults
+The daily research rotation contains curated titles across all four categories. It is an evergreen candidate catalogue, not a real-time popularity ranking. A title must be checked against current platform interest (recent views, upload date, search interest, and audience response) before being labelled trending or popular. The existing free research lookup provides Wikipedia leads only; it does not measure current views.
 
-- Platform: `/platform youtube`
-- Duration: `/duration 15-20`
-- Format: three separate recap parts, with original Burmese narration and commentary.
-- Scope: identify the exact film, season, or arc. Do not combine different seasons or arcs without clearly saying so.
+## Three-platform episode structure
 
-## Telegram workflow
+These are recommended starting durations. Adjust them to the length and scope of the film, season, or story arc.
 
-1. Send `/auto <anime title>` to collect public Wikipedia research leads.
-2. Open the returned source links and verify names, chronology, season/episode scope, and plot facts against reliable sources and the anime itself.
-3. Send `/draft3 <anime title>` to create three YouTube planning worksheets. Or add your checked notes on new lines after the command.
-4. Send `/voiceover3 <anime title>` followed by at least six verified fact lines to export three editable voice-over text files.
-5. Prepare English subtitle text with timestamps and use `/srt` to export an SRT file. SRT export formats text; it does not translate.
-6. Send `/render`, upload 1–12 images you own or are licensed to use and one narration audio file, then send `/render finish` to create a 720p slideshow MP4.
+| Platform | Parts | Each part | Total |
+|---|---:|---:|---:|
+| YouTube | 3 | 8–10 minutes | 24–30 minutes |
+| Facebook | 3 | 3–5 minutes | 9–15 minutes |
+| TikTok | 3 | 1–3 minutes | 3–9 minutes |
 
-## Anime-specific editorial checklist
+### Part-by-part coverage
 
-- State the anime title and whether the recap covers a film, season, or named story arc.
-- Add a spoiler warning when discussing major plot developments or the ending.
-- Keep character names and Japanese/Chinese terms consistent; check romanization and official spellings.
-- Distinguish confirmed canon from interpretation, fan theories, and uncertain details.
-- Add original analysis, themes, character motivations, and commentary rather than reproducing dialogue or substituting for the original viewing experience.
-- Do not copy full episodes, long scene sequences, official promotional art, soundtrack, or other copyrighted assets without permission. Use original, licensed, or otherwise authorized visuals and audio.
-- Review the final narration, subtitles, and video manually before publishing.
+- Part 1: hook, title/scope, world and character introduction, inciting event.
+- Part 2: central conflict, character decisions, turning points, consequences.
+- Part 3: climax and resolution within the stated film/season/arc, followed by original commentary.
 
-## Current capability boundaries
+Each platform needs its own edit, pacing, title, caption, cover, and suitable aspect ratio. Do not simply upload the same long video unchanged to every platform.
 
-The daily workflow searches Wikipedia for source leads and sends a three-part outline. It does not independently fact-check an anime, write a complete factual script, generate narration, select anime scenes, or upload to YouTube. The MP4 renderer currently makes a slideshow from creator-supplied images and narration audio.
+## Telegram commands
+
+1. `/allplatforms <title>` — prints the three-platform, three-part duration plan.
+2. `/auto <title>` — searches public Wikipedia pages for research leads.
+3. `/draft3 <title>` — creates three YouTube planning worksheets using cached research, or checked notes supplied with the command.
+4. `/voiceover3 <title>` followed by at least six creator-checked fact lines — exports three voice-over text files.
+5. `/srt` — formats timestamped English subtitle text as SRT; it does not translate.
+6. `/render` — makes a basic 720p slideshow from 1–12 creator-supplied authorized images and one narration audio file (audio must be under 10 minutes and 20 MB). Render each part as a separate project/video.
+
+For platform-specific worksheets, use `/platform youtube|facebook|tiktok` and a supported `/duration` value. YouTube presets: 8–10, 12–15, 15–20, 20–30, 30–45, 45–60 minutes. Facebook: 3–5, 5–7, 8–10, 10–15 minutes. TikTok: 1–3, 3–5 minutes.
+
+## Popular/trending title selection
+
+Before choosing a title as currently popular, manually check recent platform evidence such as:
+- recent official/trailer/episode uploads and their view counts;
+- recent audience response and discussion;
+- current search interest;
+- whether the title is currently releasing episodes or has a new season/film.
+
+Record the source links and the date checked. Do not call a title “trending now” based only on a static catalogue or Wikipedia. Automatic live trend detection is not yet part of the bot.
+
+## Editorial and rights checklist
+
+- Clearly name the exact film, season, episode range, or story arc being covered.
+- Add spoiler warnings where appropriate.
+- Verify chronology, character names, and plot facts against the source material and reliable references.
+- Use original Burmese narration, analysis, and commentary. Do not reproduce long dialogue, scripts, or another creator's recap.
+- Use only original, licensed, or otherwise authorized visuals, clips, music, and audio. A recap label does not itself grant permission to reuse footage.
+- Review every part and subtitle before publishing.
+
+## Current capability limits
+
+The daily workflow sends source leads and a planning worksheet; it does not generate a complete fact-checked script or determine live popularity. The current renderer creates a slideshow from images and narration supplied by the creator. It does not generate animation scenes, AI voice, or upload videos automatically to YouTube, Facebook, or TikTok. Publishing is manual until official platform integrations, permissions, and account setup are added and tested.
