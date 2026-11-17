@@ -8,6 +8,7 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 from auto_research import search_movie_sources
+from script_writer import generate_episode_selection_guide
 
 # Broad, evergreen candidate rotation across the four requested animation categories.
 # This is a curated catalogue, not a live popularity/trending ranking.
@@ -28,7 +29,8 @@ TITLE_CATEGORIES = {
         "The Incredibles", "Ratatouille", "WALL-E", "Up", "Toy Story",
         "How to Train Your Dragon", "Kung Fu Panda", "The Mitchells vs. the Machines",
         # International animated films and series
-        "Miraculous: Tales of Ladybug & Cat Noir", "Shaun the Sheep",
+        "Miraculous: Tales of Ladybug & Cat Noir", "Pororo the Little Penguin",
+        "Shaun the Sheep",
         "Klaus", "Motu Patlu", "Chhota Bheem",
     ],
     "Cartoon": [
@@ -37,7 +39,7 @@ TITLE_CATEGORIES = {
         "The Owl House", "Rick and Morty", "SpongeBob SquarePants",
         "The Powerpuff Girls", "Ben 10", "Teen Titans",
         # South Korean animation and web-animation candidates
-        "Pororo the Little Penguin", "Larva", "Pucca",
+        "Larva", "Pucca",
         "The Haunted House: The Secret of the Ghost Ball",
         "Leafie, A Hen into the Wild",
     ],
@@ -107,7 +109,7 @@ def build_daily_message(movie_title: str, research_text: str) -> str:
         "အချက်အလက်ကို မူရင်းနှင့်ပြန်စစ်ပြီး ကိုယ်ပိုင် commentary ထည့်ပါ။ "
         "အသုံးပြုခွင့်ရှိသော visual/audio ကိုသာ သုံးပါ။"
     )
-    return research_text + plan
+    return research_text + plan + "\\n\\n" + generate_episode_selection_guide()
 
 
 def split_telegram_text(text: str, limit: int = 3900) -> list[str]:
