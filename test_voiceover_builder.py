@@ -48,6 +48,25 @@ class VoiceoverBuilderTests(unittest.TestCase):
                 "Jake arrives.\nJake meets Neytiri.\n[ဇာတ်ကားနဲ့ ပြန်စစ်ထားတဲ့ ဖြစ်ရပ်တွေ ထည့်ပါ]",
             )
 
+    def test_rejects_six_template_placeholder_lines(self):
+        placeholders = "\n".join([
+            "ဇာတ်လမ်းနောက်ခံ ...",
+            "အဓိကဇာတ်ကောင် ...",
+            "အစပြုဖြစ်ရပ် ...",
+            "အဓိကပြဿနာ ...",
+            "အရေးကြီးဖြစ်ရပ် ...",
+            "အဆုံးသတ် ...",
+        ])
+        with self.assertRaisesRegex(ValueError, "နေရာလွတ် Template"):
+            generate_voiceover_part_files("Avatar", placeholders)
+
+    def test_strips_placeholder_lines_when_real_notes_are_present(self):
+        notes = self.notes + "\nအရေးကြီးဖြစ်ရပ် ...\nအဆုံးသတ် ..."
+        files = generate_voiceover_part_files("Avatar", notes)
+        combined = "\n".join(files)
+        self.assertNotIn("အရေးကြီးဖြစ်ရပ် ...", combined)
+        self.assertNotIn("အဆုံးသတ် ...", combined)
+
     def test_requires_title_and_notes(self):
         with self.assertRaises(ValueError):
             generate_voiceover_draft("", self.notes)

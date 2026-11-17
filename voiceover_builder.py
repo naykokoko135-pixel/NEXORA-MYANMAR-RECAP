@@ -7,7 +7,7 @@ import re
 MIN_FACT_LINES = 6
 PLACEHOLDER_MARKERS = (
     "[ထည့်ရန်]", "[ထည့်ပါ]", "[ဇာတ်ကားနဲ့ ပြန်စစ်ထားတဲ့ ဖြစ်ရပ်တွေ ထည့်ပါ]",
-    "[add ", "[insert ", "[placeholder", "todo", "tbd",
+    "[add ", "[insert ", "[placeholder", "todo", "tbd", "ထည့်ရန်",
 )
 
 
@@ -20,6 +20,12 @@ def _clean_notes(notes: str) -> list[str]:
         if any(line.lower().startswith(marker.lower()) for marker in PLACEHOLDER_MARKERS):
             continue
         line = re.sub(r"^(?:[-*•✓]|\d+[.)])\s*", "", line).strip()
+        # Ignore template labels followed only by ellipses/underscores; these are not facts.
+        placeholder_match = re.search(r"(?:\.{2,}|…+|_{2,})\s*$", line)
+        if placeholder_match:
+            label = line[:placeholder_match.start()].strip(" :：-—")
+            if len(label) <= 60:
+                continue
         if line:
             lines.append(line)
     return lines
@@ -48,7 +54,7 @@ def generate_voiceover_draft(title: str, notes: str) -> str:
             "မှတ်စု မလုံလောက်သေးပါ။ ဇာတ်ကားနဲ့ ပြန်စစ်ထားတဲ့ အချက်အလက် "
             "အနည်းဆုံး ၆ ကြောင်း ထည့်ပါ။ Part 1 (နောက်ခံ/ဇာတ်ကောင်), "
             "Part 2 (ပဋိပက္ခ/အလှည့်အပြောင်း), Part 3 (Climax/အဆုံးသတ်) "
-            "အလိုက် အစဉ်လိုက်ရေးပါ။ Wikipedia ရလဒ်တိုများသာ မလုံလောက်ပါ။"
+            "အလိုက် အစဉ်လိုက်ရေးပါ။ ဇာတ်လမ်းနောက်ခံ ... လို နေရာလွတ် Template စာကြောင်းများကို အချက်အလက်အဖြစ် မတွက်ပါ။ Wikipedia ရလဒ်တိုများသာ မလုံလောက်ပါ။"
         )
 
     parts = _split_three_parts(lines)
