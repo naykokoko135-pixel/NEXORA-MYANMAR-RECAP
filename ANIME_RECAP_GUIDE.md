@@ -8,6 +8,20 @@ NEXORA is being prepared for four animation categories:
 
 The daily research rotation contains curated titles across all four categories. It is an evergreen candidate catalogue, not a real-time popularity ranking. A title must be checked against current platform interest (recent views, upload date, search interest, and audience response) before being labelled trending or popular. The existing free research lookup provides Wikipedia leads only; it does not measure current views.
 
+
+## International coverage
+
+NEXORA's four categories are not limited to Myanmar or any single country. Research and recap candidates may come from worldwide releases, including (but not limited to):
+- Japan: anime and animated films
+- China: donghua and 3D animation
+- South Korea: animation and web-animation releases
+- United States and Canada: 3D animation and cartoons
+- Europe and other regions: animated films and series
+
+Country and language are discovery filters, not quality or popularity rankings. Keep the original title, country/region, original language, release year, and the exact film/season/arc in each research worksheet when that information is verifiable. Add Burmese explanations/transliteration for names where useful. Do not infer a title's country from its language or art style; verify it from a reliable source.
+
+For every candidate described as popular, trending, or widely watched, record dated evidence from the relevant public platform or official source. If current evidence is unavailable, label it as a candidate rather than claiming it is trending.
+
 ## Three-platform episode structure
 
 These are recommended starting durations. Adjust them to the length and scope of the film, season, or story arc.
