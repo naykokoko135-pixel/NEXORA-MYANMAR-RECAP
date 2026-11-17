@@ -1,4 +1,7 @@
 import asyncio
+import base64
+import binascii
+import time
 import hmac
 from io import BytesIO
 import logging
@@ -585,3 +588,103 @@ async def telegram_webhook(
     update = Update.de_json(payload, telegram_app.bot)
     await telegram_app.update_queue.put(update)
     return {"ok": True}
+
+
+# Optional authenticated bridge for a Custom GPT Action. Configure both values in
+# Render Environment; never commit either secret or put them in chat.
+CHATGPT_BRIDGE_API_KEY = os.getenv("CHATGPT_BRIDGE_API_KEY")
+CHATGPT_BRIDGE_CHAT_ID = os.getenv("CHATGPT_BRIDGE_CHAT_ID")
+BRIDGE_ALLOWED_COMMANDS = {"status", "help", "auto", "create", "research", "draft3", "voiceover3", "render"}
+
+
+def _bridge_authorized(request: Request) -> bool:
+    supplied = request.headers.get("x-nexora-bridge-key", "")
+    return bool(CHATGPT_BRIDGE_API_KEY) and hmac.compare_digest(
+        supplied, CHATGPT_BRIDGE_API_KEY
+    )
+
+
+@web_app.post("/chatgpt/command")
+async def chatgpt_bridge_command(request: Request):
+    """Run one allow-listed NEXORA bot command in the owner's configured private chat."""
+    if not _bridge_authorized(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if telegram_app is None:
+        raise HTTPException(status_code=503, detail="Telegram bot is not ready")
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="JSON object required")
+    command = str(payload.get("command", "")).strip().lower().lstrip("/")
+    argument = str(payload.get("argument", "")).strip()
+    if command not in BRIDGE_ALLOWED_COMMANDS:
+        raise HTTPException(status_code=400, detail="Command is not allowed")
+    if len(argument) > 3500 or "\n" in argument or "\r" in argument:
+        raise HTTPException(status_code=400, detail="Argument is too long or invalid")
+    try:
+        chat_id = int(CHATGPT_BRIDGE_CHAT_ID or "")
+    except ValueError:
+        raise HTTPException(status_code=503, detail="CHATGPT_BRIDGE_CHAT_ID is not configured")
+    if chat_id <= 0:
+        raise HTTPException(status_code=503, detail="Configure a private positive Telegram chat ID")
+    text = "/" + command + ((" " + argument) if argument else "")
+    synthetic_update = Update.de_json({
+        "update_id": time.time_ns() % 2_000_000_000,
+        "message": {
+            "message_id": int(time.time()) % 2_000_000_000,
+            "date": int(time.time()),
+            "chat": {"id": chat_id, "type": "private"},
+            "from": {"id": chat_id, "is_bot": False, "first_name": "NEXORA Bridge"},
+            "text": text,
+            "entities": [{"type": "bot_command", "offset": 0, "length": len("/" + command)}],
+        },
+    }, telegram_app.bot)
+    await telegram_app.process_update(synthetic_update)
+    return {"ok": True, "command": command, "delivered_to_telegram": True}
+
+
+@web_app.post("/chatgpt/send-file")
+async def chatgpt_bridge_send_file(request: Request):
+    """Send a small base64-encoded creator-owned file to the configured private chat."""
+    if not _bridge_authorized(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if telegram_app is None:
+        raise HTTPException(status_code=503, detail="Telegram bot is not ready")
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="JSON object required")
+    filename = str(payload.get("filename", ""))
+    encoded = payload.get("content_base64", "")
+    allowed_suffixes = {".mp3", ".wav", ".ogg", ".jpg", ".jpeg", ".png", ".webp", ".mp4", ".txt", ".srt"}
+    suffix = os.path.splitext(filename)[1].lower()
+    if not filename or len(filename) > 100 or suffix not in allowed_suffixes:
+        raise HTTPException(status_code=400, detail="Unsupported filename or file type")
+    if not isinstance(encoded, str) or len(encoded) > 28_000_000:
+        raise HTTPException(status_code=413, detail="File is too large")
+    try:
+        content = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid base64 file content")
+    if not content or len(content) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File must be between 1 byte and 20 MB")
+    try:
+        chat_id = int(CHATGPT_BRIDGE_CHAT_ID or "")
+    except ValueError:
+        raise HTTPException(status_code=503, detail="CHATGPT_BRIDGE_CHAT_ID is not configured")
+    if chat_id <= 0:
+        raise HTTPException(status_code=503, detail="Configure a private positive Telegram chat ID")
+    file_obj = BytesIO(content)
+    file_obj.name = os.path.basename(filename)
+    await telegram_app.bot.send_document(
+        chat_id=chat_id,
+        document=InputFile(file_obj, filename=file_obj.name),
+        caption="ဖိုင်ကို ChatGPT Bridge မှ ပို့ထားပါတယ်။ အသုံးပြုခွင့်ရှိသော မီဒီယာကိုသာ အသုံးပြုပါ။",
+        read_timeout=60,
+        write_timeout=60,
+    )
+    return {"ok": True, "filename": file_obj.name, "bytes_sent": len(content)}
