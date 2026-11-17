@@ -1,4 +1,4 @@
-"""Daily free NEXORA research delivery, invoked by GitHub Actions."""
+"""Daily free NEXORA animation recap research delivery, invoked by GitHub Actions."""
 import json
 import os
 from datetime import date, datetime
@@ -9,42 +9,80 @@ from zoneinfo import ZoneInfo
 
 from auto_research import search_movie_sources
 
-MOVIE_ROTATION = [
-    "Avatar", "Titanic", "Inception", "Interstellar", "Jurassic Park",
-    "The Lion King", "The Dark Knight", "Frozen", "Coco", "Finding Nemo",
-    "Harry Potter and the Philosopher's Stone", "The Matrix", "Gladiator",
-    "The Lord of the Rings: The Fellowship of the Ring", "Toy Story",
-    "Up", "WALL-E", "Spider-Man: Into the Spider-Verse", "The Avengers",
-    "Iron Man", "Back to the Future", "The Truman Show", "The Green Mile",
-    "Parasite", "Whiplash", "The Shawshank Redemption", "Joker",
-    "Dune", "Kung Fu Panda", "How to Train Your Dragon",
-]
+# Broad, evergreen candidate rotation across the four requested animation categories.
+# This is a curated catalogue, not a live popularity/trending ranking.
+TITLE_CATEGORIES = {
+    "Anime": [
+        "Spirited Away", "Your Name", "Demon Slayer: Kimetsu no Yaiba",
+        "Attack on Titan", "Jujutsu Kaisen", "One Piece", "Naruto",
+        "Fullmetal Alchemist: Brotherhood", "Hunter x Hunter", "Death Note",
+        "My Hero Academia", "Frieren: Beyond Journey's End", "Solo Leveling",
+        "Chainsaw Man", "Haikyu!!", "Violet Evergarden", "Suzume",
+        "A Silent Voice", "Howl's Moving Castle", "Princess Mononoke",
+        "Weathering with You", "The Boy and the Heron", "Dragon Ball Z",
+        "Bleach", "Mob Psycho 100", "Spy × Family", "Vinland Saga",
+    ],
+    "3D Animation": [
+        "Spider-Man: Into the Spider-Verse", "Spider-Man: Across the Spider-Verse",
+        "Puss in Boots: The Last Wish", "The Super Mario Bros. Movie",
+        "The Incredibles", "Ratatouille", "WALL-E", "Up", "Toy Story",
+        "How to Train Your Dragon", "Kung Fu Panda", "The Mitchells vs. the Machines",
+    ],
+    "Cartoon": [
+        "Avatar: The Last Airbender", "The Amazing World of Gumball",
+        "Adventure Time", "Gravity Falls", "Regular Show", "Steven Universe",
+        "The Owl House", "Rick and Morty", "SpongeBob SquarePants",
+        "The Powerpuff Girls", "Ben 10", "Teen Titans",
+    ],
+    "Donghua": [
+        "The King's Avatar", "Soul Land", "The Daily Life of the Immortal King",
+        "Battle Through the Heavens", "Perfect World", "A Record of a Mortal's Journey to Immortality",
+        "Fog Hill of Five Elements", "Link Click", "Heaven Official's Blessing",
+        "The Legend of Hei", "Scissor Seven", "White Cat Legend",
+    ],
+}
+
+# Keep the legacy name for existing imports and tests.
+MOVIE_ROTATION = [title for titles in TITLE_CATEGORIES.values() for title in titles]
+
+
+def category_for_title(title: str) -> str:
+    for category, titles in TITLE_CATEGORIES.items():
+        if title in titles:
+            return category
+    return "Animation"
 
 
 def select_daily_movie(local_date: date) -> str:
-    """Choose one stable title per local calendar day, cycling through the list."""
+    """Choose one stable candidate per local calendar day, cycling through categories."""
     return MOVIE_ROTATION[local_date.toordinal() % len(MOVIE_ROTATION)]
 
 
 def build_daily_message(movie_title: str, research_text: str) -> str:
-    """Append a three-part YouTube plan without inventing plot details."""
+    """Append clear part lengths for all three publishing platforms."""
+    category = category_for_title(movie_title)
     plan = (
-        "\n\n🎬 YOUTUBE — ၃ ပိုင်းခွဲ Recap အစီအစဉ်\n"
-        f"ဇာတ်ကား: {movie_title}\n"
-        "Part 1 — ဇာတ်လမ်းမိတ်ဆက်၊ နေရာ/အချိန်နောက်ခံ၊ အဓိကဇာတ်ကောင်များ "
-        "(အတည်ပြုထားသော မှတ်စုများဖြင့် ဖြည့်ရန်)\n"
-        "Part 2 — အဓိကပြဿနာ၊ ပဋိပက္ခနှင့် ဇာတ်လမ်းတိုးတက်မှု "
-        "(ရင်းမြစ်နှင့်တိုက်စစ်ပြီး ဖြည့်ရန်)\n"
-        "Part 3 — အထွတ်အထိပ်၊ အဆုံးသတ်နှင့် သုံးသပ်ချက် "
-        "(ရုပ်ရှင်နှင့်တိုက်စစ်ပြီး ဖြည့်ရန်)\n\n"
-        "မှတ်ချက်: ဤအပိုင်းများသည် အစီအစဉ်/worksheet သာဖြစ်ပြီး "
-        "ဇာတ်ညွှန်းအပြည့် သို့မဟုတ် ဗီဒီယိုမဟုတ်ပါ။ မထုတ်ဝေမီ လူကိုယ်တိုင် စစ်ဆေးပါ။"
+        "\n\n🎬 NEXORA — ANIMATION RECAP PLAN\n"
+        f"အမျိုးအစား: {category}\n"
+        f"ခေါင်းစဉ်: {movie_title}\n\n"
+        "YOUTUBE — ၃ ပိုင်း၊ တစ်ပိုင်း ၈–၁၀ မိနစ် (စုစုပေါင်း ၂၄–၃၀ မိနစ်)\n"
+        "Part 1: မိတ်ဆက်၊ နောက်ခံ၊ ဇာတ်ကောင်များနှင့် အစပြုဖြစ်ရပ်။\n"
+        "Part 2: အဓိကပြဿနာ၊ turning points နှင့် ဇာတ်ကောင်ဆုံးဖြတ်ချက်များ။\n"
+        "Part 3: Climax၊ သတ်မှတ်ထားသော season/film အဆုံးသတ်နှင့် သုံးသပ်ချက်။\n\n"
+        "FACEBOOK — ၃ ပိုင်း၊ တစ်ပိုင်း ၃–၅ မိနစ် (စုစုပေါင်း ၉–၁၅ မိနစ်)\n"
+        "Part 1: Hook + နောက်ခံ။ Part 2: ပဋိပက္ခ + အလှည့်အပြောင်း။ Part 3: ရလဒ် + သုံးသပ်ချက်။\n\n"
+        "TIKTOK — ၃ ပိုင်း၊ တစ်ပိုင်း ၁–၃ မိနစ် (စုစုပေါင်း ၃–၉ မိနစ်)\n"
+        "Part 1: Hook + စတင်ဖြစ်ရပ်။ Part 2: အဓိကပြဿနာ။ Part 3: အကျိုးဆက် + အမြင်။\n\n"
+        "မှတ်ချက်: ဤစာသည် research lead နှင့် planning worksheet သာဖြစ်ပြီး ဇာတ်ညွှန်းအပြည့် သို့မဟုတ် ဗီဒီယိုမဟုတ်ပါ။ "
+        "နေ့စဉ်စာရင်းသည် အမျိုးအစား ၄ မျိုးပါ curated title rotation ဖြစ်ပြီး live trending/view-count ranking မဟုတ်ပါ။ "
+        "လက်ရှိလူကြည့်များမှုကို သီးခြား trend source ဖြင့် စစ်ဆေးရမည်။ "
+        "အချက်အလက်ကို မူရင်းနှင့်ပြန်စစ်ပြီး ကိုယ်ပိုင် commentary ထည့်ပါ။ "
+        "အသုံးပြုခွင့်ရှိသော visual/audio ကိုသာ သုံးပါ။"
     )
     return research_text + plan
 
 
 def split_telegram_text(text: str, limit: int = 3900) -> list[str]:
-    """Split long messages safely below Telegram's message-size limit."""
     chunks = []
     remaining = text.strip()
     while len(remaining) > limit:

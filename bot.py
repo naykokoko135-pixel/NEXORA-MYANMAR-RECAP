@@ -20,7 +20,7 @@ from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
 from video_renderer import render_slideshow, VideoRenderError
 
-from script_writer import (generate_recap_outline, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
+from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
 
 logging.basicConfig(
@@ -51,6 +51,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "ပြီးနောက် /draft3 <ဇာတ်ကားအမည်> - ရှာထားသော Notes ကို အလိုအလျောက်သုံးရန်\n"
             "/draft <ဇာတ်ကားအမည်> - Research Notes မှ Draft worksheet\n"
             "/draft3 <ဇာတ်ကားအမည်> - YouTube သုံးပိုင်း Draft worksheets\n"
+            "/allplatforms <အမည်> - YouTube/Facebook/TikTok အပိုင်းနှင့် ကြာချိန်ခွဲပြရန်\n"
             "/voiceover <ဇာတ်ကားအမည်> - Notes မှ Voice-over မူကြမ်းဖိုင်ထုတ်ရန်\n"
             "/voiceover3 <ဇာတ်ကားအမည်> - Notes မှ Voice-over ဖိုင် ၃ ဖိုင်ထုတ်ရန်\n"
             "/render - ပုံများ + အသံဖိုင်မှ MP4 ထုတ်ရန်\n"
@@ -122,6 +123,19 @@ async def auto_research_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     for start_at in range(0, len(result), 3900):
         await update.message.reply_text(result[start_at:start_at + 3900])
+
+
+async def allplatforms_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send an explicit three-part duration plan for all supported platforms."""
+    if not update.message:
+        return
+    topic = " ".join(context.args).strip()
+    if not topic:
+        await update.message.reply_text("အသုံးပြုပုံ: /allplatforms Anime အမည်")
+        return
+    plan = generate_all_platform_plan(topic)
+    for start_at in range(0, len(plan), 3900):
+        await update.message.reply_text(plan[start_at:start_at + 3900])
 
 
 async def draft_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -478,6 +492,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/auto သည် Wikipedia မှ source lead များရှာပေးသည်၊ အချက်အလက်ကို ကိုယ်တိုင်ပြန်စစ်ပါ။\n"
             "/draft သည် ပေးထားသော Research Notes ကို worksheet အဖြစ် စီစဉ်ပေးသည်။\n"
             "/draft3 သည် YouTube အတွက် သီးခြား worksheet သုံးခု ထုတ်ပေးသည်။\n"
+            "/allplatforms သည် YouTube/Facebook/TikTok အတွက် အပိုင်းနှင့် ကြာချိန် သီးခြားခွဲပြသည်။\n"
             "/voiceover <အမည်> နှင့် /voiceover3 <အမည်> သည် သင်ပေးသော စစ်ဆေးပြီး Notes ကို TXT ဖိုင်အဖြစ် စီစဉ်ပေးသည်။\n"
             "Voice-over အတွက် ဇာတ်ကားနှင့် ပြန်စစ်ထားသော Notes အနည်းဆုံး ၆ ကြောင်း လိုအပ်သည်။\n"
             "အသုံးပြုပုံ: /voiceover3 Avatar ပြီးနောက် စာကြောင်းအသစ်မှ ဖြစ်ရပ်မှန် Notes များ ထည့်ပါ။\n"
@@ -527,6 +542,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("auto", auto_research_cmd))
     telegram_app.add_handler(CommandHandler("draft", draft_cmd))
     telegram_app.add_handler(CommandHandler("draft3", draft3_cmd))
+    telegram_app.add_handler(CommandHandler("allplatforms", allplatforms_cmd))
     telegram_app.add_handler(CommandHandler("voiceover", voiceover_cmd))
     telegram_app.add_handler(CommandHandler("voiceover3", voiceover3_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
@@ -610,7 +626,7 @@ async def telegram_webhook(
 # Render Environment; never commit either secret or put them in chat.
 CHATGPT_BRIDGE_API_KEY = os.getenv("CHATGPT_BRIDGE_API_KEY")
 CHATGPT_BRIDGE_CHAT_ID = os.getenv("CHATGPT_BRIDGE_CHAT_ID")
-BRIDGE_ALLOWED_COMMANDS = {"status", "help", "auto", "create", "research", "draft3", "voiceover3", "render"}
+BRIDGE_ALLOWED_COMMANDS = {"status", "help", "auto", "create", "research", "draft3", "allplatforms", "voiceover3", "render"}
 
 
 def _bridge_authorized(request: Request) -> bool:
