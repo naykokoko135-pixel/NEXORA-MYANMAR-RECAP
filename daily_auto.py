@@ -73,7 +73,7 @@ def build_daily_message(movie_title: str, research_text: str) -> str:
         "Part 1: Hook + နောက်ခံ။ Part 2: ပဋိပက္ခ + အလှည့်အပြောင်း။ Part 3: ရလဒ် + သုံးသပ်ချက်။\n\n"
         "TIKTOK — ၃ ပိုင်း၊ တစ်ပိုင်း ၁–၃ မိနစ် (စုစုပေါင်း ၃–၉ မိနစ်)\n"
         "Part 1: Hook + စတင်ဖြစ်ရပ်။ Part 2: အဓိကပြဿနာ။ Part 3: အကျိုးဆက် + အမြင်။\n\n"
-        "မှတ်ချက်: ဤစာသည် research lead နှင့် planning worksheet သာဖြစ်သည်။ "
+        "မှတ်ချက်: ဤစာသည် research lead နှင့် planning worksheet သာဖြစ်ပြီး ဇာတ်ညွှန်းအပြည့် သို့မဟုတ် ဗီဒီယိုမဟုတ်ပါ။ "
         "နေ့စဉ်စာရင်းသည် အမျိုးအစား ၄ မျိုးပါ curated title rotation ဖြစ်ပြီး live trending/view-count ranking မဟုတ်ပါ။ "
         "လက်ရှိလူကြည့်များမှုကို သီးခြား trend source ဖြင့် စစ်ဆေးရမည်။ "
         "အချက်အလက်ကို မူရင်းနှင့်ပြန်စစ်ပြီး ကိုယ်ပိုင် commentary ထည့်ပါ။ "
