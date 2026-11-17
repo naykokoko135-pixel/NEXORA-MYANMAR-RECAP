@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from telegram import InputFile, Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from srt_builder import build_srt
 from research_builder import generate_research_worksheet
@@ -210,10 +210,14 @@ async def voiceover3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     first_line, separator, notes = update.message.text.partition("\n")
     parts = first_line.split(maxsplit=1)
     topic = parts[1].strip() if len(parts) > 1 else ""
-    if not topic or not separator or not notes.strip():
+    if not topic:
+        await update.message.reply_text("အသုံးပြုပုံ: /voiceover3 Avatar")
+        return
+    if not (separator and notes.strip()):
+        context.user_data["pending_voiceover"] = {"title": topic, "parts": 3}
         await update.message.reply_text(
-            "အသုံးပြုပုံ:\n/voiceover3 Avatar\n"
-            "ပြီးနောက် ဇာတ်ကားနဲ့ ပြန်စစ်ထားတဲ့ ဖြစ်ရပ်များကို စာကြောင်းတစ်ကြောင်းစီ ထည့်ပါ။"
+            f"{topic} အတွက် စစ်ဆေးထားသော Notes အနည်းဆုံး ၆ ကြောင်းကို နောက်မက်ဆေ့ချ်တစ်ခုဖြင့် ပို့ပါ။\n"
+            "တစ်ကြောင်းစီရေးပါ။ မလုပ်တော့ပါက /cancel ပို့နိုင်ပါတယ်။"
         )
         return
     try:
@@ -228,6 +232,36 @@ async def voiceover3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             document=InputFile(file_obj, filename=file_obj.name),
             caption=f"🎙️ {topic} — Part {index}/3"
         )
+
+
+async def cancel_voiceover_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    pending = context.user_data.pop("pending_voiceover", None)
+    if pending:
+        await update.message.reply_text("Voice-over Notes စောင့်ဆိုင်းမှုကို ပယ်ဖျက်ပြီးပါပြီ။")
+    else:
+        await update.message.reply_text("ပယ်ဖျက်ရန် စောင့်နေသော Voice-over မရှိပါ။")
+
+
+async def voiceover_notes_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+    pending = context.user_data.get("pending_voiceover")
+    if not pending:
+        return
+    title = pending.get("title", "")
+    notes = update.message.text.strip()
+    try:
+        drafts = generate_voiceover_part_files(title, notes)
+    except ValueError as exc:
+        await update.message.reply_text(f"{exc}\nNotes ကို ပြန်စစ်ပြီး ထပ်ပို့ပါ။ မလုပ်တော့ပါက /cancel ပို့ပါ။")
+        return
+    for index, draft in enumerate(drafts, start=1):
+        file_obj = BytesIO(draft.encode("utf-8-sig"))
+        file_obj.name = f"nexora_{title.replace(' ', '_')}_part_{index}.txt"
+        await update.message.reply_document(document=InputFile(file_obj, filename=file_obj.name), caption=f"🎙️ {title} — Part {index}/3")
+    context.user_data.pop("pending_voiceover", None)
 
 
 async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -385,6 +419,8 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("draft3", draft3_cmd))
     telegram_app.add_handler(CommandHandler("voiceover", voiceover_cmd))
     telegram_app.add_handler(CommandHandler("voiceover3", voiceover3_cmd))
+    telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))
+    telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, voiceover_notes_message))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
