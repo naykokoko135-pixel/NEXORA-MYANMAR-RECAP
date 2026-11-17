@@ -27,12 +27,19 @@ TITLE_CATEGORIES = {
         "Puss in Boots: The Last Wish", "The Super Mario Bros. Movie",
         "The Incredibles", "Ratatouille", "WALL-E", "Up", "Toy Story",
         "How to Train Your Dragon", "Kung Fu Panda", "The Mitchells vs. the Machines",
+        # International animated films and series
+        "Miraculous: Tales of Ladybug & Cat Noir", "Shaun the Sheep",
+        "Klaus", "Motu Patlu", "Chhota Bheem",
     ],
     "Cartoon": [
         "Avatar: The Last Airbender", "The Amazing World of Gumball",
         "Adventure Time", "Gravity Falls", "Regular Show", "Steven Universe",
         "The Owl House", "Rick and Morty", "SpongeBob SquarePants",
         "The Powerpuff Girls", "Ben 10", "Teen Titans",
+        # South Korean animation and web-animation candidates
+        "Pororo the Little Penguin", "Larva", "Pucca",
+        "The Haunted House: The Secret of the Ghost Ball",
+        "Leafie, A Hen into the Wild",
     ],
     "Donghua": [
         "The King's Avatar", "Soul Land", "The Daily Life of the Immortal King",
@@ -41,6 +48,26 @@ TITLE_CATEGORIES = {
         "The Legend of Hei", "Scissor Seven", "White Cat Legend",
     ],
 }
+
+# Verified country/region labels for selected additional international candidates.
+# Unknown titles deliberately remain unlabelled until checked against reliable sources.
+TITLE_REGIONS = {
+    "Pororo the Little Penguin": "South Korea",
+    "Larva": "South Korea",
+    "Pucca": "South Korea",
+    "The Haunted House: The Secret of the Ghost Ball": "South Korea",
+    "Leafie, A Hen into the Wild": "South Korea",
+    "Miraculous: Tales of Ladybug & Cat Noir": "France",
+    "Shaun the Sheep": "United Kingdom",
+    "Klaus": "Spain",
+    "Motu Patlu": "India",
+    "Chhota Bheem": "India",
+}
+
+
+def region_for_title(title: str) -> str:
+    return TITLE_REGIONS.get(title, "မူရင်းနိုင်ငံ/ဒေသကို ရင်းမြစ်ဖြင့် စစ်ဆေးရန်")
+
 
 # Keep the legacy name for existing imports and tests.
 MOVIE_ROTATION = [title for titles in TITLE_CATEGORIES.values() for title in titles]
@@ -64,6 +91,7 @@ def build_daily_message(movie_title: str, research_text: str) -> str:
     plan = (
         "\n\n🎬 NEXORA — ANIMATION RECAP PLAN\n"
         f"အမျိုးအစား: {category}\n"
+        f"နိုင်ငံ/ဒေသ: {region_for_title(movie_title)}\n"
         f"ခေါင်းစဉ်: {movie_title}\n\n"
         "YOUTUBE — ၃ ပိုင်း၊ တစ်ပိုင်း ၈–၁၀ မိနစ် (စုစုပေါင်း ၂၄–၃၀ မိနစ်)\n"
         "Part 1: မိတ်ဆက်၊ နောက်ခံ၊ ဇာတ်ကောင်များနှင့် အစပြုဖြစ်ရပ်။\n"
