@@ -1,4 +1,4 @@
-"""Daily free NEXORA research delivery, invoked by GitHub Actions."""
+"""Daily free NEXORA anime research delivery, invoked by GitHub Actions."""
 import json
 import os
 from datetime import date, datetime
@@ -9,36 +9,41 @@ from zoneinfo import ZoneInfo
 
 from auto_research import search_movie_sources
 
+# Anime films and series. Wikipedia results are research leads only; verify details.
+# Keep the legacy constant name so existing tests/imports remain compatible.
 MOVIE_ROTATION = [
-    "Avatar", "Titanic", "Inception", "Interstellar", "Jurassic Park",
-    "The Lion King", "The Dark Knight", "Frozen", "Coco", "Finding Nemo",
-    "Harry Potter and the Philosopher's Stone", "The Matrix", "Gladiator",
-    "The Lord of the Rings: The Fellowship of the Ring", "Toy Story",
-    "Up", "WALL-E", "Spider-Man: Into the Spider-Verse", "The Avengers",
-    "Iron Man", "Back to the Future", "The Truman Show", "The Green Mile",
-    "Parasite", "Whiplash", "The Shawshank Redemption", "Joker",
-    "Dune", "Kung Fu Panda", "How to Train Your Dragon",
+    "Spirited Away", "Your Name", "Demon Slayer: Kimetsu no Yaiba",
+    "Attack on Titan", "Jujutsu Kaisen", "One Piece", "Naruto",
+    "Fullmetal Alchemist: Brotherhood", "Hunter x Hunter", "Death Note",
+    "My Hero Academia", "Frieren: Beyond Journey's End", "Solo Leveling",
+    "Chainsaw Man", "Haikyu!!", "Violet Evergarden", "Suzume",
+    "A Silent Voice", "Howl's Moving Castle", "Princess Mononoke",
+    "Weathering with You", "The Boy and the Heron", "Dragon Ball Z",
+    "Bleach", "Mob Psycho 100", "Spy × Family", "Vinland Saga",
+    "Re:Zero − Starting Life in Another World", "The Apothecary Diaries",
+    "The Seven Deadly Sins",
 ]
 
 
 def select_daily_movie(local_date: date) -> str:
-    """Choose one stable title per local calendar day, cycling through the list."""
+    """Choose one stable anime title per local calendar day, cycling through the list."""
     return MOVIE_ROTATION[local_date.toordinal() % len(MOVIE_ROTATION)]
 
 
 def build_daily_message(movie_title: str, research_text: str) -> str:
-    """Append a three-part YouTube plan without inventing plot details."""
+    """Append a three-part YouTube anime recap plan without inventing plot details."""
     plan = (
-        "\n\n🎬 YOUTUBE — ၃ ပိုင်းခွဲ Recap အစီအစဉ်\n"
-        f"ဇာတ်ကား: {movie_title}\n"
-        "Part 1 — ဇာတ်လမ်းမိတ်ဆက်၊ နေရာ/အချိန်နောက်ခံ၊ အဓိကဇာတ်ကောင်များ "
+        "\n\n🎬 NEXORA ANIME — YOUTUBE ၃ ပိုင်းခွဲ Recap အစီအစဉ်\n"
+        f"Anime: {movie_title}\n"
+        "Part 1 — Anime မိတ်ဆက်၊ ကမ္ဘာ/နောက်ခံ၊ အဓိကဇာတ်ကောင်များ "
         "(အတည်ပြုထားသော မှတ်စုများဖြင့် ဖြည့်ရန်)\n"
-        "Part 2 — အဓိကပြဿနာ၊ ပဋိပက္ခနှင့် ဇာတ်လမ်းတိုးတက်မှု "
+        "Part 2 — အဓိကပဋိပက္ခ၊ ဇာတ်ကောင်ဖွံ့ဖြိုးမှုနှင့် အရေးကြီး turning points "
         "(ရင်းမြစ်နှင့်တိုက်စစ်ပြီး ဖြည့်ရန်)\n"
-        "Part 3 — အထွတ်အထိပ်၊ အဆုံးသတ်နှင့် သုံးသပ်ချက် "
-        "(ရုပ်ရှင်နှင့်တိုက်စစ်ပြီး ဖြည့်ရန်)\n\n"
-        "မှတ်ချက်: ဤအပိုင်းများသည် အစီအစဉ်/worksheet သာဖြစ်ပြီး "
-        "ဇာတ်ညွှန်းအပြည့် သို့မဟုတ် ဗီဒီယိုမဟုတ်ပါ။ မထုတ်ဝေမီ လူကိုယ်တိုင် စစ်ဆေးပါ။"
+        "Part 3 — အထွတ်အထိပ်၊ season/film အဆုံးသတ်နှင့် ကိုယ်ပိုင်သုံးသပ်ချက် "
+        "(ကြည့်ရှုထားသော အပိုင်းအကန့်အသတ်ကို ရှင်းလင်းဖော်ပြရန်)\n\n"
+        "မှတ်ချက်: ဤအပိုင်းများသည် worksheet သာဖြစ်ပြီး ဇာတ်ညွှန်းအပြည့် သို့မဟုတ် ဗီဒီယိုမဟုတ်ပါ။ "
+        "Wikipedia ရလဒ်များကို research lead အဖြစ်သာယူပါ။ မထုတ်ဝေမီ အချက်အလက်နှင့် "
+        "အသုံးပြုခွင့်ရှိသော Visual/Audio များကို လူကိုယ်တိုင် စစ်ဆေးပါ။"
     )
     return research_text + plan
 
