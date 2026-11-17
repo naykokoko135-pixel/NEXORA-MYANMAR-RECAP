@@ -64,6 +64,8 @@ Example:
 
 This remains a deterministic free formatter, not an AI writer, translator, or fact-checker. It does not invent missing plot events or guarantee a 15–20 minute runtime. Wikipedia search snippets alone are not enough; review facts against the film and reliable sources, and add original commentary before recording.
 
+For three separate downloads, use `/voiceover3 Avatar` as the first line and put checked facts on new lines in story order. Do not paste the complete `/auto` result as if it were a script: search headings, related results, and source links are not plot facts, and short Wikipedia excerpts alone will be rejected if fewer than six usable fact lines remain.
+
 ## Daily automatic research (5:00 AM Thailand time)
 The `.github/workflows/daily-auto.yml` workflow runs daily at 22:00 UTC (05:00 Asia/Bangkok on the following local date). It chooses one title per day from a built-in rotation, runs the free Wikipedia source lookup, and sends the research leads plus a three-part YouTube planning structure to the configured Telegram chat. The three parts are planning sections, not three finished scripts or videos.
 
