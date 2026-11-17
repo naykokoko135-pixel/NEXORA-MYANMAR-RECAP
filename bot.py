@@ -15,6 +15,7 @@ from draft_builder import generate_draft_worksheet, generate_three_part_draft_wo
 from auto_research import search_movie_sources, ResearchLookupError
 from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
+from video_renderer import render_slideshow, VideoRenderError
 
 from script_writer import (generate_recap_outline, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -49,6 +50,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/draft3 <ဇာတ်ကားအမည်> - YouTube သုံးပိုင်း Draft worksheets\n"
             "/voiceover <ဇာတ်ကားအမည်> - Notes မှ Voice-over မူကြမ်းဖိုင်ထုတ်ရန်\n"
             "/voiceover3 <ဇာတ်ကားအမည်> - Notes မှ Voice-over ဖိုင် ၃ ဖိုင်ထုတ်ရန်\n"
+            "/render - ပုံများ + အသံဖိုင်မှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - English စာတန်းထိုး SRT ဖိုင်ထုတ်ရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
@@ -76,9 +78,9 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
             "AI API: မချိတ်ထားပါ (အခပေး API မသုံးပါ)\n"
-            "လုပ်ဆောင်နိုင်မှု: Auto research + Recap worksheets + Voice-over TXT export + SRT export\n"
+            "လုပ်ဆောင်နိုင်မှု: Auto research + Worksheets + Voice-over TXT + SRT + Image/Audio MP4 render\n"
             "Daily Auto: GitHub Actions မှ မနက် ၅ နာရီ (ထိုင်းစံတော်ချိန်) Research ပို့နိုင်သည်။\n"
-            "Video rendering / social auto-upload: မပါဝင်သေးပါ။"
+            "Social auto-upload: မပါဝင်သေးပါ။"
         )
 
 
@@ -265,6 +267,96 @@ async def voiceover_notes_message(update: Update, context: ContextTypes.DEFAULT_
     context.user_data.pop("pending_voiceover", None)
 
 
+
+async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    action = context.args[0].lower() if context.args else "start"
+    if action == "cancel":
+        context.user_data.pop("video_render", None)
+        await update.message.reply_text("Video ပြင်ဆင်မှုကို ပယ်ဖျက်ပြီးပါပြီ။")
+        return
+    if action == "finish":
+        session = context.user_data.get("video_render")
+        if not session or not session.get("images") or not session.get("audio"):
+            await update.message.reply_text("ပုံအနည်းဆုံး ၁ ပုံနဲ့ အသံဖိုင် ၁ ဖိုင် လိုပါတယ်။ /render ဖြင့် ပြန်စပါ။")
+            return
+        await update.message.reply_text("MP4 ထုတ်လုပ်နေပါတယ်။ ခဏစောင့်ပါ...")
+        import tempfile
+        try:
+            with tempfile.TemporaryDirectory(prefix="nexora_video_") as temp:
+                output = os.path.join(temp, "nexora_video.mp4")
+                await asyncio.to_thread(render_slideshow, session["images"], session["audio"], output)
+                with open(output, "rb") as video_file:
+                    await update.message.reply_video(
+                        video=InputFile(video_file, filename="nexora_video.mp4"),
+                        supports_streaming=True,
+                        caption="NEXORA MP4 ပြီးပါပြီ။ အသုံးပြုခွင့်ရှိသော ပုံ/အသံများကိုသာ ထည့်သုံးပါ။",
+                        read_timeout=120,
+                        write_timeout=120,
+                    )
+        except VideoRenderError as exc:
+            await update.message.reply_text(str(exc))
+        except Exception:
+            log.exception("Video render delivery failed")
+            await update.message.reply_text("MP4 ပို့မရပါ။ ပိုသေးသောဖိုင်များဖြင့် ထပ်စမ်းပါ။")
+        finally:
+            context.user_data.pop("video_render", None)
+        return
+    context.user_data["video_render"] = {"images": [], "audio": None}
+    await update.message.reply_text(
+        "Video ဖန်တီးမှု စတင်ပါပြီ။\n"
+        "၁) ပုံ JPG/PNG/WEBP အများဆုံး ၁၂ ပုံ ပို့ပါ။\n"
+        "၂) Narration အသံ MP3/M4A/WAV/OGG တစ်ဖိုင် ပို့ပါ (၂၀ MB အောက်၊ ၁၀ မိနစ်အောက်)။\n"
+        "၃) ပြီးရင် /render finish ပို့ပါ။ မလုပ်တော့ပါက /render cancel ပို့ပါ။\n"
+        "ကိုယ်ပိုင် သို့မဟုတ် အသုံးပြုခွင့်ရှိသော ပုံ/အသံကိုသာ သုံးပါ။"
+    )
+
+
+async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    session = context.user_data.get("video_render")
+    if session is None:
+        return
+    message = update.message
+    media_file = None
+    filename = ""
+    kind = ""
+    if message.photo:
+        media_file = await message.photo[-1].get_file()
+        filename, kind = f"photo_{len(session['images']) + 1}.jpg", "image"
+    elif message.audio:
+        media_file = await message.audio.get_file()
+        filename = message.audio.file_name or "narration.mp3"
+        kind = "audio"
+    elif message.voice:
+        media_file = await message.voice.get_file()
+        filename, kind = "narration.ogg", "audio"
+    if media_file is None:
+        return
+    size = getattr(media_file, "file_size", 0) or 0
+    limit = 20 * 1024 * 1024 if kind == "audio" else 8 * 1024 * 1024
+    if size > limit:
+        await message.reply_text("ဖိုင်အရွယ်အစား ကြီးနေပါတယ်။ ပိုသေးတဲ့ဖိုင်သုံးပါ။")
+        return
+    buffer = BytesIO()
+    await media_file.download_to_memory(out=buffer)
+    data = buffer.getvalue()
+    if kind == "image":
+        if len(session["images"]) >= 12:
+            await message.reply_text("ပုံ ၁၂ ပုံ ပြည့်ပါပြီ။ /render finish ပို့ပါ။")
+            return
+        session["images"].append((filename, data))
+        await message.reply_text(f"ပုံ {len(session['images'])}/12 လက်ခံပြီးပါပြီ။")
+    else:
+        if len(data) > 20 * 1024 * 1024:
+            await message.reply_text("အသံဖိုင်သည် ၂၀ MB အောက် ဖြစ်ရပါမယ်။")
+            return
+        session["audio"] = (filename, data)
+        await message.reply_text("Narration အသံဖိုင် လက်ခံပြီးပါပြီ။ /render finish ပို့နိုင်ပါပြီ။")
+
+
 async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
@@ -388,6 +480,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "အသုံးပြုပုံ: /voiceover3 Avatar ပြီးနောက် စာကြောင်းအသစ်မှ ဖြစ်ရပ်မှန် Notes များ ထည့်ပါ။\n"
             "Wikipedia /auto ရလဒ်တိုများကို တိုက်ရိုက်သုံးရန် မလုံလောက်ပါ။ Source link များကို ပြန်စစ်ပြီး ကိုယ်တိုင် Notes ရေးပါ။\n"
             "/auto Avatar ပြီးနောက် /draft3 Avatar ပို့လျှင် ရှာထားသော Notes ကို အလိုအလျောက် ထည့်ပေးသည်။\n"
+            "/render ဖြင့် ပုံများနှင့် narration အသံမှ MP4 slideshow ထုတ်နိုင်သည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော English စာသားမှ .srt ဖိုင်ထုတ်နိုင်သည်။"
         )
@@ -433,6 +526,8 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("draft3", draft3_cmd))
     telegram_app.add_handler(CommandHandler("voiceover", voiceover_cmd))
     telegram_app.add_handler(CommandHandler("voiceover3", voiceover3_cmd))
+    telegram_app.add_handler(CommandHandler("render", render_cmd))
+    telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))
     telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, voiceover_notes_message))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
