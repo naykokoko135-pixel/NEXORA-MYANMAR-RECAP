@@ -109,7 +109,7 @@ def build_daily_message(movie_title: str, research_text: str) -> str:
         "အချက်အလက်ကို မူရင်းနှင့်ပြန်စစ်ပြီး ကိုယ်ပိုင် commentary ထည့်ပါ။ "
         "အသုံးပြုခွင့်ရှိသော visual/audio ကိုသာ သုံးပါ။"
     )
-    return research_text + plan + "\\n\\n" + generate_episode_selection_guide()
+    return research_text + plan + "\n\n" + generate_episode_selection_guide()
 
 
 def split_telegram_text(text: str, limit: int = 3900) -> list[str]:
