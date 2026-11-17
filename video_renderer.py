@@ -8,7 +8,7 @@ from pathlib import Path
 
 MAX_IMAGES = 12
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
-MAX_AUDIO_BYTES = 25 * 1024 * 1024
+MAX_AUDIO_BYTES = 20 * 1024 * 1024
 MAX_AUDIO_SECONDS = 600
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
 AUDIO_SUFFIXES = {".mp3", ".m4a", ".wav", ".ogg"}
@@ -49,7 +49,7 @@ def render_slideshow(
     if Path(audio_name).suffix.lower() not in AUDIO_SUFFIXES:
         raise VideoRenderError("အသံဖိုင်အမျိုးအစား မမှန်ပါ။ MP3/M4A/WAV/OGG သုံးပါ။")
     if not audio_data or len(audio_data) > MAX_AUDIO_BYTES:
-        raise VideoRenderError("အသံဖိုင်သည် ၂၅ MB အောက် ဖြစ်ရပါမယ်။")
+        raise VideoRenderError("အသံဖိုင်သည် ၂၀ MB အောက် ဖြစ်ရပါမယ်။")
 
     for name, data in images:
         if Path(name).suffix.lower() not in IMAGE_SUFFIXES:
