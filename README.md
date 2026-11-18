@@ -275,3 +275,16 @@ The first request may take longer while the model assets are downloaded and load
 MyanmarTTS currently uses a single default reference voice in its simple package interface; it is **not** a library of multiple named character actors. Do not use another person's reference recording unless you have their clear permission. This optional experiment does not alter or replace Nilar/Thiha, does not change existing `/tts`, `/ttssrt`, or `/scenetts` behavior, and does not provide word-aligned SRT.
 
 Model information and upstream license notes: [MyanmarTTS on PyPI](https://pypi.org/project/MyanmarTTS/) and [model card](https://huggingface.co/freococo/MyanmarTTS). The model weights and generated samples are CC0; supporting code and vocoder retain their stated MIT licenses. Review the upstream NOTICE before redistribution.
+
+
+### Run the real-model smoke test with GitHub Actions
+
+You can run the optional MyanmarTTS model test without installing the dependencies on your phone or changing Render:
+
+1. Open the repository's **Actions** tab.
+2. Select **Manual Local MyanmarTTS Smoke Test**.
+3. Choose **Run workflow**. The default sample is a short generic Burmese sentence; do not enter private or personal text.
+4. Wait for the job to finish. Open the completed run and download the `nexora-local-myanmar-tts-smoke` artifact.
+5. Extract and play `local_myanmar_tts_smoke.wav` to review pronunciation and audio quality.
+
+This workflow is manually triggered only. It installs the optional dependencies on a temporary GitHub-hosted runner, may download model assets from Hugging Face, and uploads the generated WAV as a short-lived artifact (3-day retention). It does not use repository secrets, change Render settings, or enable local TTS on the production bot. Runner memory/CPU limits may prevent the model from completing; a successful unit-test run does not prove that the real model has generated audio.
