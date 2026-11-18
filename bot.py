@@ -69,7 +69,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
             "/srtmy - မြန်မာစာသားမှ SRT ထုတ်ရန်\n"
             "/tts <preset> - မြန်မာ MP3 အသံထုတ်ရန်\n"
-            "/voicedemo <preset> - အသံပုံစံ နမူနာ MP3 နားထောင်ရန်\n"
+            "/voicedemo <preset> - ရှိပြီးသားအသံပုံစံနမူနာ MP3 နားထောင်ရန်\n"
+            "/tts-design <voice_name> - AI စိတ်ကူးယဉ်ဇာတ်ကောင်အသံ WAV ဖန်တီးရန် (GPU host လိုအပ်)\n"
             "/ttssrt <preset> - MP3 နှင့် အချိန်ကိုက် SRT တွဲထုတ်ရန်\n"
             "/tts-local - Local MyanmarTTS WAV ထုတ်ရန် (စမ်းသပ်ဆဲ၊ host enable လိုအပ်)\n"
             "/voices - အသံပုံစံအားလုံးကြည့်ရန်\n"
@@ -817,13 +818,13 @@ async def ttsdesign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate a fictional Burmese character voice with optional VoxCPM2."""
     if not update.message or not update.message.text:
         return
-    first_line, separator, script = update.message.text.partition("\\n")
+    first_line, separator, script = update.message.text.partition("\n")
     parts = first_line.split(maxsplit=1)
     voice = parts[1].strip().lower() if len(parts) > 1 else ""
     if not separator or not script.strip() or voice not in VOICE_DESIGNS:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /tts-design <voice_name> ပြီးနောက် စာကြောင်းအသစ်မှ ဇာတ်ညွှန်းထည့်ပါ။\\n"
-            "Voice အသစ်ဒီဇိုင်းများ: " + ", ".join(VOICE_DESIGNS) + "\\n"
+            "အသုံးပြုပုံ: /tts-design <voice_name> ပြီးနောက် စာကြောင်းအသစ်မှ ဇာတ်ညွှန်းထည့်ပါ။\n"
+            "Voice အသစ်ဒီဇိုင်းများ: " + ", ".join(VOICE_DESIGNS) + "\n"
             "ဤအသံများသည် AI ဖန်တီးထားသော စိတ်ကူးယဉ်အသံများဖြစ်ပြီး တကယ့်လူတစ်ဦး၏အသံကို မကူးယူပါ။"
         )
         return
@@ -840,7 +841,7 @@ async def ttsdesign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_document(
         document=InputFile(file_obj, filename=file_obj.name),
         caption=(
-            f"AI Voice Design: {VOICE_DESIGNS[voice]['label']}\\n"
+            f"AI Voice Design: {VOICE_DESIGNS[voice]['label']}\n"
             "စိတ်ကူးယဉ် synthetic voice ဖြစ်ပြီး တကယ့်အသံရှင်တစ်ဦးကို ကိုယ်စားမပြုပါ။"
         ),
         read_timeout=120,
@@ -1020,7 +1021,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/render ဖြင့် ပုံများနှင့် narration အသံမှ MP4 slideshow ထုတ်နိုင်သည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
-            "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts-local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
+            "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts-design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts-local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
         )
 
 
