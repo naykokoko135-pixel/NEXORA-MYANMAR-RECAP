@@ -17,7 +17,7 @@ from subtitle_builder import build_burmese_srt
 from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
 from local_myanmar_tts import synthesize_local_burmese_speech
 from voxcpm_voice_design import VOICE_DESIGNS, synthesize_designed_burmese_voice
-from scene_tts import parse_scene_script
+from scene_tts import parse_scene_script, parse_voice_design_scene_script
 from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
 from voice_profile_storage import load_voice_profiles, save_voice_profiles
 from voice_profile_backup import export_voice_profile_backup, import_voice_profile_backup, VoiceProfileBackupError, MAX_BACKUP_BYTES
@@ -958,6 +958,50 @@ async def scenetts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+async def scenedesign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generate separate fictional VoxCPM2 WAV files for tagged scenes."""
+    if not update.message or not update.message.text:
+        return
+    script = update.message.text.partition("\\n")[2].strip()
+    try:
+        scenes = parse_voice_design_scene_script(script)
+    except ValueError as exc:
+        await update.message.reply_text(
+            f"{exc}\\n\\nအသုံးပြုပုံ: /scenedesign ပြီးနောက် [ai:story_female]၊ "
+            "[ai:villain] ကဲ့သို့ ခေါင်းစဉ်များနှင့် စာသားကို အခန်းလိုက်ထည့်ပါ။\\n"
+            "အသံစာရင်းအတွက် /voices ကို သုံးပါ။"
+        )
+        return
+
+    await update.message.reply_text(
+        f"AI ဇာတ်ဝင်ခန်း {len(scenes)} ခန်းကို သီးခြား WAV ထုတ်နေပါတယ်။ "
+        "GPU host ပေါ်တွင် အခန်းတစ်ခန်းချင်းစီ အချိန်ယူနိုင်ပါတယ်..."
+    )
+    for index, scene in enumerate(scenes, start=1):
+        voice = scene["voice"]
+        try:
+            audio = await synthesize_designed_burmese_voice(scene["text"], voice)
+        except (ValueError, RuntimeError) as exc:
+            await update.message.reply_text(
+                f"AI အခန်း {index} ({voice}) မအောင်မြင်ပါ: {exc}\\n"
+                "အရင်အခန်း WAV များကို ရရှိပြီးပါက ဆက်လက်အသုံးပြုနိုင်ပါတယ်။"
+            )
+            return
+
+        audio_name = f"nexora_ai_scene_{index}_{voice}.wav"
+        audio_file = BytesIO(audio)
+        audio_file.name = audio_name
+        await update.message.reply_document(
+            document=InputFile(audio_file, filename=audio_name),
+            caption=(
+                f"AI အခန်း {index}/{len(scenes)} — {VOICE_DESIGNS[voice]['label']}\\n"
+                "စိတ်ကူးယဉ် synthetic voice ဖြစ်ပြီး တကယ့်လူတစ်ဦး၏အသံကို မကူးယူပါ။"
+            ),
+            read_timeout=120,
+            write_timeout=120,
+        )
+
+
 async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """List Burmese voice identities and delivery-style presets."""
     if not update.message:
@@ -971,6 +1015,7 @@ async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append(f"/tts {key} — {preset['label']}")
     lines.append("MP3 + SRT တွဲလိုပါက /ttssrt <preset> ကို သုံးပါ။ အသံကို အရင်နားထောင်လိုပါက /voicedemo <preset> ကို သုံးပါ။")
     lines.append("AI Voice Design အသစ်များ: " + ", ".join(VOICE_DESIGNS) + " — /tts-design <voice_name> ဖြင့် WAV ထုတ်နိုင်သည် (VoxCPM2 GPU host လိုအပ်သည်)။")
+    lines.append("ဇာတ်ဝင်ခန်းတစ်ခန်းစီအတွက် AI အသံမတူစေလိုပါက /scenedesign နှင့် [ai:story_female] ကဲ့သို့ ခေါင်းစဉ်သုံးပါ။ အခန်း ၄ ခန်းအထိ၊ တစ်ခန်းစာလုံး ၁,၅၀၀ အထိ။")
     lines.append("မြန်မာ Role များ: [ဇာတ်ကြောင်း], [မင်းသား], [မင်းသမီး], [ဗီလိန်], [လူကြီး], [ကလေး], [ဟာသ], [လျှို့ဝှက်], [အက်ရှင်]")
     lines.append("English Role များ: [narrator], [protagonist], [heroine], [antagonist], [supporting], [elder], [child], [comic], [suspense], [action]")
     lines.append("Role များသည် ရှိပြီးသား preset များသို့ ချိတ်ဆက်ထားခြင်းသာဖြစ်ပြီး Nilar/Thiha အသံအခြေခံကို မပြောင်းပါ။")
@@ -1076,6 +1121,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("tts", tts_cmd))
     telegram_app.add_handler(CommandHandler("voicedemo", voicedemo_cmd))
     telegram_app.add_handler(CommandHandler("tts-design", ttsdesign_cmd))
+    telegram_app.add_handler(CommandHandler("scenedesign", scenedesign_cmd))
     telegram_app.add_handler(CommandHandler("tts-local", ttslocal_cmd))
     telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
     telegram_app.add_handler(CommandHandler("scenetts", scenetts_cmd))
