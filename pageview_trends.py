@@ -1,6 +1,6 @@
 """Free Wikimedia article-pageview attention signals across NEXORA categories.
 
-These are public Wikipedia article views, not video plays or episode view counts.
+These are public English Wikipedia article views, not video plays or episode view counts.
 """
 import json
 from datetime import date, datetime, timedelta, timezone
@@ -38,17 +38,19 @@ def fetch_category_pageviews(title_categories, as_of=None, samples_per_category=
     previous_end = recent_start - timedelta(days=1)
     result = {
         "ok": False,
-        "source": "Wikimedia Pageviews API",
+        "source": "Wikimedia Pageviews API (English Wikipedia)",
         "checked_at": datetime.now(timezone.utc).isoformat(),
         "period_start": start.strftime("%Y%m%d"),
         "period_end": end.strftime("%Y%m%d"),
+        "samples_per_category": max(0, int(samples_per_category)),
         "categories": {},
         "errors": 0,
     }
 
     for category, titles in (title_categories or {}).items():
         category_items = []
-        for title in _sample_titles(titles, today, samples_per_category):
+        sampled_titles = _sample_titles(titles, today, samples_per_category)
+        for title in sampled_titles:
             article = quote(str(title).replace(" ", "_"), safe="")
             url = (
                 f"{BASE_URL}/en.wikipedia/all-access/user/{article}/daily/"
@@ -74,10 +76,12 @@ def fetch_category_pageviews(title_categories, as_of=None, samples_per_category=
                     "recent_views": recent,
                     "previous_views": previous,
                     "change_pct": change,
+                    "verification_status": "လူကိုယ်တိုင် မူရင်းနှင့် ထပ်မံစစ်ဆေးရန်",
                 })
             except (HTTPError, URLError, TimeoutError, OSError, ValueError, TypeError, KeyError):
                 result["errors"] += 1
 
+        # This order is only a comparison among today's sampled titles, not a category ranking.
         category_items.sort(key=lambda item: item["recent_views"], reverse=True)
         result["categories"][category] = category_items
 
@@ -86,20 +90,22 @@ def fetch_category_pageviews(title_categories, as_of=None, samples_per_category=
 
 
 def format_category_pageviews(result):
+    samples = result.get("samples_per_category", SAMPLE_PER_CATEGORY)
     lines = [
-        "📊 NEXORA — အမျိုးအစား ၄ မျိုး၏ Wikipedia စိတ်ဝင်စားမှုအချက်ပြ",
-        f"ရင်းမြစ်: {result.get('source', 'Wikimedia Pageviews API')}",
+        "📊 NEXORA — English Wikipedia ဆောင်းပါး Pageviews အချက်ပြ",
+        f"ရင်းမြစ်: {result.get('source', 'Wikimedia Pageviews API (English Wikipedia)')}",
         f"ကာလ: {result.get('period_start', '?')} မှ {result.get('period_end', '?')} (ရက် ၁၄)",
+        f"စစ်ဆေးမှု: အမျိုးအစားတစ်ခုလျှင် နမူနာ {samples} ခုကို နေ့စဉ်လှည့်လည်ရွေးချယ်ခြင်း",
+        "အောက်ပါအစီအစဉ်သည် ယနေ့နမူနာအတွင်း Pageviews အလိုက်သာ စီထားခြင်းဖြစ်ပြီး အမျိုးအစားတစ်ခုလုံး၏ Ranking မဟုတ်ပါ။",
     ]
     categories = result.get("categories", {})
     if not result.get("ok"):
         lines.extend(["Pageview အချက်အလက် မရရှိပါ။", "အဆင့်သတ်မှတ်ချက်ကို မခန့်မှန်းထားပါ။"])
-        return "\n".join(lines)
 
     for category, items in categories.items():
-        lines.append(f"\n{category}:")
+        lines.append(f"\n{category} — နမူနာ {samples} ခုအနက် ဒေတာရရှိမှု {len(items)} ခု:")
         if not items:
-            lines.append("ဒေတာမရရှိပါ။")
+            lines.append("ဒေတာမရရှိပါ။ လူကြိုက်များမှုအဖြစ် မခန့်မှန်းထားပါ။")
             continue
         for index, item in enumerate(items, start=1):
             change = (
@@ -107,15 +113,19 @@ def format_category_pageviews(result):
                 if item.get("change_pct") is not None else "ပြောင်းလဲမှု မတွက်နိုင်"
             )
             lines.append(
-                f"{index}. {item['title']} — နောက်ဆုံး ၇ ရက် {item['recent_views']:,} views"
-                f" | ယခင် ၇ ရက်နှင့် {change}"
+                f"{index}. {item['title']} — နောက်ဆုံး ၇ ရက် {item['recent_views']:,} "
+                f"English Wikipedia article views | ယခင် ၇ ရက်နှင့် {change}"
             )
-            lines.append(item["url"])
+            lines.append(f"Wikipedia source: {item['url']}")
+            lines.append(f"အတည်ပြုမှု: {item.get('verification_status', 'လူကိုယ်တိုင် မူရင်းနှင့် ထပ်မံစစ်ဆေးရန်')}")
 
     lines.extend([
         "\nအရေးကြီး: ဤကိန်းဂဏန်းများသည် English Wikipedia ဆောင်းပါး pageviews သာဖြစ်ပြီး YouTube/Facebook/TikTok ကြည့်ရှုမှု၊"
         " episode view count သို့မဟုတ် လူကြိုက်များမှုအပြည့်အစုံ မဟုတ်ပါ။",
         "ခေါင်းစဉ်နမူနာ ၂ ခုစီကို နေ့စဉ်လှည့်လည်စစ်ဆေးထားခြင်းဖြစ်၍ အမျိုးအစားတစ်ခုလုံး၏ အပြီးသတ် ranking မဟုတ်ပါ။",
         "မူရင်းစာမျက်နှာမကိုက်ညီနိုင်သော ခေါင်းစဉ်များကို source link ဖြင့် လူက ထပ်မံစစ်ဆေးပါ။",
+        "YouTube/Facebook/TikTok platform metrics: ဤအစီရင်ခံစာတွင် မရရှိသေးပါ — Wikipedia data ဖြင့် အစားမထိုးပါ။",
     ])
+    if result.get("errors"):
+        lines.append(f"API မှ ဒေတာမရယူနိုင်သော ခေါင်းစဉ်: {result['errors']} ခု")
     return "\n".join(lines)
