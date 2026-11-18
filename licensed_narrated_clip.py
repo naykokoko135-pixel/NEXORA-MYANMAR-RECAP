@@ -14,6 +14,15 @@ from urllib.parse import urlparse
 from licensed_video_pipeline import ALLOWED_HOST, MAX_SOURCE_BYTES, LicensedClipError
 
 
+def _subtitle_duration_seconds(subtitles_srt: str) -> float:
+    """Read the final SRT cue end time; reject malformed timing rather than truncate narration."""
+    end_times = re.findall(r"-->\\s*(\\d{2}):(\\d{2}):(\\d{2}),(\\d{3})", subtitles_srt)
+    if not end_times:
+        raise LicensedClipError("SRT အဆုံးအချိန်ကို မဖတ်နိုင်ပါ။")
+    last = end_times[-1]
+    return int(last[0]) * 3600 + int(last[1]) * 60 + int(last[2]) + int(last[3]) / 1000
+
+
 def render_licensed_narrated_preview(
     source: dict,
     narration_mp3: bytes,
@@ -43,10 +52,7 @@ def render_licensed_narrated_preview(
         raise LicensedClipError("မြန်မာ SRT စာတန်းပုံစံ မမှန်ပါ။")
     if not isinstance(max_duration_seconds, int) or isinstance(max_duration_seconds, bool) or not 1 <= max_duration_seconds <= 300:
         raise LicensedClipError("Preview ကြာချိန်သည် 1 မှ 300 စက္ကန့်အတွင်း ဖြစ်ရပါမယ်။")
-    end_times = re.findall(r"-->\\s*(\\d{2}):(\\d{2}):(\\d{2}),(\\d{3})", subtitles_srt)
-    if not end_times:
-        raise LicensedClipError("SRT အဆုံးအချိန်ကို မဖတ်နိုင်ပါ။")
-    last = end_times[-1]
+    subtitle_duration = _subtitle_duration_seconds(subtitles_srt)
     subtitle_duration = int(last[0]) * 3600 + int(last[1]) * 60 + int(last[2]) + int(last[3]) / 1000
     if subtitle_duration > max_duration_seconds:
         raise LicensedClipError(f"အသံ/SRT ကြာချိန် {max_duration_seconds} စက္ကန့်ထက် ကျော်နေပါတယ်။ Script ကို အပိုင်းခွဲပါ။")
