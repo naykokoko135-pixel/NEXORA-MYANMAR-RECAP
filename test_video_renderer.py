@@ -50,7 +50,7 @@ class VideoRendererValidationTests(unittest.TestCase):
                      patch("subprocess.run", side_effect=fake_render) as run:
                     render_slideshow([("cover.jpg", b"image")], ("voice.mp3", b"audio"), output,
                         platform=platform,
-                        subtitle=("captions.srt", "1\\n00:00:00,000 --> 00:00:02,000\\nမြန်မာစာတန်း\\n".encode("utf-8")))
+                        subtitle=("captions.srt", "\\n".join(["1", "00:00:00,000 --> 00:00:02,000", "မြန်မာစာတန်း", ""]).encode("utf-8")))
                 command = run.call_args.args[0]
                 self.assertIn(f"scale={dimensions}", command[command.index("-vf") + 1])
                 self.assertIn("setsar=1", command[command.index("-vf") + 1])
