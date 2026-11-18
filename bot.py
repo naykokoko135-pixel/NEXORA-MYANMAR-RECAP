@@ -1592,15 +1592,15 @@ async def growthpack_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     raw = update.message.text.split(maxsplit=1)
     if len(raw) < 2:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /growthpack Anime|Frieren: Beyond Journey's End|ဇာတ်လမ်းအကျဉ်း (optional)\\n"
-            "Category: Anime | 3D Animation | Cartoon | Donghua | International Movies\\n"
+            "အသုံးပြုပုံ: /growthpack Anime|Frieren: Beyond Journey's End|ဇာတ်လမ်းအကျဉ်း (optional)\n"
+            "Category: Anime | 3D Animation | Cartoon | Donghua | International Movies\n"
             "Summary မထည့်ပါက ဇာတ်ကွက်ကို မခန့်မှန်းဘဲ ဖြည့်ရန်နေရာ ထားပေးမည်။"
         )
         return
     fields = raw[1].split("|", 2)
     if len(fields) < 2:
         await update.message.reply_text(
-            "Category နဲ့ ခေါင်းစဉ်ကို | ဖြင့် ခွဲပါ။\\n"
+            "Category နဲ့ ခေါင်းစဉ်ကို | ဖြင့် ခွဲပါ။\n"
             "ဥပမာ: /growthpack Donghua|Soul Land|အတည်ပြုထားသော ဇာတ်လမ်းအကျဉ်း"
         )
         return
