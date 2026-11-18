@@ -10,6 +10,8 @@ MAX_IMAGES = 12
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 MAX_AUDIO_BYTES = 20 * 1024 * 1024
 MAX_AUDIO_SECONDS = 600
+MAX_SUBTITLE_BYTES = 1024 * 1024
+SUBTITLE_SUFFIXES = {".srt"}
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
 AUDIO_SUFFIXES = {".mp3", ".m4a", ".wav", ".ogg"}
 
@@ -42,12 +44,23 @@ def render_slideshow(
     audio: tuple[str, bytes] | list[tuple[str, bytes]],
     output_path: str | Path,
     platform: str = "youtube",
+    subtitle: tuple[str, bytes] | None = None,
 ) -> Path:
     """Render up to 12 still images and narration into a platform-sized MP4."""
     dimensions = {"youtube": (1280, 720), "facebook": (864, 1080), "tiktok": (720, 1280)}
     if platform not in dimensions:
         raise VideoRenderError("Platform သည် youtube/facebook/tiktok ဖြစ်ရပါမယ်။")
     width, height = dimensions[platform]
+    if subtitle is not None:
+        subtitle_name, subtitle_data = subtitle
+        if Path(subtitle_name).suffix.lower() not in SUBTITLE_SUFFIXES or not subtitle_data or len(subtitle_data) > MAX_SUBTITLE_BYTES:
+            raise VideoRenderError("စာတန်းဖိုင်သည် SRT ဖြစ်ပြီး ၁ MB အောက် ဖြစ်ရပါမယ်။")
+        try:
+            subtitle_text = subtitle_data.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise VideoRenderError("SRT ဖိုင်သည် UTF-8 မြန်မာစာဖြစ်ရပါမယ်။") from exc
+        if "-->" not in subtitle_text:
+            raise VideoRenderError("SRT timestamp ပုံစံ မမှန်ပါ။")
     if not 1 <= len(images) <= MAX_IMAGES:
         raise VideoRenderError(f"ပုံ {1} မှ {MAX_IMAGES} ပုံအထိ ထည့်နိုင်ပါတယ်။")
     audio_tracks = [audio] if isinstance(audio, tuple) else list(audio)
@@ -89,6 +102,11 @@ def render_slideshow(
         if duration > MAX_AUDIO_SECONDS:
             raise VideoRenderError("အသံ Track အားလုံးပေါင်း ၁၀ မိနစ်ထက် မကျော်ရပါ။")
 
+        subtitle_path = None
+        if subtitle is not None:
+            subtitle_path = work / "captions.srt"
+            subtitle_path.write_bytes(subtitle[1])
+
         lines = []
         segment = duration / len(images)
         for index, (name, data) in enumerate(images):
@@ -106,6 +124,7 @@ def render_slideshow(
             ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
             "-f", "concat", "-safe", "0", "-i", str(concat_path),
             *[arg for audio_path in audio_paths for arg in ("-i", str(audio_path))],
+            *(["-i", str(subtitle_path)] if subtitle_path else []),
             "-vf", f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
                    f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p",
             "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
@@ -120,6 +139,7 @@ def render_slideshow(
                  "-map", "0:v", "-map", "[aout]"]
                 if len(audio_paths) > 1 else ["-map", "0:v", "-map", "1:a"]
             ),
+            *(["-map", f"{len(audio_paths) + 1}:s:0", "-c:s", "mov_text", "-metadata:s:s:0", "language=bur"] if subtitle_path else []),
             "-c:a", "aac", "-b:a", "128k", "-shortest", "-t", f"{duration:.3f}",
             "-movflags", "+faststart", str(target),
         ]

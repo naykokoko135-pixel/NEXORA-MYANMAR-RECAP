@@ -398,12 +398,12 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with tempfile.TemporaryDirectory(prefix="nexora_video_") as temp:
                 output = os.path.join(temp, "nexora_video.mp4")
                 audio_input = session["audio_tracks"] if session.get("audio_tracks") else session["audio"]
-                await asyncio.to_thread(render_slideshow, session["images"], audio_input, output, session.get("platform", "youtube"))
+                await asyncio.to_thread(render_slideshow, session["images"], audio_input, output, session.get("platform", "youtube"), session.get("subtitle"))
                 with open(output, "rb") as video_file:
                     await update.message.reply_video(
                         video=InputFile(video_file, filename="nexora_video.mp4"),
                         supports_streaming=True,
-                        caption=f"NEXORA {session.get('platform', 'youtube').upper()} MP4 ပြီးပါပြီ။ အသုံးပြုခွင့်ရှိသော ပုံ/အသံများကိုသာ ထည့်သုံးပါ။",
+                        caption=f"NEXORA {session.get('platform', 'youtube').upper()} MP4 ပြီးပါပြီ။ " + ("မြန်မာစာတန်းထိုး ထည့်သွင်းထားပါတယ်။ " if session.get("subtitle") else "") + "အသုံးပြုခွင့်ရှိသော ပုံ/အသံများကိုသာ ထည့်သုံးပါ။",
                         read_timeout=120,
                         write_timeout=120,
                     )
@@ -452,7 +452,8 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "၁) ပုံ JPG/PNG/WEBP အများဆုံး ၁၂ ပုံ ပို့ပါ။\n"
         "၂) Narration အသံဖိုင် ပို့ပါ၊ သို့မဟုတ် /render voice <profile အမည်> ဖြင့် သိမ်းထားသော အသံ Track များရွေးပါ။\n"
         "၃) Voice Track များကို အစဉ်လိုက် ပေါင်းစပ်မည်။ Track စုစုပေါင်း ၂၀ MB/၁၀ မိနစ်အောက် ဖြစ်ရပါမယ်။\n"
-        "၄) ပြီးရင် /render finish ပို့ပါ။ မလုပ်တော့ပါက /render cancel ပို့ပါ။\n"
+        "၄) မြန်မာစာတန်းထိုးလိုပါက .srt ဖိုင် (၁ MB အောက်) ပို့ပါ။ MP4 ထဲတွင် ရွေးဖွင့်နိုင်သော Subtitle Track အဖြစ် ထည့်ပေးမည်။\n"
+        "၅) ပြီးရင် /render finish ပို့ပါ။ မလုပ်တော့ပါက /render cancel ပို့ပါ။\n"
         "ကိုယ်ပိုင် သို့မဟုတ် အသုံးပြုခွင့်ရှိသော ပုံ/အသံကိုသာ သုံးပါ။"
     )
 
@@ -609,17 +610,23 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     elif message.voice:
         media_file = await message.voice.get_file()
         filename, kind = "narration.ogg", "audio"
+    if media_file is None and message.document and (message.document.file_name or "").lower().endswith(".srt"):
+        media_file = await message.document.get_file()
+        filename, kind = message.document.file_name or "captions.srt", "subtitle"
     if media_file is None:
         return
     size = getattr(media_file, "file_size", 0) or 0
-    limit = 20 * 1024 * 1024 if kind == "audio" else 8 * 1024 * 1024
+    limit = 20 * 1024 * 1024 if kind == "audio" else (1024 * 1024 if kind == "subtitle" else 8 * 1024 * 1024)
     if size > limit:
         await message.reply_text("ဖိုင်အရွယ်အစား ကြီးနေပါတယ်။ ပိုသေးတဲ့ဖိုင်သုံးပါ။")
         return
     buffer = BytesIO()
     await media_file.download_to_memory(out=buffer)
     data = buffer.getvalue()
-    if kind == "image":
+    if kind == "subtitle":
+        session["subtitle"] = (filename, data)
+        await message.reply_text("မြန်မာစာတန်းထိုး SRT လက်ခံပြီးပါပြီ။ /render finish ဖြင့် MP4 ထုတ်နိုင်ပါပြီ။")
+    elif kind == "image":
         if len(session["images"]) >= 12:
             await message.reply_text("ပုံ ၁၂ ပုံ ပြည့်ပါပြီ။ /render finish ပို့ပါ။")
             return
@@ -1080,7 +1087,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Wikipedia /auto ရလဒ်တိုများကို တိုက်ရိုက်သုံးရန် မလုံလောက်ပါ။ Source link များကို ပြန်စစ်ပြီး ကိုယ်တိုင် Notes ရေးပါ။\n"
             "/auto Avatar ပြီးနောက် /draft3 Avatar ပို့လျှင် ရှာထားသော Notes ကို အလိုအလျောက် ထည့်ပေးသည်။\n"
             "/seriesguide <title> ဖြင့် TVmaze ကို အရင်စစ်ပါမည်။ Anime စာရင်းထဲမှ ခေါင်းစဉ်များကို AniList ဖြင့် ထပ်စစ်ပြီး နောက်ဆုံးတွင် Wikidata ကို စစ်ပါမည်။ ရင်းမြစ်မတွေ့ပါက အရေအတွက်ကို မခန့်မှန်းပါ။\n"
-            "/platform youtube|facebook|tiktok ကို အရင်ရွေးပြီး /render ဖြင့် Platform အချိုးအစားကိုက် MP4 ထုတ်နိုင်သည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
+            "/platform youtube|facebook|tiktok ကို အရင်ရွေးပြီး /render ဖြင့် Platform အချိုးအစားကိုက် MP4 ထုတ်နိုင်သည်။ .srt ဖိုင်ပို့လျှင် မြန်မာစာတန်းကို MP4 ထဲတွင် ရွေးဖွင့်နိုင်သော Track အဖြစ် ထည့်မည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"

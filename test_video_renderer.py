@@ -64,6 +64,48 @@ class VideoRendererValidationTests(unittest.TestCase):
         with self.assertRaises(VideoRenderError):
             render_slideshow([("cover.jpg", b"image")], ("voice.mp3", b"audio"), "out.mp4", platform="unknown")
 
+
+    def test_embeds_burmese_srt_as_selectable_mp4_track(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "out.mp4"
+
+            def fake_render(command, **kwargs):
+                output.write_bytes(b"mp4")
+                return type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+
+            fake_ffmpeg = SimpleNamespace(get_ffmpeg_exe=lambda: "ffmpeg")
+            subtitle_text = chr(10).join(["1", "00:00:00,000 --> 00:00:02,000", "မြန်မာစာတန်း", ""])
+            with patch.dict(sys.modules, {"imageio_ffmpeg": fake_ffmpeg}), \
+                 patch("video_renderer._duration_seconds", return_value=2.0), \
+                 patch("subprocess.run", side_effect=fake_render) as run:
+                render_slideshow(
+                    [("cover.jpg", b"image")],
+                    ("voice.mp3", b"audio"),
+                    output,
+                    platform="tiktok",
+                    subtitle=("captions.srt", subtitle_text.encode("utf-8")),
+                )
+
+            command = run.call_args.args[0]
+            self.assertIn("720:1280", command[command.index("-vf") + 1])
+            self.assertIn("mov_text", command)
+            self.assertIn("language=bur", command)
+            self.assertIn("2:s:0", command)
+
+    def test_rejects_invalid_srt_file(self):
+        with self.assertRaises(VideoRenderError):
+            render_slideshow(
+                [("cover.jpg", b"image")], ("voice.mp3", b"audio"), "out.mp4",
+                subtitle=("captions.txt", b"not an srt"),
+            )
+
+    def test_rejects_non_utf8_srt(self):
+        with self.assertRaises(VideoRenderError):
+            render_slideshow(
+                [("cover.jpg", b"image")], ("voice.mp3", b"audio"), "out.mp4",
+                subtitle=("captions.srt", bytes([255]) + b"-->"),
+            )
+
     def test_rejects_empty_image_list(self):
         with self.assertRaises(VideoRenderError):
             render_slideshow([], ("voice.mp3", b"audio"), "out.mp4")
