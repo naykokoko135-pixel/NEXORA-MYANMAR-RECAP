@@ -141,6 +141,7 @@ def build_word_aligned_srt(boundaries: list[dict], max_chars: int = 42, max_dura
 async def synthesize_burmese_speech_with_srt(text: str, voice: str = "female") -> tuple[bytes, str]:
     """Return MP3 bytes and SRT aligned to Edge TTS word-boundary timings."""
     voice_id = validate_tts_request(text, voice)
+    preset = get_tts_preset(voice)
     try:
         import edge_tts
     except ImportError as exc:

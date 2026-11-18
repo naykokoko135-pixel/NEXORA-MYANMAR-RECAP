@@ -1,4 +1,8 @@
+import asyncio
+import sys
+import types
 import unittest
+from unittest.mock import patch
 
 from tts_builder import VOICE_MAP, VOICE_PRESETS, get_tts_preset, validate_tts_request, build_word_aligned_srt
 
@@ -44,6 +48,38 @@ class BurmeseTtsValidationTests(unittest.TestCase):
         self.assertEqual(preset["voice"], "male")
         self.assertEqual(preset["rate"], "-12%")
         self.assertEqual(preset["pitch"], "-5Hz")
+    def test_ttssrt_applies_selected_voice_preset(self):
+        calls = {}
+
+        class FakeCommunicate:
+            def __init__(self, text, voice, **kwargs):
+                calls["voice"] = voice
+                calls.update(kwargs)
+
+            async def stream(self):
+                yield {"type": "audio", "data": b"fake-mp3"}
+                yield {
+                    "type": "WordBoundary",
+                    "text": "မင်္ဂလာပါ။",
+                    "offset": 0,
+                    "duration": 12_000_000,
+                }
+
+        fake_module = types.SimpleNamespace(Communicate=FakeCommunicate)
+        with patch.dict(sys.modules, {"edge_tts": fake_module}):
+            audio, srt = asyncio.run(
+                __import__("tts_builder").synthesize_burmese_speech_with_srt(
+                    "မင်္ဂလာပါ။", "villain"
+                )
+            )
+
+        self.assertEqual(audio, b"fake-mp3")
+        self.assertEqual(calls["voice"], "my-MM-ThihaNeural")
+        self.assertEqual(calls["rate"], "-12%")
+        self.assertEqual(calls["pitch"], "-5Hz")
+        self.assertEqual(calls["boundary"], "WordBoundary")
+        self.assertIn("မင်္ဂလာပါ။", srt)
+
     def test_text_limit_enforced(self):
         with self.assertRaises(ValueError):
             validate_tts_request("က" * 6001, "female")
