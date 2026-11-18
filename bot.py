@@ -558,10 +558,10 @@ async def srtmy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Create Burmese captions with estimated timing from a supplied script."""
     if not update.message or not update.message.text:
         return
-    script = update.message.text.partition("\\n")[2].strip()
+    script = update.message.text.partition("\n")[2].strip()
     if not script:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /srtmy ပြီးနောက် မြန်မာ Voice-over စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\\n"
+            "အသုံးပြုပုံ: /srtmy ပြီးနောက် မြန်မာ Voice-over စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
             "မှတ်ချက်: အချိန်ကို စာလုံးအရေအတွက်ဖြင့် ခန့်မှန်းထားခြင်းဖြစ်ပြီး အသံနှင့် ကိုက်ညီအောင် ပြန်ညှိပါ။"
         )
         return
