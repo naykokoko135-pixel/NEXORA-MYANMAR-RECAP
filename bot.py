@@ -63,6 +63,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
             "/srtmy - မြန်မာစာသားမှ SRT ထုတ်ရန်\n"
             "/tts female|male - မြန်မာ MP3 အသံထုတ်ရန်\n"
+            "/ttssrt female|male - MP3 နှင့် အချိန်ကိုက် SRT တွဲထုတ်ရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60 မိနစ်\n"
@@ -597,12 +598,12 @@ async def ttssrt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate Burmese MP3 and word-aligned SRT together."""
     if not update.message or not update.message.text:
         return
-    first_line, separator, script = update.message.text.partition("\\n")
+    first_line, separator, script = update.message.text.partition("\n")
     parts = first_line.split(maxsplit=1)
     voice = parts[1].strip().lower() if len(parts) > 1 else ""
     if not separator or not script.strip() or voice not in {"female", "male"}:
         await update.message.reply_text(
-            "အသုံးပြုပုံ:\\n/ttssrt female\\nပြီးနောက် မြန်မာ Voice-over စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\\n"
+            "အသုံးပြုပုံ:\n/ttssrt female\nပြီးနောက် မြန်မာ Voice-over စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
             "အမျိုးသားအသံအတွက် /ttssrt male ကို သုံးပါ။"
         )
         return
