@@ -24,10 +24,10 @@ def _enabled() -> bool:
 def _flatten_samples(audio):
     if hasattr(audio, "detach"):
         audio = audio.detach().cpu().numpy()
-    elif hasattr(audio, "squeeze"):
+    if hasattr(audio, "squeeze"):
         audio = audio.squeeze()
-        if hasattr(audio, "tolist"):
-            audio = audio.tolist()
+    if hasattr(audio, "tolist"):
+        audio = audio.tolist()
 
     def walk(value):
         if isinstance(value, (list, tuple)):
