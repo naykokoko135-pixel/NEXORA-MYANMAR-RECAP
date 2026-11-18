@@ -158,8 +158,8 @@ class VideoRendererValidationTests(unittest.TestCase):
                 return type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
 
             fake_ffmpeg = SimpleNamespace(get_ffmpeg_exe=lambda: "ffmpeg")
-            with patch.dict(sys.modules, {"imageio_ffmpeg": fake_ffmpeg}), \\
-                 patch("video_renderer._duration_seconds", side_effect=[2.5, 4.0]), \\
+            with patch.dict(sys.modules, {"imageio_ffmpeg": fake_ffmpeg}), \
+                 patch("video_renderer._duration_seconds", side_effect=[2.5, 4.0]), \
                  patch("subprocess.run", side_effect=fake_render) as run:
                 from video_renderer import render_scene_timeline
                 render_scene_timeline(
