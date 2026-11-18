@@ -70,7 +70,9 @@ def save_voice_profiles(user_id: int | str, profiles: dict) -> None:
         total += len(audio)
         if total > MAX_TOTAL_PROFILE_BYTES:
             raise ValueError("Voice Profile အားလုံးပေါင်း ၄၀ MB ထက် ကျော်နေပါတယ်။")
-        checked[name] = (filename, audio)
+        normalized = {}
+        store_voice_profile(normalized, name, filename, audio)
+        checked[name] = (normalized[name]["filename"], normalized[name]["audio"])
     with _connect() as connection:
         connection.execute("DELETE FROM voice_profiles WHERE user_id = ?", (str(user_id),))
         connection.executemany(
