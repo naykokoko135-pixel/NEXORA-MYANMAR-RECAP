@@ -529,7 +529,7 @@ async def autofactsclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /autofactsclip <Anime/ရုပ်ရှင်အမည်>\\n"
+            "အသုံးပြုပုံ: /autofactsclip <Anime/ရုပ်ရှင်အမည်>\n"
             "ခေါင်းစဉ်တိတိကျကျကို Wikidata မှ စစ်ပြီး CC/Public Domain footage ရှာကာ "
             "အခြေခံအချက်အလက် မြန်မာအသံ + SRT Preview ထုတ်ပေးပါမယ်။"
         )
@@ -561,11 +561,11 @@ async def autofactsclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     video=InputFile(video_file, filename="nexora_facts_preview.mp4"),
                     supports_streaming=True,
                     caption=(
-                        f"NEXORA {platform.upper()} — အလိုအလျောက် အချက်အလက်မိတ်ဆက် Preview\\n"
-                        f"Wikidata: {metadata.get('source', '')}\\n"
-                        f"Commons: {source.get('source_page', '')}\\n"
-                        f"လိုင်စင်: {source.get('license', '')}\\n"
-                        f"ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\\n"
+                        f"NEXORA {platform.upper()} — အလိုအလျောက် အချက်အလက်မိတ်ဆက် Preview\n"
+                        f"Wikidata: {metadata.get('source', '')}\n"
+                        f"Commons: {source.get('source_page', '')}\n"
+                        f"လိုင်စင်: {source.get('license', '')}\n"
+                        f"ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\n"
                         "မှတ်ချက်: ဇာတ်ကွက် recap မဟုတ်ပါ။ Wikidata metadata မှ ရရှိသော "
                         "အခြေခံအချက်အလက်များသာ အသံဖတ်ထားသည်။ မူရင်းဗီဒီယိုအသံကို ဖယ်ထားပြီး "
                         "အသုံးပြုမီ လိုင်စင် Attribution စည်းကမ်းကို စစ်ပါ။"
