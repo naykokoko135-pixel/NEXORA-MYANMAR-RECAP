@@ -209,6 +209,7 @@ def build_daily_message(movie_title: str, research_text: str, metadata_text: str
         "\n\n🎬 NEXORA — RECAP PLAN\n"
         f"အမျိုးအစား: {category}\n"
         f"နိုင်ငံ/ဒေသ: {region_for_title(movie_title)}\n"
+        f"မီဒီယာပုံစံ: {format_for_title(movie_title)}\n"
         f"ခေါင်းစဉ်: {movie_title}\n\n"
         "YOUTUBE — ၃ ပိုင်း၊ တစ်ပိုင်း ၈–၁၀ မိနစ် (စုစုပေါင်း ၂၄–၃၀ မိနစ်)\n"
         "Part 1: မိတ်ဆက်၊ နောက်ခံ၊ ဇာတ်ကောင်များနှင့် အစပြုဖြစ်ရပ်။\n"
