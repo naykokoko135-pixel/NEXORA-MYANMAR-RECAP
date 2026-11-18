@@ -62,6 +62,19 @@ Use `/animationepisodes <title>` to retrieve up to five short episode-summary ex
 
 Use `/movieplotresearch <title>` to require an exact Wikidata title match, exclude Indian-origin entries and entries with animation-related genres, then retrieve an explicitly labelled Plot/Synopsis section from the linked English Wikipedia article. The result is a research excerpt only. English Wikipedia is community-edited, a missing Plot section is rejected, and the command does not translate the text or create a recap MP4. Confirm the title is a live-action international movie and verify plot facts against reliable sources before use.
 
+## Longer licensed recap video preview
+
+Use `/recapvideo <exact title>` followed by an optional preset line and creator-written Burmese narration. NEXORA requires an exact Wikidata title record with known non-Indian country metadata, searches Wikimedia Commons, and proceeds only when a strong title metadata match has an allowed CC0/CC BY/CC BY-SA/Public Domain license. It then generates Burmese narration, word-aligned SRT, and an MP4 preview up to five minutes in the selected platform ratio.
+
+Example:
+```
+/recapvideo Frieren: Beyond Journey's End
+narrator
+[ကိုယ်တိုင်ရေးပြီး Episode နှင့် ပြန်စစ်ထားသော narration]
+```
+
+The command rejects unknown country metadata and Indian-origin/co-production records. A Commons file-title match does not prove the clip depicts the correct episode or scene; inspect the finished MP4 manually and verify the license, attribution, and any Share-Alike obligations before publishing. The source footage may loop to cover narration duration. This is a preview workflow, not an automatically researched full episode recap, and it does not infer 3D animation from a generic Animation genre.
+
 ## Recap voice + synchronized subtitles
 
 Use `/recapvoice [preset]` followed by creator-written Burmese narration in the same Telegram message. If no preset is supplied, NEXORA uses `narrator`. It generates one MP3 and one SRT using Edge TTS word-boundary timing. Available presets are listed by `/voices`; presets reuse the two currently available Burmese neural voices (Nilar and Thiha), not separate cloned actors. The script limit is 6,000 characters.
