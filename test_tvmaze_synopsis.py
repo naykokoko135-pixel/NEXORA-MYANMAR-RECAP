@@ -39,6 +39,15 @@ class TVMazeSynopsisTests(unittest.TestCase):
         self.assertFalse(result["found"])
         self.assertIn("အိန္ဒိယ", result["status"])
 
+    @patch("tvmaze_synopsis._get_json")
+    def test_rejects_unknown_country(self, mock_get):
+        mock_get.return_value = [{"score": 1, "show": self._show(
+            network=None, webChannel=None
+        )}]
+        result = fetch_tvmaze_synopsis("Sample Cartoon")
+        self.assertFalse(result["found"])
+        self.assertIn("နိုင်ငံအချက်အလက်", result["status"])
+
     def test_rejects_empty_title(self):
         self.assertFalse(fetch_tvmaze_synopsis("")["found"])
 
