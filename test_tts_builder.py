@@ -109,11 +109,11 @@ class BurmeseTtsValidationTests(unittest.TestCase):
 
     def test_scene_script_maps_character_roles_to_existing_presets(self):
         scenes = parse_scene_script(
-            "[narrator]\\nမိတ်ဆက်စာသား\\n"
-            "[protagonist]\\nသူရဲကောင်းစာသား\\n"
-            "[heroine]\\nအမျိုးသမီးဇာတ်ဆောင်စာသား\\n"
-            "[antagonist]\\nဗီလိန်စာသား\\n"
-            "[comic]\\nဟာသစာသား"
+            "[narrator]\nမိတ်ဆက်စာသား\n"
+            "[protagonist]\nသူရဲကောင်းစာသား\n"
+            "[heroine]\nအမျိုးသမီးဇာတ်ဆောင်စာသား\n"
+            "[antagonist]\nဗီလိန်စာသား\n"
+            "[comic]\nဟာသစာသား"
         )
         self.assertEqual(
             [(scene["role"], scene["preset"]) for scene in scenes],
@@ -127,7 +127,7 @@ class BurmeseTtsValidationTests(unittest.TestCase):
         )
 
     def test_direct_preset_header_remains_supported(self):
-        scene = parse_scene_script("[mystery]\\nလျှို့ဝှက်စာသား")[0]
+        scene = parse_scene_script("[mystery]\nလျှို့ဝှက်စာသား")[0]
         self.assertEqual(scene["role"], "mystery")
         self.assertEqual(scene["preset"], "mystery")
 
