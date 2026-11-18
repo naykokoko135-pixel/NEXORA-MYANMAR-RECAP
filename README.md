@@ -54,6 +54,10 @@ AniList search results are not treated as exact matches unless the requested tit
 
 Use `/seriesresearch <title>` to request an exact-title TVmaze show match. NEXORA only displays the summary when TVmaze marks the entry with the Animation genre and rejects Indian-origin shows. The returned summary is a series-level overview, not an episode plot. TVmaze records are community-maintained; the command does not infer whether an animated work is 2D or 3D, and it does not create a recap video.
 
+## Animated series episode research
+
+Use `/animationepisodes <title>` to retrieve up to five short episode-summary excerpts from an exact TVmaze series match. The series must be tagged with the Animation genre and have a known non-Indian country. Each excerpt is capped at 240 characters and includes its TVmaze source link. This is episode-level research material, not a complete recap script, scene transcript, or studio-verified account. TVmaze data is community-maintained and must be checked before use.
+
 ## International movie plot research
 
 Use `/movieplotresearch <title>` to require an exact Wikidata title match, exclude Indian-origin entries and entries with animation-related genres, then retrieve an explicitly labelled Plot/Synopsis section from the linked English Wikipedia article. The result is a research excerpt only. English Wikipedia is community-edited, a missing Plot section is rejected, and the command does not translate the text or create a recap MP4. Confirm the title is a live-action international movie and verify plot facts against reliable sources before use.

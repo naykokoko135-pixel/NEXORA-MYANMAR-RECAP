@@ -87,3 +87,75 @@ def fetch_tvmaze_synopsis(title):
         }
     except Exception:
         return {"found": False, "status": "TVmaze ရင်းမြစ်ကို ယခုချိတ်ဆက်မရပါ။"}
+
+
+def fetch_tvmaze_episode_summaries(title, limit=5):
+    """Return brief episode-summary research leads for one exact animated series.
+
+    Each provider summary is excerpted to 240 characters maximum. This is
+    research material, not a generated recap script or verified scene transcript.
+    """
+    requested = " ".join(str(title or "").split()).strip()
+    try:
+        count = int(limit)
+    except (TypeError, ValueError):
+        count = 5
+    count = max(1, min(count, 5))
+    if not requested or len(requested) > 120:
+        return {"found": False, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
+    try:
+        payload = _get_json(API_URL + "/search/shows?q=" + quote(requested))
+        target = _norm(requested)
+        exact = [
+            (item.get("show") or {})
+            for item in payload if isinstance(payload, list)
+            if _norm((item.get("show") or {}).get("name")) == target
+        ]
+        if len(exact) != 1:
+            return {"found": False, "status": "TVmaze တွင် အမည်တိတိကျကျ ကိုက်ညီသော Series တစ်ခုတည်းကို မသတ်မှတ်နိုင်ပါ။"}
+        show = exact[0]
+        genres = [str(x).casefold() for x in show.get("genres", [])]
+        if "animation" not in genres:
+            return {"found": False, "status": "TVmaze မှာ Animation genre အဖြစ် အတည်မပြုနိုင်ပါ။"}
+        country = (
+            (show.get("network") or {}).get("country") or
+            (show.get("webChannel") or {}).get("country") or {}
+        )
+        country_name = country.get("name") or ""
+        if not country_name:
+            return {"found": False, "status": "မူရင်းနိုင်ငံအချက်အလက် မရှိသဖြင့် ရပ်ထားပါတယ်။"}
+        if country_name.casefold() in {"india", "republic of india"}:
+            return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယခေါင်းစဉ်များ မထည့်ထားပါ။"}
+        show_id = show.get("id")
+        if not isinstance(show_id, int):
+            return {"found": False, "status": "TVmaze Series ID မရရှိပါ။"}
+        episodes = _get_json(f"{API_URL}/shows/{show_id}/episodes")
+        results = []
+        for episode in episodes if isinstance(episodes, list) else []:
+            summary = _plain(episode.get("summary"))
+            if len(summary) < 40:
+                continue
+            results.append({
+                "season": episode.get("season"),
+                "number": episode.get("number"),
+                "title": episode.get("name") or "Untitled episode",
+                "airdate": episode.get("airdate") or "",
+                "summary_excerpt": summary[:240],
+                "source": episode.get("url") or show.get("url") or "",
+            })
+            if len(results) >= count:
+                break
+        if not results:
+            return {"found": False, "status": "TVmaze မှာ အသုံးပြုနိုင်သော Episode summary မတွေ့ပါ။"}
+        return {
+            "found": True,
+            "provider": "TVmaze",
+            "title": show.get("name") or requested,
+            "country": country_name,
+            "provider_url": show.get("url") or "",
+            "episodes": results,
+            "scope": "brief_episode_summary_excerpts",
+            "notice": "TVmaze episode summaries are brief research excerpts, not a full recap script.",
+        }
+    except Exception:
+        return {"found": False, "status": "TVmaze Episode ရင်းမြစ်ကို ယခုချိတ်ဆက်မရပါ။"}
