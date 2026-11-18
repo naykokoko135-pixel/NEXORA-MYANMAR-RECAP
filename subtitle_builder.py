@@ -30,12 +30,11 @@ def _split_long_piece(piece: str, limit: int) -> list[str]:
 
 def _caption_chunks(script: str, limit: int) -> list[str]:
     chunks = []
-    for paragraph in re.split(r"\\n+", (script or "").replace("\\r", "\\n")):
+    for paragraph in re.split(r"\n+", (script or "").replace("\r", "\n")):
         paragraph = paragraph.strip()
         if not paragraph:
             continue
-        # Prefer sentence boundaries, then Burmese/Latin spaces.
-        sentences = re.split(r"(?<=[။.!?])\\s*|(?<=၊)\\s*", paragraph)
+        sentences = re.split(r"(?<=[။.!?])\s*|(?<=၊)\s*", paragraph)
         for sentence in sentences:
             words = sentence.split()
             current = ""
@@ -81,5 +80,5 @@ def build_burmese_srt(script: str, chars_per_second: float = DEFAULT_CHARS_PER_S
         start = _stamp(cursor_ms)
         cursor_ms += duration_ms
         end = _stamp(cursor_ms)
-        entries.append(f"{index}\\n{start} --> {end}\\n{caption}")
-    return "\\n\\n".join(entries) + "\\n"
+        entries.append(f"{index}\n{start} --> {end}\n{caption}")
+    return "\n\n".join(entries) + "\n"
