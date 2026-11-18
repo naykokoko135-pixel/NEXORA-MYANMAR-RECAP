@@ -33,7 +33,7 @@ class VoxCPMVoiceDesignTests(unittest.TestCase):
 
     def test_backend_disabled_by_default(self):
         with patch.dict(os.environ, {}, clear=True):
-            with self.assertRaisesRegex(RuntimeError, "မဖွင့်ထားပါ"):
+            with self.assertRaisesRegex(RuntimeError, "ပိတ်ထားပါတယ်"):
                 asyncio.run(synthesize_designed_burmese_voice("မင်္ဂလာပါ", "story_male"))
 
     def test_enabled_backend_generates_wav(self):
@@ -63,6 +63,7 @@ class VoxCPMVoiceDesignTests(unittest.TestCase):
             with patch.dict(sys.modules, {
                 "voxcpm": fake_voxcpm,
                 "soundfile": FakeSoundFile,
+                "torch": types.SimpleNamespace(cuda=types.SimpleNamespace(is_available=lambda: True)),
             }):
                 import voxcpm_voice_design
                 with patch.object(voxcpm_voice_design, "_model", None):

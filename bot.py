@@ -923,8 +923,13 @@ async def scenetts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         scenes = parse_scene_script(script)
     except ValueError as exc:
         await update.message.reply_text(
-            f"{exc}\n\nအသုံးပြုပုံ: /scenetts ပြီးနောက် [narrator]၊ [hero]၊ [villain] "
-            "စသည့် ခေါင်းစဉ်များနှင့် စာသားကို အခန်းလိုက်ထည့်ပါ။"
+            f"{exc}\n\n"
+            "အရေးကြီး: Command နဲ့ ဇာတ်ဝင်ခန်းစာသားကို Telegram message တစ်စောင်တည်းမှာ "
+            "ထည့်ပို့ပါ။ /scenetts ကို သီးခြားပို့ပြီး စာသားကို နောက် message တစ်စောင်အဖြစ် "
+            "ပို့ပါက လက်ရှိစနစ်က မဖတ်နိုင်ပါ။\n\n"
+            "ဥပမာ:\\n/scenetts\\n[narrator]\\nဒီနေ့ ဇာတ်လမ်းကို စတင်မိတ်ဆက်ပါမယ်။"
+            "\\n\\n[hero]\\nကျွန်တော် ဒီနေရာကို ပထမဆုံး ရောက်ဖူးတာပါ။"
+            "\\n\\n[villain]\\nမင်း ဒီအကြောင်းကို ဘယ်သူ့ကိုမှ မပြောရဘူး။"
         )
         return
 
