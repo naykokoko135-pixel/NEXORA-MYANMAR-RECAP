@@ -249,5 +249,7 @@ class WikidataMetadataTests(unittest.TestCase):
         ]
         result = fetch_wikidata_metadata("Frieren: Beyond Journey's End")
         self.assertTrue(result["found"])
-\n\nif __name__ == "__main__":
+
+
+if __name__ == "__main__":
     unittest.main()
