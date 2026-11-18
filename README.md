@@ -62,6 +62,15 @@ Use `/animationepisodes <title>` to retrieve up to five short episode-summary ex
 
 Use `/movieplotresearch <title>` to require an exact Wikidata title match, exclude Indian-origin entries and entries with animation-related genres, then retrieve an explicitly labelled Plot/Synopsis section from the linked English Wikipedia article. The result is a research excerpt only. English Wikipedia is community-edited, a missing Plot section is rejected, and the command does not translate the text or create a recap MP4. Confirm the title is a live-action international movie and verify plot facts against reliable sources before use.
 
+## Highest-rated animated episode research
+
+Use `/topratedepisodes <series title>` to retrieve up to five highest-rated episodes from TVMaze for an exact title match. The command requires the Animation genre and a known non-Indian country, includes episode source links, and omits episodes without a valid rating. It does not infer whether a series is 2D or 3D.
+
+Important: TVMaze episode ratings are community ratings, not episode view counts, audience size, or live popularity. A high rating is only one research signal; it does not prove an episode will attract more recap views. For popularity, use comparable official view/engagement data when publicly available. If those metrics are missing, report them as unavailable rather than estimating them.
+
+Example:
+`/topratedepisodes Sample Donghua`
+
 ## Channel growth and publishing pack
 
 Use `/growthpack <category>|<title>|<verified summary optional>` after selecting a platform with `/platform youtube|facebook|tiktok`. Supported categories are Anime, 3D Animation, Cartoon, Donghua, and International Movies (live-action). The command prepares platform-specific title options, an opening hook, description, hashtags, thumbnail/cover guidance, pacing suggestions, a comment prompt, and a pre-publish quality checklist. If a verified plot summary is supplied, it is included in the description; if not, the pack leaves a placeholder instead of inventing plot details.
