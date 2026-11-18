@@ -493,8 +493,19 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         metadata = await asyncio.to_thread(fetch_wikidata_metadata, query)
         countries = validate_non_indian_wikidata_metadata(metadata)
-        sources = await asyncio.to_thread(search_licensed_video, query, 10)
-        source = choose_matching_source(query, sources)
+        search_titles = [
+            metadata.get("title", ""),
+            metadata.get("enwiki_title", ""),
+            metadata.get("mywiki_title", ""),
+        ]
+        search_titles = list(dict.fromkeys(
+            " ".join(str(title).split()) for title in search_titles
+            if str(title).strip()
+        ))
+        sources = await asyncio.to_thread(
+            search_licensed_video, query, 10, search_titles
+        )
+        source = choose_matching_source(query, sources, search_titles)
         if not source:
             await update.message.reply_text("ခေါင်းစဉ်နှင့် metadata ကိုက်ညီမှုခိုင်မာသော CC/Public Domain footage မတွေ့ပါ။ မသက်ဆိုင်သော video ကို အစားထိုးမရွေးထားပါ။")
             return
