@@ -92,7 +92,7 @@ def fetch_series_episode_guide(title):
             status = "TVmaze မှတ်တမ်းရရှိပါပြီ။ ထုတ်လွှင့်သူ၏ Official Episode Guide နှင့် ထပ်မံတိုက်စစ်ပါ။"
 
         return {
-            "found": True,
+            "found": bool(valid_episode_count),
             "title": show.get("name", clean_title),
             "show_id": show_id,
             "show_type": show.get("type") or "မရရှိပါ",
