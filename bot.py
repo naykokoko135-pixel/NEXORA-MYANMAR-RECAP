@@ -44,7 +44,7 @@ from english_plot_research import fetch_english_plot_section, EnglishPlotError
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
 from recap_voice_pack import parse_recap_voice_request
-from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata
+from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -519,6 +519,25 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     ),
                     read_timeout=180,
                     write_timeout=180,
+                )
+            try:
+                audio_bytes, subtitle_bytes = build_recap_video_sidecars(audio, srt_text)
+                voice_file = BytesIO(audio_bytes)
+                voice_file.name = "nexora_recap_voiceover.mp3"
+                await update.message.reply_document(
+                    document=InputFile(voice_file, filename=voice_file.name),
+                    caption="MP4 တွင် အသုံးပြုထားသော မြန်မာ Narration MP3 မူရင်းဖိုင်ပါ။",
+                )
+                subtitle_file = BytesIO(subtitle_bytes)
+                subtitle_file.name = "nexora_recap_subtitles.srt"
+                await update.message.reply_document(
+                    document=InputFile(subtitle_file, filename=subtitle_file.name),
+                    caption="သီးခြားပြင်ဆင်/တင်နိုင်သော မြန်မာ SRT ဖိုင်ပါ။ MP4 ထဲတွင်လည်း subtitle track ပါဝင်ပါတယ်။",
+                )
+            except Exception:
+                log.exception("Recap video audio/subtitle sidecar delivery failed")
+                await update.message.reply_text(
+                    "MP4 Preview ထုတ်ပြီးပါပြီ။ MP3/SRT သီးခြားဖိုင်ပို့ရာတွင် အမှားရှိသဖြင့် MP4 ထဲရှိ subtitle track ကို အသုံးပြုပါ။"
                 )
             try:
                 attribution = build_licensed_attribution_note(

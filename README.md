@@ -64,6 +64,7 @@ Use `/movieplotresearch <title>` to require an exact Wikidata title match, exclu
 
 ## Longer licensed recap video preview
 After the MP4, NEXORA also sends `nexora_footage_attribution.txt` with the Commons file name, creator/artist, attribution text when supplied, license, usage terms, source page, and Wikidata source. Treat this as a checklist: verify the exact license version and creator details on the Commons page before publishing.
+It also sends the narration as `nexora_recap_voiceover.mp3` and the standalone, UTF-8 Burmese captions as `nexora_recap_subtitles.srt`; the MP4 retains its embedded selectable subtitle track too.
 
 
 Use `/recapvideo <exact title>` followed by an optional preset line and creator-written Burmese narration. NEXORA requires an exact Wikidata title record with known non-Indian country metadata, searches Wikimedia Commons, and proceeds only when a strong title metadata match has an allowed CC0/CC BY/CC BY-SA/Public Domain license. It then generates Burmese narration, word-aligned SRT, and an MP4 preview up to five minutes in the selected platform ratio.

@@ -33,3 +33,17 @@ def validate_non_indian_wikidata_metadata(metadata: dict) -> list[str]:
     if any(country.casefold() in INDIAN_COUNTRY_NAMES for country in normalized):
         raise ValueError("အိန္ဒိယ သို့မဟုတ် အိန္ဒိယပူးတွဲထုတ်လုပ်မှုကို ဒီ Project မှာ မထည့်ပါ။")
     return normalized
+
+
+def build_recap_video_sidecars(audio_mp3: bytes, subtitles_srt: str) -> tuple[bytes, bytes]:
+    """Validate and prepare downloadable MP3/SRT assets alongside the rendered MP4."""
+    if not isinstance(audio_mp3, bytes) or not audio_mp3 or len(audio_mp3) > 20 * 1024 * 1024:
+        raise ValueError("Narration MP3 သည် ဗလာဖြစ်နေခြင်း သို့မဟုတ် 20 MB ထက်ကြီးနေပါတယ်။")
+    if not isinstance(subtitles_srt, str) or not subtitles_srt.strip() or "-->" not in subtitles_srt:
+        raise ValueError("မြန်မာ SRT စာတန်းပုံစံ မမှန်ပါ။")
+    subtitle_bytes = subtitles_srt.encode("utf-8-sig")
+    if len(subtitle_bytes) > 1024 * 1024:
+        raise ValueError("SRT ဖိုင်သည် 1 MB ထက်ကြီးနေပါတယ်။")
+    return audio_mp3, subtitle_bytes
+
+
