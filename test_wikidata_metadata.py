@@ -1,0 +1,87 @@
+import json
+import unittest
+from io import BytesIO
+from urllib.error import URLError
+from unittest.mock import patch
+
+from wikidata_metadata import fetch_wikidata_metadata, format_wikidata_metadata
+
+
+class Response(BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+
+def claim(entity_id=None, time_value=None):
+    value = {"id": entity_id} if entity_id else {"time": time_value}
+    return {"mainsnak": {"datavalue": {"value": value}}}
+
+
+class WikidataMetadataTests(unittest.TestCase):
+    @patch("wikidata_metadata.urlopen")
+    def test_exact_title_returns_country_year_director_genre_and_language(self, mock_urlopen):
+        search = {"search": [{
+            "id": "Q123", "label": "Train to Busan",
+            "description": "2016 South Korean film",
+        }]}
+        entity = {"entities": {"Q123": {"claims": {
+            "P495": [claim("Q884")],
+            "P577": [claim(time_value="+2016-07-20T00:00:00Z")],
+            "P57": [claim("Q555")],
+            "P136": [claim("Q11424")],
+            "P364": [claim("Q9176")],
+        }}}}
+        labels = {"entities": {
+            "Q884": {"labels": {"en": {"value": "South Korea"}}},
+            "Q555": {"labels": {"en": {"value": "Yeon Sang-ho"}}},
+            "Q11424": {"labels": {"en": {"value": "film"}}},
+            "Q9176": {"labels": {"en": {"value": "Korean"}}},
+        }}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search).encode()),
+            Response(json.dumps(entity).encode()),
+            Response(json.dumps(labels).encode()),
+        ]
+        result = fetch_wikidata_metadata("Train to Busan")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["countries"], ["South Korea"])
+        self.assertEqual(result["year"], "2016")
+        self.assertEqual(result["directors"], ["Yeon Sang-ho"])
+        self.assertEqual(result["genres"], ["film"])
+        self.assertEqual(result["languages"], ["Korean"])
+        self.assertIn("wikidata.org/wiki/Q123", format_wikidata_metadata(result))
+
+    @patch("wikidata_metadata.urlopen")
+    def test_does_not_accept_unrelated_title_match(self, mock_urlopen):
+        mock_urlopen.return_value = Response(json.dumps({
+            "search": [{"id": "Q99", "label": "Train", "description": "rail vehicle"}]
+        }).encode())
+        result = fetch_wikidata_metadata("Train to Busan")
+        self.assertFalse(result["found"])
+        self.assertIn("အမည်တိတိကျကျ", result["status"])
+        self.assertEqual(mock_urlopen.call_count, 1)
+
+    @patch("wikidata_metadata.urlopen")
+    def test_api_failure_is_reported_without_crashing(self, mock_urlopen):
+        mock_urlopen.side_effect = URLError("offline")
+        result = fetch_wikidata_metadata("Parasite")
+        self.assertFalse(result["found"])
+        self.assertIn("မခန့်မှန်းထားပါ", format_wikidata_metadata(result))
+
+    def test_missing_metadata_fields_are_explicit(self):
+        result = format_wikidata_metadata({
+            "found": True, "title": "Example", "description": "",
+            "countries": [], "year": None, "directors": [],
+            "genres": [], "languages": [], "source": "https://www.wikidata.org/wiki/Q1",
+            "status": "Needs verification",
+        })
+        self.assertIn("ထွက်ရှိသည့်နှစ်: မရရှိပါ", result)
+        self.assertIn("ဒါရိုက်တာ: မရရှိပါ", result)
+        self.assertIn("ထပ်မံတိုက်စစ်ပါ", result)
+
+
+if __name__ == "__main__":
+    unittest.main()
