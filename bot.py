@@ -16,6 +16,7 @@ from srt_builder import build_srt
 from subtitle_builder import build_burmese_srt
 from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
 from scene_tts import parse_scene_script
+from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
@@ -66,6 +67,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/tts <preset> - မြန်မာ MP3 အသံထုတ်ရန်\n"
             "/ttssrt <preset> - MP3 နှင့် အချိန်ကိုက် SRT တွဲထုတ်ရန်\n"
             "/voices - အသံပုံစံအားလုံးကြည့်ရန်\n"
+            "/voiceprofile <name> - ကိုယ်ပိုင်အသံဖိုင် သိမ်းရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60 မိနစ်\n"
@@ -335,10 +337,11 @@ async def cancel_voiceover_cmd(update: Update, context: ContextTypes.DEFAULT_TYP
     if not update.message:
         return
     pending = context.user_data.pop("pending_voiceover", None)
-    if pending:
-        await update.message.reply_text("Voice-over Notes စောင့်ဆိုင်းမှုကို ပယ်ဖျက်ပြီးပါပြီ။")
+    pending_profile = context.user_data.pop("pending_voice_profile", None)
+    if pending or pending_profile:
+        await update.message.reply_text("စောင့်ဆိုင်းနေသော Voice-over/အသံဖိုင်တင်ခြင်းကို ပယ်ဖျက်ပြီးပါပြီ။")
     else:
-        await update.message.reply_text("ပယ်ဖျက်ရန် စောင့်နေသော Voice-over မရှိပါ။")
+        await update.message.reply_text("ပယ်ဖျက်ရန် စောင့်နေသော အလုပ်မရှိပါ။")
 
 
 async def voiceover_notes_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -372,15 +375,16 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     if action == "finish":
         session = context.user_data.get("video_render")
-        if not session or not session.get("images") or not session.get("audio"):
-            await update.message.reply_text("ပုံအနည်းဆုံး ၁ ပုံနဲ့ အသံဖိုင် ၁ ဖိုင် လိုပါတယ်။ /render ဖြင့် ပြန်စပါ။")
+        if not session or not session.get("images") or not (session.get("audio") or session.get("audio_tracks")):
+            await update.message.reply_text("ပုံအနည်းဆုံး ၁ ပုံနဲ့ အသံဖိုင်/Voice Profile အနည်းဆုံး ၁ ခု လိုပါတယ်။ /render ဖြင့် ပြန်စပါ။")
             return
         await update.message.reply_text("MP4 ထုတ်လုပ်နေပါတယ်။ ခဏစောင့်ပါ...")
         import tempfile
         try:
             with tempfile.TemporaryDirectory(prefix="nexora_video_") as temp:
                 output = os.path.join(temp, "nexora_video.mp4")
-                await asyncio.to_thread(render_slideshow, session["images"], session["audio"], output)
+                audio_input = session["audio_tracks"] if session.get("audio_tracks") else session["audio"]
+                await asyncio.to_thread(render_slideshow, session["images"], audio_input, output)
                 with open(output, "rb") as video_file:
                     await update.message.reply_video(
                         video=InputFile(video_file, filename="nexora_video.mp4"),
@@ -397,23 +401,97 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         finally:
             context.user_data.pop("video_render", None)
         return
-    context.user_data["video_render"] = {"images": [], "audio": None}
+    if action == "voice":
+        session = context.user_data.get("video_render")
+        if not session:
+            await update.message.reply_text("အရင်ဆုံး /render ပို့ပြီး Video session စတင်ပါ။")
+            return
+        if len(context.args) < 2:
+            await update.message.reply_text("အသုံးပြုပုံ: /render voice <profile အမည်>")
+            return
+        try:
+            profile_name = normalize_profile_name(" ".join(context.args[1:]))
+        except ValueError as exc:
+            await update.message.reply_text(str(exc))
+            return
+        profile = context.user_data.get("custom_voice_profiles", {}).get(profile_name)
+        if not profile:
+            await update.message.reply_text("အဲဒီ Voice Profile မတွေ့ပါ။ /voiceprofile list ဖြင့် စစ်ပါ။")
+            return
+        tracks = session.setdefault("audio_tracks", [])
+        if len(tracks) >= 12:
+            await update.message.reply_text("Voice Track ၁၂ ခု ပြည့်ပါပြီ။")
+            return
+        tracks.append((profile["filename"], profile["audio"]))
+        await update.message.reply_text(f"{profile_name} အသံ Track ထည့်ပြီးပါပြီ။ လက်ရှိ Track {len(tracks)}/12။ ထပ်ထည့်ရန် /render voice <အမည်> ကို သုံးပါ။")
+        return
+    context.user_data["video_render"] = {"images": [], "audio": None, "audio_tracks": []}
     await update.message.reply_text(
         "Video ဖန်တီးမှု စတင်ပါပြီ။\n"
         "၁) ပုံ JPG/PNG/WEBP အများဆုံး ၁၂ ပုံ ပို့ပါ။\n"
-        "၂) Narration အသံ MP3/M4A/WAV/OGG တစ်ဖိုင် ပို့ပါ (၂၀ MB အောက်၊ ၁၀ မိနစ်အောက်)။\n"
-        "၃) ပြီးရင် /render finish ပို့ပါ။ မလုပ်တော့ပါက /render cancel ပို့ပါ။\n"
+        "၂) Narration အသံဖိုင် ပို့ပါ၊ သို့မဟုတ် /render voice <profile အမည်> ဖြင့် သိမ်းထားသော အသံ Track များရွေးပါ။\n"
+        "၃) Voice Track များကို အစဉ်လိုက် ပေါင်းစပ်မည်။ Track စုစုပေါင်း ၂၀ MB/၁၀ မိနစ်အောက် ဖြစ်ရပါမယ်။\n"
+        "၄) ပြီးရင် /render finish ပို့ပါ။ မလုပ်တော့ပါက /render cancel ပို့ပါ။\n"
         "ကိုယ်ပိုင် သို့မဟုတ် အသုံးပြုခွင့်ရှိသော ပုံ/အသံကိုသာ သုံးပါ။"
     )
+
+
+async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    args = context.args
+    profiles = context.user_data.setdefault("custom_voice_profiles", {})
+    if not args:
+        await update.message.reply_text("အသုံးပြုပုံ: /voiceprofile <အမည်> ပြီးနောက် ကိုယ်ပိုင် MP3/M4A/WAV/OGG အသံဖိုင် ပို့ပါ။\n/voiceprofile list\n/voiceprofile delete <အမည်>")
+        return
+    if args[0].lower() == "list":
+        names = list(profiles)
+        await update.message.reply_text("သိမ်းထားသောအသံများ: " + (", ".join(names) if names else "မရှိသေးပါ") + "\nSession ထဲတွင်သာ ယာယီသိမ်းထားပြီး TTS voice cloning မဟုတ်ပါ။")
+        return
+    if args[0].lower() == "delete":
+        try:
+            name = normalize_profile_name(" ".join(args[1:]))
+            delete_voice_profile(profiles, name)
+        except ValueError as exc:
+            await update.message.reply_text(str(exc))
+            return
+        await update.message.reply_text("အသံ Profile ကို ဖျက်ပြီးပါပြီ။")
+        return
+    try:
+        name = normalize_profile_name(" ".join(args))
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    context.user_data["pending_voice_profile"] = name
+    await update.message.reply_text(f"{name} အတွက် ကိုယ်ပိုင်အသံ MP3/M4A/WAV/OGG ဖိုင် (၂၀ MB အောက်) ပို့ပါ။ မလုပ်တော့ပါက /cancel ပို့ပါ။")
 
 
 async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
+    message = update.message
+    pending = context.user_data.get("pending_voice_profile")
+    if pending and (message.audio or message.voice or message.document):
+        media = message.audio or message.voice or message.document
+        filename_in = getattr(media, "file_name", None) or ("voice_profile.ogg" if message.voice else "voice_profile.mp3")
+        media_file = await media.get_file()
+        if (getattr(media_file, "file_size", 0) or 0) > 20 * 1024 * 1024:
+            await message.reply_text("အသံဖိုင်သည် ၂၀ MB အောက် ဖြစ်ရပါမယ်။")
+            return
+        buffer = BytesIO()
+        await media_file.download_to_memory(out=buffer)
+        filename = filename_in
+        try:
+            store_voice_profile(context.user_data.setdefault("custom_voice_profiles", {}), pending, filename, buffer.getvalue())
+        except ValueError as exc:
+            await message.reply_text(str(exc))
+            return
+        context.user_data.pop("pending_voice_profile", None)
+        await message.reply_text(f"{pending} အသံဖိုင် သိမ်းပြီးပါပြီ။ /voiceprofile list ဖြင့် ကြည့်နိုင်ပါတယ်။ ဒီဖိုင်သည် အသံသွင်းထားသော narration ကို တိုက်ရိုက်ပြန်သုံးရန်ဖြစ်ပြီး စာသားအသစ်ကို TTS ပြောင်းပေးခြင်း မဟုတ်ပါ။")
+        return
     session = context.user_data.get("video_render")
     if session is None:
         return
-    message = update.message
     media_file = None
     filename = ""
     kind = ""
@@ -782,7 +860,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("voiceover", voiceover_cmd))
     telegram_app.add_handler(CommandHandler("voiceover3", voiceover3_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
-    telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE, video_media_message))
+    telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))
     telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, voiceover_notes_message))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
@@ -791,6 +869,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("tts", tts_cmd))
     telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
     telegram_app.add_handler(CommandHandler("scenetts", scenetts_cmd))
+    telegram_app.add_handler(CommandHandler("voiceprofile", voiceprofile_cmd))
     telegram_app.add_handler(CommandHandler("voices", voices_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
