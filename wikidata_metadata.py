@@ -116,7 +116,7 @@ def fetch_wikidata_metadata(title):
         entity_payload = _request_json({
             "action": "wbgetentities",
             "ids": entity_id,
-            "props": "labels|descriptions|claims",
+            "props": "labels|descriptions|claims|sitelinks",
             "languages": "my|en",
             "languagefallback": 1,
             "format": "json",
@@ -168,6 +168,8 @@ def fetch_wikidata_metadata(title):
             "description": selected.get("description", ""),
             "description_my": entity_descriptions.get("my", {}).get("value", ""),
             "entity_id": entity_id,
+            "mywiki_title": entity.get("sitelinks", {}).get("mywiki", {}).get("title", ""),
+            "mywiki_source": ("https://my.wikipedia.org/wiki/" + entity.get("sitelinks", {}).get("mywiki", {}).get("title", "").replace(" ", "_")) if entity.get("sitelinks", {}).get("mywiki", {}).get("title") else "",
             "countries": values_for("P495"),
             "countries_my": values_for("P495", "my"),
             "year": _date_year(claims),
