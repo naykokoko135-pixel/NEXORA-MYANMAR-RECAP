@@ -36,7 +36,8 @@ def _request_json(url):
             if exc.code != 429 or attempt != 0:
                 raise
             try:
-                retry_after = float(exc.headers.get("Retry-After", "1"))
+                headers = exc.headers or {}
+                retry_after = float(headers.get("Retry-After", "1"))
             except (TypeError, ValueError):
                 retry_after = 1.0
             time.sleep(max(0.0, min(retry_after, 2.0)))
