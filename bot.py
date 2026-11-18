@@ -772,10 +772,10 @@ async def ttslocal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate a WAV using the optional local MyanmarTTS model."""
     if not update.message or not update.message.text:
         return
-    script = update.message.text.partition("\\n")[2].strip()
+    script = update.message.text.partition("\n")[2].strip()
     if not script:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /tts-local ပြီးနောက် မြန်မာစာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\\n"
+            "အသုံးပြုပုံ: /tts-local ပြီးနောက် မြန်မာစာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
             "ဒီစနစ်သည် စမ်းသပ်ဆဲ Local TTS ဖြစ်ပြီး စာသား ၁,၂၀၀ အောက်သာ လက်ခံပါတယ်။"
         )
         return
