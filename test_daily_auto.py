@@ -1,7 +1,10 @@
 import unittest
 from datetime import date
 
-from daily_auto import MOVIE_ROTATION, build_daily_message, category_for_title, select_daily_movie, split_telegram_text
+from daily_auto import (
+    MOVIE_ROTATION, TITLE_CATEGORIES, build_daily_message, category_for_title,
+    region_for_title, select_daily_movie, split_telegram_text,
+)
 
 
 class DailyAutoTests(unittest.TestCase):
@@ -17,6 +20,17 @@ class DailyAutoTests(unittest.TestCase):
 
     def test_selection_uses_catalog(self):
         self.assertIn(select_daily_movie(date(2026, 11, 17)), MOVIE_ROTATION)
+
+    def test_all_four_animation_categories_have_titles(self):
+        self.assertEqual(set(TITLE_CATEGORIES), {"Anime", "3D Animation", "Cartoon", "Donghua"})
+        self.assertTrue(all(TITLE_CATEGORIES.values()))
+
+    def test_international_titles_and_regions_are_included(self):
+        self.assertIn("Klaus", MOVIE_ROTATION)
+        self.assertEqual(region_for_title("Klaus"), "Spain")
+        self.assertEqual(region_for_title("Ne Zha"), "China")
+        self.assertEqual(region_for_title("Masha and the Bear"), "Russia")
+        self.assertEqual(region_for_title("Motu Patlu"), "India")
 
     def test_message_contains_three_youtube_parts(self):
         result = build_daily_message("Avatar", "Research leads")
