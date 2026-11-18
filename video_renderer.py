@@ -41,8 +41,13 @@ def render_slideshow(
     images: list[tuple[str, bytes]],
     audio: tuple[str, bytes] | list[tuple[str, bytes]],
     output_path: str | Path,
+    platform: str = "youtube",
 ) -> Path:
-    """Render up to 12 still images with one narration track into a 720p MP4."""
+    """Render up to 12 still images and narration into a platform-sized MP4."""
+    dimensions = {"youtube": (1280, 720), "facebook": (864, 1080), "tiktok": (720, 1280)}
+    if platform not in dimensions:
+        raise VideoRenderError("Platform သည် youtube/facebook/tiktok ဖြစ်ရပါမယ်။")
+    width, height = dimensions[platform]
     if not 1 <= len(images) <= MAX_IMAGES:
         raise VideoRenderError(f"ပုံ {1} မှ {MAX_IMAGES} ပုံအထိ ထည့်နိုင်ပါတယ်။")
     audio_tracks = [audio] if isinstance(audio, tuple) else list(audio)
@@ -101,8 +106,8 @@ def render_slideshow(
             ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
             "-f", "concat", "-safe", "0", "-i", str(concat_path),
             *[arg for audio_path in audio_paths for arg in ("-i", str(audio_path))],
-            "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,"
-                   "pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
+            "-vf", f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
+                   f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p",
             "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
             *(
                 ["-filter_complex",
