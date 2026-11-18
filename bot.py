@@ -17,6 +17,7 @@ from subtitle_builder import build_burmese_srt
 from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
 from scene_tts import parse_scene_script
 from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
+from voice_profile_storage import load_voice_profiles, save_voice_profiles
 from voice_profile_backup import export_voice_profile_backup, import_voice_profile_backup, VoiceProfileBackupError, MAX_BACKUP_BYTES
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
@@ -417,7 +418,13 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ValueError as exc:
             await update.message.reply_text(str(exc))
             return
-        profile = context.user_data.get("custom_voice_profiles", {}).get(profile_name)
+        try:
+            profiles = load_voice_profiles(update.effective_user.id)
+            context.user_data["custom_voice_profiles"] = profiles
+        except (OSError, ValueError) as exc:
+            await update.message.reply_text(f"Voice Storage ကို ဖတ်မရပါ: {exc}")
+            return
+        profile = profiles.get(profile_name)
         if not profile:
             await update.message.reply_text("အဲဒီ Voice Profile မတွေ့ပါ။ /voiceprofile list ဖြင့် စစ်ပါ။")
             return
@@ -443,7 +450,12 @@ async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
     args = context.args
-    profiles = context.user_data.setdefault("custom_voice_profiles", {})
+    try:
+        profiles = load_voice_profiles(update.effective_user.id)
+    except (OSError, ValueError) as exc:
+        await update.message.reply_text(f"Voice Storage ကို ဖတ်မရပါ: {exc}")
+        return
+    context.user_data["custom_voice_profiles"] = profiles
     if not args:
         await update.message.reply_text("အသုံးပြုပုံ: /voiceprofile <အမည်> ပြီးနောက် ကိုယ်ပိုင် MP3/M4A/WAV/OGG အသံဖိုင် ပို့ပါ။\n/voiceprofile list\n/voiceprofile delete <အမည်>\n/voiceprofile export\n/voiceprofile import")
         return
@@ -466,12 +478,13 @@ async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     if args[0].lower() == "list":
         names = list(profiles)
-        await update.message.reply_text("သိမ်းထားသောအသံများ: " + (", ".join(names) if names else "မရှိသေးပါ") + "\nSession ထဲတွင်သာ ယာယီသိမ်းထားပြီး TTS voice cloning မဟုတ်ပါ။")
+        await update.message.reply_text("သိမ်းထားသောအသံများ: " + (", ".join(names) if names else "မရှိသေးပါ") + "\nPersistent Disk ချိတ်ပြီး VOICE_PROFILE_DB_PATH သတ်မှတ်ထားမှ Restart ပြီးနောက်လည်း မပျောက်ပါ။ TTS voice cloning မဟုတ်ပါ။")
         return
     if args[0].lower() == "delete":
         try:
             name = normalize_profile_name(" ".join(args[1:]))
             delete_voice_profile(profiles, name)
+            save_voice_profiles(update.effective_user.id, profiles)
         except ValueError as exc:
             await update.message.reply_text(str(exc))
             return
@@ -510,6 +523,11 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         except VoiceProfileBackupError as exc:
             await message.reply_text(str(exc))
             return
+        try:
+            save_voice_profiles(update.effective_user.id, restored)
+        except (OSError, ValueError) as exc:
+            await message.reply_text(f"Voice Profile ကို အမြဲတမ်းသိမ်းမရပါ: {exc}")
+            return
         context.user_data["custom_voice_profiles"] = restored
         context.user_data.pop("pending_voice_profile_import", None)
         await message.reply_text(f"Voice Profile Backup ပြန်သွင်းပြီးပါပြီ။ လက်ရှိ Profile {len(restored)} ခု ရှိပါတယ်။")
@@ -526,7 +544,10 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         await media_file.download_to_memory(out=buffer)
         filename = filename_in
         try:
-            store_voice_profile(context.user_data.setdefault("custom_voice_profiles", {}), pending, filename, buffer.getvalue())
+            profiles = load_voice_profiles(update.effective_user.id)
+            store_voice_profile(profiles, pending, filename, buffer.getvalue())
+            save_voice_profiles(update.effective_user.id, profiles)
+            context.user_data["custom_voice_profiles"] = profiles
         except ValueError as exc:
             await message.reply_text(str(exc))
             return

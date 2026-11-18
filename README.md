@@ -86,6 +86,14 @@ GitHub's scheduled workflow can start a little later than the exact minute. The 
 
 
 
+## Persistent voice profile storage
+
+Voice Profile audio is stored in a per-Telegram-user SQLite database by `voice_profile_storage.py`. The default database path is `data/nexora_voice_profiles.sqlite3`. This survives process restarts only when that path is on persistent storage; a normal Render container filesystem is ephemeral and can be replaced during redeploys.
+
+For Render, attach a Persistent Disk to the web service, mount it at `/var/data`, and set the private environment variable `VOICE_PROFILE_DB_PATH=/var/data/nexora_voice_profiles.sqlite3`. Redeploy after the disk and environment variable are configured. Do not point the database into the Git checkout or another ephemeral directory. Without the mounted disk, the SQLite integration works during the current container lifetime but does **not** guarantee survival across redeploys.
+
+Each Telegram user ID has an isolated profile collection. The database stores audio BLOBs; keep the disk and exported ZIP backups private. Only upload recordings you own or are authorized to use. SQLite is included with Python, so no extra package is required. `/voiceprofile export` remains available as an additional manual backup.
+
 ## Burmese MP3 voice-over
 
 Send \`/tts female\` or \`/tts male\`, then put the Burmese narration text on the next line. NEXORA can generate an MP3 using the Burmese neural voices \`my-MM-NilarNeural\` (female) or \`my-MM-ThihaNeural\` (male). The command accepts up to 6,000 characters and returns an MP3 file.
@@ -189,7 +197,7 @@ Use `/voices` in Telegram to list them. Then use `/tts <preset>` for MP3 or `/tt
 
 ## Custom voice recordings
 
-Use /voiceprofile <name>, then send your own MP3/M4A/WAV/OGG recording (up to 20 MB). Use /voiceprofile list to view saved clips and /voiceprofile delete <name> to remove one. Up to 12 clips are held in the current Telegram session and may be lost when the bot restarts. This stores prerecorded audio only; it does not clone a voice or synthesize new words. Use only your own recordings or recordings with clear permission. Use /voiceprofile export to download a ZIP backup and /voiceprofile import to restore it; import merges the backup into the current session and validates file names, types, sizes, and archive contents. Keep the backup private because it contains audio recordings.
+Use /voiceprofile <name>, then send your own MP3/M4A/WAV/OGG recording (up to 20 MB). Use /voiceprofile list to view saved clips and /voiceprofile delete <name> to remove one. Clips are stored per Telegram user in SQLite. To keep them across Render redeploys, attach a Persistent Disk and configure VOICE_PROFILE_DB_PATH as described in the Persistent voice profile storage section. Without that mounted disk, the database remains on ephemeral container storage. This stores prerecorded audio only; it does not clone a voice or synthesize new words. Use only your own recordings or recordings with clear permission. Use /voiceprofile export to download a ZIP backup and /voiceprofile import to restore it; import merges and validates file names, types, sizes, and archive contents. Keep the backup private because it contains audio recordings.
 
 
 ### Use saved character voices in MP4
