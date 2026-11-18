@@ -636,12 +636,12 @@ async def scenetts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate separate MP3 and aligned SRT files for each tagged scene."""
     if not update.message or not update.message.text:
         return
-    script = update.message.text.partition("\\n")[2].strip()
+    script = update.message.text.partition("\n")[2].strip()
     try:
         scenes = parse_scene_script(script)
     except ValueError as exc:
         await update.message.reply_text(
-            f"{exc}\\n\\nအသုံးပြုပုံ: /scenetts ပြီးနောက် [narrator]၊ [hero]၊ [villain] "
+            f"{exc}\n\nအသုံးပြုပုံ: /scenetts ပြီးနောက် [narrator]၊ [hero]၊ [villain] "
             "စသည့် ခေါင်းစဉ်များနှင့် စာသားကို အခန်းလိုက်ထည့်ပါ။"
         )
         return
@@ -656,7 +656,7 @@ async def scenetts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         except (ValueError, RuntimeError) as exc:
             await update.message.reply_text(
-                f"အခန်း {index} ({scene['preset']}) မှာ ရပ်သွားပါတယ်: {exc}\\n"
+                f"အခန်း {index} ({scene['preset']}) မှာ ရပ်သွားပါတယ်: {exc}\n"
                 "အရင်အခန်းဖိုင်များကို ရရှိပြီးပါက ဆက်လက်အသုံးပြုနိုင်ပါတယ်။"
             )
             return
