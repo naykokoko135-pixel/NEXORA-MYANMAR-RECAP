@@ -149,5 +149,40 @@ class VideoRendererValidationTests(unittest.TestCase):
             render_slideshow(images, ("voice.mp3", b"audio"), "out.mp4")
 
 
+    def test_scene_timeline_pairs_each_image_with_its_audio_duration(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "timeline.mp4"
+
+            def fake_render(command, **kwargs):
+                output.write_bytes(b"mp4")
+                return type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+
+            fake_ffmpeg = SimpleNamespace(get_ffmpeg_exe=lambda: "ffmpeg")
+            with patch.dict(sys.modules, {"imageio_ffmpeg": fake_ffmpeg}), \\
+                 patch("video_renderer._duration_seconds", side_effect=[2.5, 4.0]), \\
+                 patch("subprocess.run", side_effect=fake_render) as run:
+                from video_renderer import render_scene_timeline
+                render_scene_timeline(
+                    [
+                        {"title": "Intro", "image": ("one.jpg", b"image1"), "audio": ("one.mp3", b"voice1")},
+                        {"title": "Reveal", "image": ("two.jpg", b"image2"), "audio": ("two.mp3", b"voice2")},
+                    ],
+                    output,
+                )
+
+            command = run.call_args.args[0]
+            self.assertEqual(command[command.index("-t") + 1], "6.500")
+            concat_input = command[command.index("-i") + 1]
+            self.assertTrue(concat_input.endswith("slides.txt"))
+
+    def test_scene_timeline_requires_one_audio_per_image(self):
+        from video_renderer import render_scene_timeline
+        with self.assertRaises(VideoRenderError):
+            render_scene_timeline(
+                [{"title": "Only image", "image": ("one.jpg", b"image"), "audio": None}],
+                "out.mp4",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
