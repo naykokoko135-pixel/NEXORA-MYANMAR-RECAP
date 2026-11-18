@@ -35,6 +35,7 @@ from wikidata_metadata import fetch_wikidata_metadata
 from autofacts_narration import generate_burmese_facts_narration
 from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
 from verified_plot_narration import generate_burmese_plot_narration
+from anilist_synopsis import fetch_anilist_synopsis
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -648,6 +649,33 @@ async def autoplotclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("ဇာတ်လမ်း Preview မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
 
 
+
+
+async def animesynopsis_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show an exact-match AniList series overview as a research lead."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text("အသုံးပြုပုံ: /animesynopsis <Anime အမည်>\\nAniList မှ အမည်တိတိကျကျကိုက်ညီသော series synopsis ကို ရှာပေးပါမယ်။")
+        return
+    await update.message.reply_text("AniList မှ Anime ခေါင်းစဉ်နှင့် synopsis ကို စစ်ဆေးနေပါတယ်...")
+    result = await asyncio.to_thread(fetch_anilist_synopsis, query)
+    if not result.get("found"):
+        await update.message.reply_text(result.get("status", "Synopsis မရရှိပါ။"))
+        return
+    message = (
+        f"Anime Research — {result.get('title', query)}\\n"
+        f"အမျိုးအစား: {result.get('format') or 'မဖော်ပြထား'} | "
+        f"နှစ်: {result.get('year') or 'မဖော်ပြထား'} | "
+        f"အပိုင်း: {result.get('episodes') or 'မဖော်ပြထား'}\\n\\n"
+        f"{result['synopsis'][:2600]}\\n\\n"
+        f"ရင်းမြစ်: {result.get('provider_url', '')}\\n"
+        "သတိပြုရန်: ဒီစာသားသည် AniList ရဲ့ series အဆင့် မိတ်ဆက်စာသာဖြစ်ပြီး "
+        "episode တစ်ခုချင်း ဇာတ်ကွက်မဟုတ်ပါ။ မြန်မာဘာသာပြန်/အချက်အလက်စစ်ဆေးမှု မလုပ်ရသေးသဖြင့် "
+        "အလိုအလျောက် recap MP4 အဖြစ် မသုံးထားပါ။"
+    )
+    await update.message.reply_text(message, disable_web_page_preview=True)
 
 
 async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1431,6 +1459,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/autonarrateclip <title>\n<preset>\n<script> ဖြင့် narration နှင့် selectable SRT track ထည့်နိုင်သည်။ ဇာတ်လမ်းအချက်အလက်ကို စစ်ပြီးမှ ထည့်ပါ။\n"
             "/autofactsclip <title> သည် Wikidata အချက်အလက်နှင့် ခွင့်ပြုထားသော footage ကိုသုံးပြီး မိတ်ဆက် Video အလိုအလျောက်ထုတ်သည်။ ဇာတ်ကွက် recap မဟုတ်ပါ။\n"
             "/autoplotclip <title> သည် မြန်မာ Wikipedia ဇာတ်လမ်းအကျဉ်း ရှိမှသာ ရင်းမြစ်အခြေပြု narration preview ထုတ်သည်။\n"
+            "/animesynopsis <title> သည် AniList မှ Anime series synopsis ကို research အဖြစ်ပြသည်။ Episode recap မဟုတ်ပါ။\\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
@@ -1484,6 +1513,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("autonarrateclip", autonarrateclip_cmd))
     telegram_app.add_handler(CommandHandler("autofactsclip", autofactsclip_cmd))
     telegram_app.add_handler(CommandHandler("autoplotclip", autoplotclip_cmd))
+    telegram_app.add_handler(CommandHandler("animesynopsis", animesynopsis_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
     telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))
