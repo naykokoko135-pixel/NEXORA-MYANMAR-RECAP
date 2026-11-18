@@ -63,6 +63,8 @@ Use `/animationepisodes <title>` to retrieve up to five short episode-summary ex
 Use `/movieplotresearch <title>` to require an exact Wikidata title match, exclude Indian-origin entries and entries with animation-related genres, then retrieve an explicitly labelled Plot/Synopsis section from the linked English Wikipedia article. The result is a research excerpt only. English Wikipedia is community-edited, a missing Plot section is rejected, and the command does not translate the text or create a recap MP4. Confirm the title is a live-action international movie and verify plot facts against reliable sources before use.
 
 ## Longer licensed recap video preview
+After the MP4, NEXORA also sends `nexora_footage_attribution.txt` with the Commons file name, creator/artist, attribution text when supplied, license, usage terms, source page, and Wikidata source. Treat this as a checklist: verify the exact license version and creator details on the Commons page before publishing.
+
 
 Use `/recapvideo <exact title>` followed by an optional preset line and creator-written Burmese narration. NEXORA requires an exact Wikidata title record with known non-Indian country metadata, searches Wikimedia Commons, and proceeds only when a strong title metadata match has an allowed CC0/CC BY/CC BY-SA/Public Domain license. It then generates Burmese narration, word-aligned SRT, and an MP4 preview up to five minutes in the selected platform ratio.
 
