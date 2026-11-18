@@ -45,6 +45,7 @@ def render_slideshow(
     output_path: str | Path,
     platform: str = "youtube",
     subtitle: tuple[str, bytes] | None = None,
+    match_audio_to_images: bool = False,
 ) -> Path:
     """Render up to 12 still images and narration into a platform-sized MP4."""
     dimensions = {"youtube": (1280, 720), "facebook": (864, 1080), "tiktok": (720, 1280)}
@@ -94,10 +95,13 @@ def render_slideshow(
         work = Path(temp)
         audio_paths = []
         duration = 0.0
+        track_durations = []
         for index, (audio_name, audio_data) in enumerate(audio_tracks):
             audio_path = work / (f"voice_{index:02d}" + Path(audio_name).suffix.lower())
             audio_path.write_bytes(audio_data)
-            duration += _duration_seconds(ffmpeg, audio_path)
+            track_duration = _duration_seconds(ffmpeg, audio_path)
+            track_durations.append(track_duration)
+            duration += track_duration
             audio_paths.append(audio_path)
         if duration > MAX_AUDIO_SECONDS:
             raise VideoRenderError("အသံ Track အားလုံးပေါင်း ၁၀ မိနစ်ထက် မကျော်ရပါ။")
@@ -107,14 +111,17 @@ def render_slideshow(
             subtitle_path = work / "captions.srt"
             subtitle_path.write_bytes(subtitle[1])
 
+        if match_audio_to_images and len(audio_tracks) != len(images):
+            raise VideoRenderError("Scene Timeline တွင် ပုံနှင့် အသံအရေအတွက် တူညီရပါမယ်။")
+        image_durations = track_durations if match_audio_to_images else [duration / len(images)] * len(images)
+
         lines = []
-        segment = duration / len(images)
         for index, (name, data) in enumerate(images):
             image_path = work / f"image_{index:02d}{Path(name).suffix.lower()}"
             image_path.write_bytes(data)
             safe_path = str(image_path).replace("'", "'\\''")
             lines.append(f"file '{safe_path}'")
-            lines.append(f"duration {segment:.4f}")
+            lines.append(f"duration {image_durations[index]:.4f}")
         last_path = str(work / f"image_{len(images)-1:02d}{Path(images[-1][0]).suffix.lower()}").replace("'", "'\\''")
         lines.append(f"file '{last_path}'")
         concat_path = work / "slides.txt"
@@ -150,3 +157,18 @@ def render_slideshow(
         if result.returncode != 0 or not target.exists() or target.stat().st_size == 0:
             raise VideoRenderError("MP4 ထုတ်လုပ်မှု မအောင်မြင်ပါ။ ပုံနဲ့အသံဖိုင်ကို ပြန်စစ်ပါ။")
     return target
+
+
+
+def render_scene_timeline(scenes: list[dict], output_path: str | Path, platform: str = "youtube", subtitle: tuple[str, bytes] | None = None) -> Path:
+    """Render ordered scene image/audio pairs, holding each image for its narration."""
+    if not 1 <= len(scenes) <= MAX_IMAGES:
+        raise VideoRenderError(f"Scene ၁ မှ {MAX_IMAGES} ခုအထိ ထည့်နိုင်ပါတယ်။")
+    images = []
+    audio_tracks = []
+    for index, scene in enumerate(scenes, start=1):
+        if not isinstance(scene, dict) or not scene.get("image") or not scene.get("audio"):
+            raise VideoRenderError(f"Scene {index} တွင် ပုံနဲ့ အသံ နှစ်မျိုးလုံး လိုအပ်ပါတယ်။")
+        images.append(scene["image"])
+        audio_tracks.append(scene["audio"])
+    return render_slideshow(images, audio_tracks, output_path, platform=platform, subtitle=subtitle, match_audio_to_images=True)
