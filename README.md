@@ -50,6 +50,14 @@ Use `/animesynopsis <Anime title>` to look up an exact-title Anime entry through
 
 AniList search results are not treated as exact matches unless the requested title matches an official title or listed synonym. Ambiguous and fuzzy matches are rejected. Indian-origin entries are excluded. AniList synopsis text is a series-level overview, not an episode-by-episode plot summary; it is shown only as a research lead and is not passed to the automatic MP4 recap renderer. It is not automatically translated into Burmese, so verify the facts and language before using it.
 
+## Cartoon and Donghua series research
+
+Use `/seriesresearch <title>` to request an exact-title TVmaze show match. NEXORA only displays the summary when TVmaze marks the entry with the Animation genre and rejects Indian-origin shows. The returned summary is a series-level overview, not an episode plot. TVmaze records are community-maintained; the command does not infer whether an animated work is 2D or 3D, and it does not create a recap video.
+
+## International movie plot research
+
+Use `/movieplotresearch <title>` to require an exact Wikidata title match, exclude Indian-origin entries and entries with animation-related genres, then retrieve an explicitly labelled Plot/Synopsis section from the linked English Wikipedia article. The result is a research excerpt only. English Wikipedia is community-edited, a missing Plot section is rejected, and the command does not translate the text or create a recap MP4. Confirm the title is a live-action international movie and verify plot facts against reliable sources before use.
+
 ## Research notes to recap draft
 Use `/draft Avatar` and put your checked notes on the following lines in the same Telegram message. The bot preserves those notes and organizes prompts into chapters for the selected platform and duration. It does not write a finished factual narrative, independently verify notes, browse the web, or invent missing plot details. Keep source references with your notes and review the result before publishing.
 
