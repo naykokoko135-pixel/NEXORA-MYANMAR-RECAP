@@ -99,7 +99,7 @@ def parse_voice_design_scene_script(script: str) -> list[dict]:
 
     def flush():
         nonlocal current_lines, total_chars
-        text = "\\n".join(current_lines).strip()
+        text = "\n".join(current_lines).strip()
         if text:
             scenes.append({
                 "voice": current_voice,
