@@ -8,7 +8,8 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 from auto_research import search_movie_sources
-from wikidata_metadata import fetch_wikidata_metadata, format_wikidata_metadata
+from wikidata_metadata import (fetch_wikidata_metadata, format_wikidata_metadata,
+                               format_wikidata_episode_guide)
 from script_writer import generate_episode_selection_guide
 from trend_sources import fetch_anime_trends, format_anime_trends
 from pageview_trends import fetch_category_pageviews, format_category_pageviews
@@ -268,10 +269,15 @@ def main() -> None:
     local_today = datetime.now(ZoneInfo("Asia/Bangkok")).date()
     movie = select_daily_movie(local_today)
     research = search_movie_sources(movie)
-    metadata_report = format_wikidata_metadata(fetch_wikidata_metadata(movie))
+    metadata = fetch_wikidata_metadata(movie)
+    metadata_report = format_wikidata_metadata(metadata)
     series_report = ""
     if format_for_title(movie) == "Animated Series":
-        series_report = format_series_episode_guide(fetch_series_episode_guide(movie))
+        tvmaze_result = fetch_series_episode_guide(movie)
+        if tvmaze_result.get("found"):
+            series_report = format_series_episode_guide(tvmaze_result)
+        else:
+            series_report = format_wikidata_episode_guide(metadata)
     trend_report = format_anime_trends(fetch_anime_trends())
     pageview_report = format_category_pageviews(fetch_category_pageviews(TITLE_CATEGORIES))
     message = build_daily_message(movie, research, metadata_report, series_report) + "\n\n" + trend_report + "\n\n" + pageview_report

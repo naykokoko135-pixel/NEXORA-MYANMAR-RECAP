@@ -4,7 +4,8 @@ from io import BytesIO
 from urllib.error import URLError
 from unittest.mock import patch
 
-from wikidata_metadata import fetch_wikidata_metadata, format_wikidata_metadata
+from wikidata_metadata import (fetch_wikidata_metadata, format_wikidata_metadata,
+                               format_wikidata_episode_guide)
 
 
 class Response(BytesIO):
@@ -15,9 +16,14 @@ class Response(BytesIO):
         self.close()
 
 
-def claim(entity_id=None, time_value=None):
-    value = {"id": entity_id} if entity_id else {"time": time_value}
-    return {"mainsnak": {"datavalue": {"value": value}}}
+def claim(entity_id=None, time_value=None, quantity_value=None, rank="normal"):
+    if entity_id:
+        value = {"id": entity_id}
+    elif time_value:
+        value = {"time": time_value}
+    else:
+        value = {"amount": str(quantity_value), "unit": "1"}
+    return {"rank": rank, "mainsnak": {"datavalue": {"value": value}}}
 
 
 class WikidataMetadataTests(unittest.TestCase):
@@ -81,6 +87,57 @@ class WikidataMetadataTests(unittest.TestCase):
         self.assertIn("ထွက်ရှိသည့်နှစ်: မရရှိပါ", result)
         self.assertIn("ဒါရိုက်တာ: မရရှိပါ", result)
         self.assertIn("ထပ်မံတိုက်စစ်ပါ", result)
+
+
+    @patch("wikidata_metadata.urlopen")
+    def test_episode_and_season_counts_are_extracted_from_wikidata(self, mock_urlopen):
+        search = {"search": [{
+            "id": "Q321", "label": "Example Series",
+            "description": "animated television series",
+        }]}
+        entity = {"entities": {"Q321": {"claims": {
+            "P1113": [claim(quantity_value="+24")],
+            "P2437": [claim(quantity_value="+2")],
+        }}}}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search).encode()),
+            Response(json.dumps(entity).encode()),
+        ]
+        result = fetch_wikidata_metadata("Example Series")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["episode_count"], 24)
+        self.assertEqual(result["season_count"], 2)
+        formatted = format_wikidata_episode_guide(result)
+        self.assertIn("စုစုပေါင်း Episode အရေအတွက်: 24", formatted)
+        self.assertIn("Season အရေအတွက်: 2", formatted)
+        self.assertIn("wikidata.org/wiki/Q321", formatted)
+        self.assertIn("Season တစ်ခုချင်းစီ", formatted)
+
+    @patch("wikidata_metadata.urlopen")
+    def test_ambiguous_episode_counts_are_not_guessed(self, mock_urlopen):
+        search = {"search": [{"id": "Q322", "label": "Example Series"}]}
+        entity = {"entities": {"Q322": {"claims": {
+            "P1113": [
+                claim(quantity_value="+24"),
+                claim(quantity_value="+26"),
+            ],
+        }}}}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search).encode()),
+            Response(json.dumps(entity).encode()),
+        ]
+        result = fetch_wikidata_metadata("Example Series")
+        self.assertIsNone(result["episode_count"])
+        self.assertIn("မရရှိပါ", format_wikidata_episode_guide(result))
+
+    def test_episode_fallback_does_not_invent_missing_counts(self):
+        formatted = format_wikidata_episode_guide({
+            "found": True, "title": "Example Series",
+            "episode_count": None, "season_count": None,
+            "source": "https://www.wikidata.org/wiki/Q1",
+        })
+        self.assertIn("မရရှိပါ", formatted)
+        self.assertIn("မခန့်မှန်းထားပါ", formatted)
 
 
 if __name__ == "__main__":

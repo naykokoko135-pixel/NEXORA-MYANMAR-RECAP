@@ -16,6 +16,8 @@ PROPERTIES = {
     "P57": "directors",
     "P136": "genres",
     "P364": "languages",
+    "P1113": "episode_count",
+    "P2437": "season_count",
 }
 
 
@@ -53,6 +55,30 @@ def _date_year(claims):
         if match:
             return match.group(1)
     return None
+
+
+
+def _quantity_value(claims, property_id):
+    """Return one unambiguous, non-deprecated integer quantity or None."""
+    statements = [
+        item for item in claims.get(property_id, [])
+        if item.get("rank") != "deprecated"
+    ]
+    preferred = [item for item in statements if item.get("rank") == "preferred"]
+    candidates = preferred or statements
+    values = set()
+    for item in candidates:
+        raw = item.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+        amount = raw.get("amount") if isinstance(raw, dict) else None
+        if amount is None:
+            continue
+        try:
+            number = float(str(amount).lstrip("+"))
+        except (TypeError, ValueError):
+            continue
+        if number >= 0 and number.is_integer():
+            values.add(int(number))
+    return next(iter(values)) if len(values) == 1 else None
 
 
 def fetch_wikidata_metadata(title):
@@ -138,6 +164,8 @@ def fetch_wikidata_metadata(title):
             "directors": values_for("P57"),
             "genres": values_for("P136"),
             "languages": values_for("P364"),
+            "episode_count": _quantity_value(claims, "P1113"),
+            "season_count": _quantity_value(claims, "P2437"),
             "source": "https://www.wikidata.org/wiki/" + entity_id,
             "status": "Wikidata မှတ်တမ်းကို ရရှိပါပြီ။ မူရင်းထုတ်လုပ်သူ/ဖြန့်ချိသူရင်းမြစ်ဖြင့် ထပ်မံစစ်ဆေးပါ။",
         }
@@ -170,4 +198,27 @@ def format_wikidata_metadata(metadata):
         "အခြေအနေ: " + metadata.get("status", "ထပ်မံစစ်ဆေးရန်"),
         "မှတ်ချက်: Wikidata သည် လူထုတည်းဖြတ်ဒေတာဖြစ်သည်။ မူရင်းစတူဒီယို/ဖြန့်ချိသူရင်းမြစ်နှင့် ထပ်မံတိုက်စစ်ပါ။",
     ]
+    return "\n".join(lines)
+
+
+
+def format_wikidata_episode_guide(metadata):
+    """Format only Wikidata's explicit total counts; never infer season breakdowns."""
+    if not metadata or not metadata.get("found"):
+        status = (metadata or {}).get("status", "Wikidata Episode အချက်အလက် မရရှိပါ။")
+        return "📺 Episode အရေအတွက် (Wikidata အစားထိုးရင်းမြစ်)\n" + status
+
+    episode_count = metadata.get("episode_count")
+    season_count = metadata.get("season_count")
+    lines = [
+        "📺 Episode အရေအတွက် (Wikidata အစားထိုးရင်းမြစ်)",
+        "ခေါင်းစဉ်: " + metadata.get("title", "မရရှိပါ"),
+        "Season အရေအတွက်: " + (str(season_count) if season_count is not None else "မရရှိပါ"),
+        "စုစုပေါင်း Episode အရေအတွက်: " + (str(episode_count) if episode_count is not None else "မရရှိပါ"),
+        "Source: " + metadata.get("source", ""),
+        "အခြေအနေ: Wikidata တွင် အရေအတွက်တန်ဖိုးရှိပါကသာ ဖော်ပြထားသည်။",
+        "သတိပြုရန်: Season တစ်ခုချင်းစီ၏ Episode စာရင်း/ခေါင်းစဉ်များ မဟုတ်ပါ။ လူထုတည်းဖြတ်ဒေတာဖြစ်ပြီး နောက်ဆုံးအခြေအနေ မပြည့်စုံနိုင်သဖြင့် Official Studio/Broadcaster Guide နှင့် ပြန်စစ်ပါ။",
+    ]
+    if episode_count is None and season_count is None:
+        lines.append("မှတ်ချက်: Wikidata တွင် Season/Episode အရေအတွက် မရရှိပါ။ မခန့်မှန်းထားပါ။")
     return "\n".join(lines)
