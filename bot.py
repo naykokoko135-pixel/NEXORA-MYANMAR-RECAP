@@ -24,6 +24,8 @@ from voice_profile_backup import export_voice_profile_backup, import_voice_profi
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
+from tvmaze_series import fetch_series_episode_guide, format_series_episode_guide
+from wikidata_metadata import fetch_wikidata_metadata, format_wikidata_episode_guide
 from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
 from video_renderer import render_slideshow, VideoRenderError
@@ -58,6 +60,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/create <ခေါင်းစဉ်> - Free Recap template\n"
             "/research <ဇာတ်ကားအမည်> - Source စစ်ဆေးရန် worksheet\n"
             "/auto <ဇာတ်ကားအမည်> - အခမဲ့ ရင်းမြစ်ရှာရန်\n"
+            "/seriesguide <ဇာတ်လမ်းတွဲအမည်> - Season/Episode လမ်းညွှန် စစ်ဆေးရန်\n"
             "ပြီးနောက် /draft3 <ဇာတ်ကားအမည်> - ရှာထားသော Notes ကို အလိုအလျောက်သုံးရန်\n"
             "/draft <ဇာတ်ကားအမည်> - Research Notes မှ Draft worksheet\n"
             "/draft3 <ဇာတ်ကားအမည်> - YouTube သုံးပိုင်း Draft worksheets\n"
@@ -212,6 +215,30 @@ async def auto_research_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     for start_at in range(0, len(result), 3900):
         await update.message.reply_text(result[start_at:start_at + 3900])
+
+
+async def series_guide_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Look up a series guide using TVmaze first and Wikidata total counts as fallback."""
+    if not update.message:
+        return
+    title = " ".join(context.args).strip()
+    if not title:
+        await update.message.reply_text("အသုံးပြုပုံ: /seriesguide Frieren: Beyond Journey's End")
+        return
+
+    await update.message.reply_text("Season / Episode အချက်အလက်ကို အခမဲ့ရင်းမြစ်များမှ စစ်ဆေးနေပါတယ်...")
+    tvmaze_result = await asyncio.to_thread(fetch_series_episode_guide, title)
+    if tvmaze_result.get("found"):
+        report = format_series_episode_guide(tvmaze_result)
+    else:
+        wikidata_result = await asyncio.to_thread(fetch_wikidata_metadata, title)
+        report = (
+            "TVmaze စစ်ဆေးမှု: " + tvmaze_result.get("status", "မှတ်တမ်းမရရှိပါ။")
+            + "\\n\\n" + format_wikidata_episode_guide(wikidata_result)
+        )
+
+    for start_at in range(0, len(report), 3900):
+        await update.message.reply_text(report[start_at:start_at + 3900])
 
 
 async def allplatforms_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1075,6 +1102,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "အသုံးပြုပုံ: /voiceover3 Avatar ပြီးနောက် စာကြောင်းအသစ်မှ ဖြစ်ရပ်မှန် Notes များ ထည့်ပါ။\n"
             "Wikipedia /auto ရလဒ်တိုများကို တိုက်ရိုက်သုံးရန် မလုံလောက်ပါ။ Source link များကို ပြန်စစ်ပြီး ကိုယ်တိုင် Notes ရေးပါ။\n"
             "/auto Avatar ပြီးနောက် /draft3 Avatar ပို့လျှင် ရှာထားသော Notes ကို အလိုအလျောက် ထည့်ပေးသည်။\n"
+            "/seriesguide <title> ဖြင့် TVmaze ကို အရင်စစ်ပြီး မတွေ့ပါက Wikidata ရှိ Season/Episode စုစုပေါင်းကိုသာ ပြနိုင်သည်။\n"
             "/render ဖြင့် ပုံများနှင့် narration အသံမှ MP4 slideshow ထုတ်နိုင်သည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
@@ -1118,6 +1146,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("create", create))
     telegram_app.add_handler(CommandHandler("research", research_cmd))
     telegram_app.add_handler(CommandHandler("auto", auto_research_cmd))
+    telegram_app.add_handler(CommandHandler("seriesguide", series_guide_cmd))
     telegram_app.add_handler(CommandHandler("draft", draft_cmd))
     telegram_app.add_handler(CommandHandler("draft3", draft3_cmd))
     telegram_app.add_handler(CommandHandler("allplatforms", allplatforms_cmd))
