@@ -15,7 +15,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/duration <minutes>` — choose a duration valid for the selected platform
 - `/settings` — show the current user's selections
 - `/mode free|ai` — choose a mode label; AI provider is not connected
-- `/srt` — convert timestamped subtitle lines into an SRT file\n- `/srtmy` — split a supplied Burmese narration script into estimated-time Burmese SRT captions
+- `/srt` — convert timestamped subtitle lines into an SRT file\n- `/srtmy` — split a supplied Burmese narration script into estimated-time Burmese SRT captions\n- `/tts female|male` — create a Burmese MP3 voice-over from supplied Burmese text
 
 ## Three-part YouTube worksheets
 Use `/draft3 <movie title>` and put your checked research notes on the following lines in the same Telegram message. NEXORA creates three distinct planning worksheets:
@@ -82,6 +82,14 @@ GitHub's scheduled workflow can start a little later than the exact minute. The 
 
 
 
+
+
+## Burmese MP3 voice-over
+
+Send \`/tts female\` or \`/tts male\`, then put the Burmese narration text on the next line. NEXORA can generate an MP3 using the Burmese neural voices \`my-MM-NilarNeural\` (female) or \`my-MM-ThihaNeural\` (male). The command accepts up to 6,000 characters and returns an MP3 file.
+
+This uses the third-party \`edge-tts\` Python package to access Microsoft Edge's **online** text-to-speech service without an API key. It requires outbound internet access; it is not an offline model or a guaranteed/official Azure Speech API. The text you submit with \`/tts\` is sent to that online speech service for synthesis. Do not submit private or confidential text. Service availability, voice availability, and usage limits can change. Review the generated pronunciation and audio quality before publishing.
+
 ## Burmese subtitle draft export
 
 Send `/srtmy` and put the Burmese narration script on the following lines. NEXORA splits it into readable caption chunks and creates a UTF-8 SRT download with estimated sequential timestamps. The estimate uses character count and a default reading-speed assumption; it is **not speech recognition or audio alignment**. Play the final narration and adjust caption timing before publishing. The command does not translate English into Burmese.
@@ -96,7 +104,7 @@ This is not automatic text-to-speech, movie-footage generation, AI scene selecti
 - `/auto` automates initial public-source discovery only; it does not create a complete verified plot summary or finished recap script.
 - This is not a connection to the ChatGPT conversation or an AI writing provider.
 - SRT export does not translate. `/srtmy` can draft Burmese captions from Burmese text, but its estimated timestamps must be synchronized manually to the final narration.
-- No automatic text-to-speech, AI scene selection, scheduled video queue, or automatic social publishing.
+- Burmese MP3 synthesis is available through the optional online Edge TTS command; it requires internet access and sends the submitted script to the remote speech service. It is not offline or guaranteed.\n- No AI scene selection, scheduled video queue, or automatic social publishing.
 - The AI mode does not call an AI service and does not trigger paid fallback.
 - Free hosting may sleep or restart; per-user session selections are not permanent storage.
 
