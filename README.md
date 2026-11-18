@@ -265,6 +265,10 @@ This backend is **off by default** and is intentionally excluded from the defaul
 1. Install the optional dependencies with `pip install -r requirements-local-tts.txt`.
 2. Set `NEXORA_LOCAL_TTS_ENABLED=1` in that host's environment.
 3. Start NEXORA and send `/tts-local` followed by Burmese text on the next line.
+4. To test the actual model independently of Telegram, run `NEXORA_LOCAL_TTS_ENABLED=1 python smoke_local_myanmar_tts.py` from the repository folder. On Windows PowerShell, use `$env:NEXORA_LOCAL_TTS_ENABLED="1"; python smoke_local_myanmar_tts.py`.
+5. The smoke test writes `local_myanmar_tts_smoke.wav` locally and reports the WAV duration/sample rate. Play the file to review pronunciation and audio quality; delete it when finished if it is no longer needed.
+
+The smoke test uses a short default Burmese phrase. To change it, set `NEXORA_LOCAL_TTS_SMOKE_TEXT` in the same shell. It requires the optional model dependencies and may download model assets on first run. It is an opt-in real-model check, not part of normal Render deployment or the lightweight unit-test workflow.
 
 The first request may take longer while the model assets are downloaded and loaded. CPU inference can be slow; the default test limits scripts to 1,200 characters and exports WAV. The default Render Free service is not enabled for this feature because PyTorch/model memory and CPU requirements have not been validated there.
 
