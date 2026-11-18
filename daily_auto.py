@@ -137,18 +137,18 @@ def build_daily_message(movie_title: str, research_text: str) -> str:
     """Append clear part lengths for all three publishing platforms."""
     category = category_for_title(movie_title)
     plan = (
-        "\\n\\n🎬 NEXORA — ANIMATION RECAP PLAN\\n"
-        f"အမျိုးအစား: {category}\\n"
-        f"နိုင်ငံ/ဒေသ: {region_for_title(movie_title)}\\n"
-        f"ခေါင်းစဉ်: {movie_title}\\n\\n"
-        "YOUTUBE — ၃ ပိုင်း၊ တစ်ပိုင်း ၈–၁၀ မိနစ် (စုစုပေါင်း ၂၄–၃၀ မိနစ်)\\n"
-        "Part 1: မိတ်ဆက်၊ နောက်ခံ၊ ဇာတ်ကောင်များနှင့် အစပြုဖြစ်ရပ်။\\n"
-        "Part 2: အဓိကပြဿနာ၊ turning points နှင့် ဇာတ်ကောင်ဆုံးဖြတ်ချက်များ။\\n"
-        "Part 3: Climax၊ သတ်မှတ်ထားသော season/film အဆုံးသတ်နှင့် သုံးသပ်ချက်။\\n\\n"
-        "FACEBOOK — ၃ ပိုင်း၊ တစ်ပိုင်း ၃–၅ မိနစ် (စုစုပေါင်း ၉–၁၅ မိနစ်)\\n"
-        "Part 1: Hook + နောက်ခံ။ Part 2: ပဋိပက္ခ + အလှည့်အပြောင်း။ Part 3: ရလဒ် + သုံးသပ်ချက်။\\n\\n"
-        "TIKTOK — ၃ ပိုင်း၊ တစ်ပိုင်း ၁–၃ မိနစ် (စုစုပေါင်း ၃–၉ မိနစ်)\\n"
-        "Part 1: Hook + စတင်ဖြစ်ရပ်။ Part 2: အဓိကပြဿနာ။ Part 3: အကျိုးဆက် + အမြင်။\\n\\n"
+        "\n\n🎬 NEXORA — ANIMATION RECAP PLAN\n"
+        f"အမျိုးအစား: {category}\n"
+        f"နိုင်ငံ/ဒေသ: {region_for_title(movie_title)}\n"
+        f"ခေါင်းစဉ်: {movie_title}\n\n"
+        "YOUTUBE — ၃ ပိုင်း၊ တစ်ပိုင်း ၈–၁၀ မိနစ် (စုစုပေါင်း ၂၄–၃၀ မိနစ်)\n"
+        "Part 1: မိတ်ဆက်၊ နောက်ခံ၊ ဇာတ်ကောင်များနှင့် အစပြုဖြစ်ရပ်။\n"
+        "Part 2: အဓိကပြဿနာ၊ turning points နှင့် ဇာတ်ကောင်ဆုံးဖြတ်ချက်များ။\n"
+        "Part 3: Climax၊ သတ်မှတ်ထားသော season/film အဆုံးသတ်နှင့် သုံးသပ်ချက်။\n\n"
+        "FACEBOOK — ၃ ပိုင်း၊ တစ်ပိုင်း ၃–၅ မိနစ် (စုစုပေါင်း ၉–၁၅ မိနစ်)\n"
+        "Part 1: Hook + နောက်ခံ။ Part 2: ပဋိပက္ခ + အလှည့်အပြောင်း။ Part 3: ရလဒ် + သုံးသပ်ချက်။\n\n"
+        "TIKTOK — ၃ ပိုင်း၊ တစ်ပိုင်း ၁–၃ မိနစ် (စုစုပေါင်း ၃–၉ မိနစ်)\n"
+        "Part 1: Hook + စတင်ဖြစ်ရပ်။ Part 2: အဓိကပြဿနာ။ Part 3: အကျိုးဆက် + အမြင်။\n\n"
         "မှတ်ချက်: ဤစာသည် research lead နှင့် planning worksheet သာဖြစ်ပြီး ဇာတ်ညွှန်းအပြည့် သို့မဟုတ် ဗီဒီယိုမဟုတ်ပါ။ "
         "နေ့စဉ်စာရင်းသည် Anime၊ 3D Animation၊ Cartoon နှင့် Donghua အမျိုးအစား ၄ မျိုးပါ curated international title rotation ဖြစ်ပြီး live trending/view-count ranking မဟုတ်ပါ။ "
         "နိုင်ငံ/ဒေသအမည်သည် မူရင်းထုတ်လုပ်မှု သို့မဟုတ် ပူးတွဲထုတ်လုပ်မှုကို ဆိုလိုနိုင်သည်။ "
@@ -156,14 +156,14 @@ def build_daily_message(movie_title: str, research_text: str) -> str:
         "အချက်အလက်ကို မူရင်းနှင့်ပြန်စစ်ပြီး ကိုယ်ပိုင် commentary ထည့်ပါ။ "
         "အသုံးပြုခွင့်ရှိသော visual/audio ကိုသာ သုံးပါ။"
     )
-    return research_text + plan + "\\n\\n" + generate_episode_selection_guide()
+    return research_text + plan + "\n\n" + generate_episode_selection_guide()
 
 
 def split_telegram_text(text: str, limit: int = 3900) -> list[str]:
     chunks = []
     remaining = text.strip()
     while len(remaining) > limit:
-        split_at = remaining.rfind("\\n", 0, limit)
+        split_at = remaining.rfind("\n", 0, limit)
         if split_at < limit // 2:
             split_at = limit
         chunks.append(remaining[:split_at].strip())
@@ -197,7 +197,7 @@ def main() -> None:
     research = search_movie_sources(movie)
     trend_report = format_anime_trends(fetch_anime_trends())
     pageview_report = format_category_pageviews(fetch_category_pageviews(TITLE_CATEGORIES))
-    message = build_daily_message(movie, research) + "\\n\\n" + trend_report + "\\n\\n" + pageview_report
+    message = build_daily_message(movie, research) + "\n\n" + trend_report + "\n\n" + pageview_report
     send_telegram_message(token, chat_id, message)
 
 
