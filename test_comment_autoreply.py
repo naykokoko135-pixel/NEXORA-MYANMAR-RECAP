@@ -13,7 +13,7 @@ class CommentReplyTests(unittest.TestCase):
         self.assertIn("Thanks for watching", build_reply("Thanks!"))
 
     def test_questions_and_complaints_require_review(self):
-        for value in ("When is the next video?", "မကောင်းဘူး", "ဒီဇာတ်ကားဘယ်လိုလဲ"):
+        for value in ("When is the next video?", "မကောင်းဘူး", "ဒီဇာတ်ကားဘယ်လိုလဲ", "not good", "great video but bad audio"):
             self.assertEqual(classify_comment(value), "review")
             self.assertIsNone(build_reply(value))
 
