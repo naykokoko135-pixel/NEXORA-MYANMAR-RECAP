@@ -15,6 +15,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 from srt_builder import build_srt
 from subtitle_builder import build_burmese_srt
 from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
+from local_myanmar_tts import synthesize_local_burmese_speech
 from scene_tts import parse_scene_script
 from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
 from voice_profile_storage import load_voice_profiles, save_voice_profiles
@@ -767,6 +768,33 @@ async def tts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def ttslocal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generate a WAV using the optional local MyanmarTTS model."""
+    if not update.message or not update.message.text:
+        return
+    script = update.message.text.partition("\\n")[2].strip()
+    if not script:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /tts-local ပြီးနောက် မြန်မာစာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\\n"
+            "ဒီစနစ်သည် စမ်းသပ်ဆဲ Local TTS ဖြစ်ပြီး စာသား ၁,၂၀၀ အောက်သာ လက်ခံပါတယ်။"
+        )
+        return
+    await update.message.reply_text(
+        "Local MyanmarTTS ဖြင့် WAV အသံဖန်တီးနေပါတယ်။ ပထမဆုံးအကြိမ်မှာ မော်ဒယ်ဖိုင်များကို host ထဲ download လုပ်ရနိုင်ပြီး ခဏကြာနိုင်ပါတယ်..."
+    )
+    try:
+        audio = await synthesize_local_burmese_speech(script)
+    except (ValueError, RuntimeError) as exc:
+        await update.message.reply_text(str(exc))
+        return
+    file_obj = BytesIO(audio)
+    file_obj.name = "nexora_local_myanmar_tts.wav"
+    await update.message.reply_document(
+        document=InputFile(file_obj, filename=file_obj.name),
+        caption="Local MyanmarTTS မှ ထုတ်ထားသော WAV ဖိုင်ပါ။ အသံထွက်နှင့် အရည်အသွေးကို ပြန်စစ်ပါ။"
+    )
+
+
 async def ttssrt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate Burmese MP3 and word-aligned SRT together."""
     if not update.message or not update.message.text:
@@ -855,7 +883,8 @@ async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     lines = [
         "NEXORA မြန်မာအသံပုံစံများ",
-        "မြန်မာ Neural Voice အစစ်မှာ Nilar (အမျိုးသမီး) နှင့် Thiha (အမျိုးသား) နှစ်မျိုးသာရှိပါတယ်။ ကျန်ရွေးချယ်မှုတွေက အသံအသစ်မဟုတ်ဘဲ ပြောနှုန်း/အသံအနိမ့်အမြင့် Preset များဖြစ်ပါတယ်။",
+        "Online Neural Voice အစစ်မှာ Nilar (အမျိုးသမီး) နှင့် Thiha (အမျိုးသား) နှစ်မျိုးသာရှိပါတယ်။ ကျန်ရွေးချယ်မှုတွေက အသံအသစ်မဟုတ်ဘဲ ပြောနှုန်း/အသံအနိမ့်အမြင့် Preset များဖြစ်ပါတယ်။",
+        "Local MyanmarTTS ကို သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 ဖွင့်ထားမှ /tts-local ဖြင့် စမ်းနိုင်ပါတယ်။ ဒီမော်ဒယ်မှာ default reference voice တစ်မျိုးသာပါပြီး scene အလိုက် သရုပ်ဆောင်အသစ်များ မပါပါ။"
     ]
     for key, preset in VOICE_PRESETS.items():
         lines.append(f"/tts {key} — {preset['label']}")
@@ -963,6 +992,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
     telegram_app.add_handler(CommandHandler("srtmy", srtmy_cmd))
     telegram_app.add_handler(CommandHandler("tts", tts_cmd))
+    telegram_app.add_handler(CommandHandler("tts-local", ttslocal_cmd))
     telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
     telegram_app.add_handler(CommandHandler("scenetts", scenetts_cmd))
     telegram_app.add_handler(CommandHandler("voiceprofile", voiceprofile_cmd))
