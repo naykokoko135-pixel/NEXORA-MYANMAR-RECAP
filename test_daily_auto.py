@@ -22,7 +22,7 @@ class DailyAutoTests(unittest.TestCase):
         self.assertIn(select_daily_movie(date(2026, 11, 17)), MOVIE_ROTATION)
 
     def test_all_four_animation_categories_have_titles(self):
-        self.assertEqual(set(TITLE_CATEGORIES), {"Anime", "3D Animation", "Cartoon", "Donghua"})
+        self.assertEqual(set(TITLE_CATEGORIES), {"Anime", "3D Animation", "Cartoon", "Donghua", "International Movies"})
         self.assertTrue(all(TITLE_CATEGORIES.values()))
 
     def test_international_titles_and_regions_are_included(self):
@@ -30,7 +30,12 @@ class DailyAutoTests(unittest.TestCase):
         self.assertEqual(region_for_title("Klaus"), "Spain")
         self.assertEqual(region_for_title("Ne Zha"), "China")
         self.assertEqual(region_for_title("Masha and the Bear"), "Russia")
-        self.assertEqual(region_for_title("Motu Patlu"), "India")
+        self.assertNotIn("Motu Patlu", MOVIE_ROTATION)
+        self.assertNotIn("Chhota Bheem", MOVIE_ROTATION)
+        self.assertFalse(any(region_for_title(title) == "India" for title in MOVIE_ROTATION))
+        self.assertIn("Train to Busan", TITLE_CATEGORIES["International Movies"])
+        self.assertNotIn("Train to Busan", TITLE_CATEGORIES["3D Animation"])
+        self.assertEqual(category_for_title("Train to Busan"), "International Movies")
 
     def test_message_contains_three_youtube_parts(self):
         result = build_daily_message("Avatar", "Research leads")
