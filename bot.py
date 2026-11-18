@@ -70,7 +70,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/srtmy - မြန်မာစာသားမှ SRT ထုတ်ရန်\n"
             "/tts <preset> - မြန်မာ MP3 အသံထုတ်ရန်\n"
             "/voicedemo <preset> - ရှိပြီးသားအသံပုံစံနမူနာ MP3 နားထောင်ရန်\n"
-            "/tts-design <voice_name> - AI စိတ်ကူးယဉ်ဇာတ်ကောင်အသံ WAV ဖန်တီးရန် (GPU host လိုအပ်)\n"
+            "/tts_design <voice_name> - AI စိတ်ကူးယဉ်ဇာတ်ကောင်အသံ WAV ဖန်တီးရန် (GPU host လိုအပ်)\n"
             "/scenedesign - ဇာတ်ဝင်ခန်းအလိုက် AI အသံ WAV များထုတ်ရန် (GPU host လိုအပ်)\n"
             "/ttssrt <preset> - MP3 နှင့် အချိန်ကိုက် SRT တွဲထုတ်ရန်\n"
             "/tts-local - Local MyanmarTTS WAV ထုတ်ရန် (စမ်းသပ်ဆဲ၊ host enable လိုအပ်)\n"
@@ -824,7 +824,7 @@ async def ttsdesign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     voice = parts[1].strip().lower() if len(parts) > 1 else ""
     if not separator or not script.strip() or voice not in VOICE_DESIGNS:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /tts-design <voice_name> ပြီးနောက် စာကြောင်းအသစ်မှ ဇာတ်ညွှန်းထည့်ပါ။\n"
+            "အသုံးပြုပုံ: /tts_design <voice_name> ပြီးနောက် စာကြောင်းအသစ်မှ ဇာတ်ညွှန်းထည့်ပါ။\n"
             "Voice အသစ်ဒီဇိုင်းများ: " + ", ".join(VOICE_DESIGNS) + "\n"
             "ဤအသံများသည် AI ဖန်တီးထားသော စိတ်ကူးယဉ်အသံများဖြစ်ပြီး တကယ့်လူတစ်ဦး၏အသံကို မကူးယူပါ။"
         )
@@ -1015,7 +1015,7 @@ async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for key, preset in VOICE_PRESETS.items():
         lines.append(f"/tts {key} — {preset['label']}")
     lines.append("MP3 + SRT တွဲလိုပါက /ttssrt <preset> ကို သုံးပါ။ အသံကို အရင်နားထောင်လိုပါက /voicedemo <preset> ကို သုံးပါ။")
-    lines.append("AI Voice Design အသစ်များ: " + ", ".join(VOICE_DESIGNS) + " — /tts-design <voice_name> ဖြင့် WAV ထုတ်နိုင်သည် (VoxCPM2 GPU host လိုအပ်သည်)။")
+    lines.append("AI Voice Design အသစ်များ: " + ", ".join(VOICE_DESIGNS) + " — /tts_design <voice_name> ဖြင့် WAV ထုတ်နိုင်သည် (VoxCPM2 GPU host လိုအပ်သည်)။")
     lines.append("ဇာတ်ဝင်ခန်းတစ်ခန်းစီအတွက် AI အသံမတူစေလိုပါက /scenedesign နှင့် [ai:story_female] ကဲ့သို့ ခေါင်းစဉ်သုံးပါ။ အခန်း ၄ ခန်းအထိ၊ တစ်ခန်းစာလုံး ၁,၅၀၀ အထိ။")
     lines.append("မြန်မာ Role များ: [ဇာတ်ကြောင်း], [မင်းသား], [မင်းသမီး], [ဗီလိန်], [လူကြီး], [ကလေး], [ဟာသ], [လျှို့ဝှက်], [အက်ရှင်]")
     lines.append("English Role များ: [narrator], [protagonist], [heroine], [antagonist], [supporting], [elder], [child], [comic], [suspense], [action]")
@@ -1067,7 +1067,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/render ဖြင့် ပုံများနှင့် narration အသံမှ MP4 slideshow ထုတ်နိုင်သည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
-            "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts-design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts-local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
+            "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts-local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
         )
 
 
@@ -1121,7 +1121,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("srtmy", srtmy_cmd))
     telegram_app.add_handler(CommandHandler("tts", tts_cmd))
     telegram_app.add_handler(CommandHandler("voicedemo", voicedemo_cmd))
-    telegram_app.add_handler(CommandHandler("tts-design", ttsdesign_cmd))
+    telegram_app.add_handler(CommandHandler("tts_design", ttsdesign_cmd))
     telegram_app.add_handler(CommandHandler("scenedesign", scenedesign_cmd))
     telegram_app.add_handler(CommandHandler("tts-local", ttslocal_cmd))
     telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))

@@ -20,7 +20,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/tts-local` followed by Burmese text on the next line — experimental local MyanmarTTS WAV (requires optional dependencies and explicit host enablement)
 - `/ttssrt <preset>` — create an MP3 and word-boundary-timed Burmese SRT together
 - `/voicedemo <preset>` — audition an existing Burmese Edge TTS delivery style
-- `/tts-design <voice_name>` followed by Burmese text — create a fictional synthetic voice WAV (optional compatible host only)
+- `/tts_design <voice_name>` followed by Burmese text — create a fictional synthetic voice WAV (optional compatible host only)
 - `/scenedesign` followed by `[ai:story_female]` scene headers and Burmese text — create separate fictional AI voice WAV files per scene (optional compatible GPU host only)
 
 ## Three-part YouTube worksheets
@@ -207,7 +207,7 @@ Use `/voices` in Telegram to list them. Then use `/tts <preset>` for MP3 or `/tt
 
 ## Optional AI-designed Burmese character voices
 
-VoxCPM2 can design a fictional synthetic voice from a natural-language description and supports Burmese text. NEXORA exposes this as an optional backend through `/tts-design <voice_name>`, with these built-in fictional profiles: `story_male`, `story_female`, `young_male`, `young_female`, `elder_male`, `villain`, `comic`, and `mystery`. Put the Burmese narration on the next line. The command returns a WAV file. These are generated character voices, not real actors or cloned identities.
+VoxCPM2 can design a fictional synthetic voice from a natural-language description and supports Burmese text. NEXORA exposes this as an optional backend through `/tts_design <voice_name>`, with these built-in fictional profiles: `story_male`, `story_female`, `young_male`, `young_female`, `elder_male`, `villain`, `comic`, and `mystery`. Put the Burmese narration on the next line. The command returns a WAV file. These are generated character voices, not real actors or cloned identities.
 
 This backend is **off by default** and is not part of the standard Render build. It requires a compatible GPU host, Python 3.10–3.12, PyTorch 2.5+, CUDA 12+, and approximately 8 GB of VRAM for VoxCPM2. On that host, install `requirements-voxcpm.txt` and set `NEXORA_VOXCPM_ENABLED=1`. Do not enable it on Render Free; its hardware is not suitable for this 2B-parameter model. The model repository is Apache-2.0 licensed. See the upstream [VoxCPM2 documentation](https://github.com/OpenBMB/VoxCPM) for current runtime requirements.
 
