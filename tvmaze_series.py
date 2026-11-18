@@ -1,10 +1,11 @@
 """Free TVmaze series and episode metadata lookup.
 
-TVmaze's public API is keyless and licensed CC BY-SA. This module provides
+TVmaze's public API is keyless and licensed CC BY-SA 4.0, requiring attribution and ShareAlike compliance. This module provides
 catalogue metadata only; it is not an official broadcaster episode guide.
 """
 import json
 import re
+import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -25,8 +26,21 @@ def _request_json(url):
         "User-Agent": USER_AGENT,
         "Accept": "application/json",
     })
-    with urlopen(request, timeout=15) as response:
-        return json.loads(response.read().decode("utf-8"))
+    for attempt in range(2):
+        try:
+            with urlopen(request, timeout=15) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except HTTPError as exc:
+            # TVmaze documents HTTP 429 and recommends backing off briefly.
+            # Retry only once, and cap server-provided delays to keep bot runs bounded.
+            if exc.code != 429 or attempt != 0:
+                raise
+            try:
+                retry_after = float(exc.headers.get("Retry-After", "1"))
+            except (TypeError, ValueError):
+                retry_after = 1.0
+            time.sleep(max(0.0, min(retry_after, 2.0)))
+    raise RuntimeError("TVmaze request retry exhausted.")
 
 
 def fetch_series_episode_guide(title):
@@ -149,7 +163,7 @@ def format_series_episode_guide(result):
         "Show Source: " + result.get("source", ""),
         "Episode Guide: " + result.get("episodes_source", ""),
         "အခြေအနေ: " + result.get("status_note", "ထပ်မံစစ်ဆေးရန်"),
-        "လိုင်စင်မှတ်ချက်: TVmaze ဒေတာသည် CC BY-SA ဖြစ်ပြီး TVmaze ကို ရင်းမြစ်အဖြစ် ဖော်ပြရန်လိုသည်။",
+        "လိုင်စင်မှတ်ချက်: TVmaze ဒေတာသည် CC BY-SA 4.0 ဖြစ်သည်။ TVmaze ကို ရင်းမြစ်အဖြစ် ဖော်ပြပြီး ShareAlike စည်းကမ်းကို လိုက်နာပါ။",
         "သတိပြုရန်: TVmaze စာရင်းသည် တရားဝင်ထုတ်လွှင့်သူ၏ အတည်ပြုချက် မဟုတ်ပါ။ Season/Episode အရေအတွက်ကို Official Guide နှင့် ပြန်စစ်ပါ။",
     ])
     return "\n".join(lines)
