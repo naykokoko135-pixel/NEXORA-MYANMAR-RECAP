@@ -14,6 +14,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 from srt_builder import build_srt
 from subtitle_builder import build_burmese_srt
+from tts_builder import synthesize_burmese_speech, validate_tts_request
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
@@ -554,6 +555,42 @@ async def srt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption="NEXORA English Subtitle SRT ဖိုင်"
     )
 
+async def tts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generate a Burmese MP3 using the online neural TTS service."""
+    if not update.message or not update.message.text:
+        return
+    first_line, separator, script = update.message.text.partition("\n")
+    parts = first_line.split(maxsplit=1)
+    voice = parts[1].strip().lower() if len(parts) > 1 else ""
+    if not separator or not script.strip() or voice not in {"female", "male"}:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ:\n/tts female\nပြီးနောက် မြန်မာ Voice-over စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
+            "အမျိုးသားအသံအတွက် /tts male ကို သုံးပါ။"
+        )
+        return
+    try:
+        validate_tts_request(script, voice)
+        await update.message.reply_text("မြန်မာ MP3 အသံဖိုင် ဖန်တီးနေပါတယ်။ ခဏစောင့်ပါ...")
+        audio = await synthesize_burmese_speech(script, voice)
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    except RuntimeError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    file_obj = BytesIO(audio)
+    file_obj.name = "nexora_burmese_voiceover.mp3"
+    await update.message.reply_document(
+        document=InputFile(file_obj, filename=file_obj.name),
+        caption=(
+            "မြန်မာ Voice-over MP3 ဖိုင်ပါ။ မထုတ်ဝေမီ အသံထွက်၊ အမည်အသံထွက်နှင့် "
+            "အသံအရည်အသွေးကို ပြန်စစ်ပါ။"
+        ),
+        read_timeout=60,
+        write_timeout=60,
+    )
+
+
 async def srtmy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Create Burmese captions with estimated timing from a supplied script."""
     if not update.message or not update.message.text:
@@ -596,7 +633,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/render ဖြင့် ပုံများနှင့် narration အသံမှ MP4 slideshow ထုတ်နိုင်သည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
-            "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။"
+            "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။"
         )
 
 
@@ -648,6 +685,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
     telegram_app.add_handler(CommandHandler("srtmy", srtmy_cmd))
+    telegram_app.add_handler(CommandHandler("tts", tts_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
     telegram_app.add_handler(CommandHandler("settings", settings_cmd))
