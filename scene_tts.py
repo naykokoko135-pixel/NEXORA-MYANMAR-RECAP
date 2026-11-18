@@ -120,7 +120,7 @@ def parse_voice_design_scene_script(script: str) -> list[dict]:
             if current_voice not in VOICE_DESIGNS:
                 raise ValueError(f"AI Voice မသိပါ: {current_voice}။ /voices မှ ရွေးပါ။")
             if len(scenes) >= max_scenes:
-                raise ValueError(f"AI ဇာတ်ဝင်ခန်း အများဆုံး {max_scenes} ခန်းသာ ခွင့်ပြုပါတယ်။")
+                raise ValueError("AI ဇာတ်ဝင်ခန်း အများဆုံး ၄ ခန်းသာ ခွင့်ပြုပါတယ်။")
         elif line:
             if current_voice is None:
                 raise ValueError("စာသားမရေးမီ [ai:story_female] ကဲ့သို့ AI အသံခေါင်းစဉ်တပ်ပါ။")
@@ -130,7 +130,7 @@ def parse_voice_design_scene_script(script: str) -> list[dict]:
     if not scenes:
         raise ValueError("AI ဇာတ်ဝင်ခန်းစာသား မတွေ့ပါ။")
     if len(scenes) > max_scenes:
-        raise ValueError(f"AI ဇာတ်ဝင်ခန်း အများဆုံး {max_scenes} ခန်းသာ ခွင့်ပြုပါတယ်။")
+        raise ValueError("AI ဇာတ်ဝင်ခန်း အများဆုံး ၄ ခန်းသာ ခွင့်ပြုပါတယ်။")
     if total_chars > max_total_chars:
         raise ValueError("AI ဇာတ်ဝင်ခန်းအားလုံးပေါင်း စာလုံး ၆,၀၀၀ ထက် မကျော်ရပါ။")
     for index, scene in enumerate(scenes, start=1):
