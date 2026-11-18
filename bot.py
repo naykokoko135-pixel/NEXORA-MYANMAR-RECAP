@@ -337,10 +337,11 @@ async def cancel_voiceover_cmd(update: Update, context: ContextTypes.DEFAULT_TYP
     if not update.message:
         return
     pending = context.user_data.pop("pending_voiceover", None)
-    if pending:
-        await update.message.reply_text("Voice-over Notes စောင့်ဆိုင်းမှုကို ပယ်ဖျက်ပြီးပါပြီ။")
+    pending_profile = context.user_data.pop("pending_voice_profile", None)
+    if pending or pending_profile:
+        await update.message.reply_text("စောင့်ဆိုင်းနေသော Voice-over/အသံဖိုင်တင်ခြင်းကို ပယ်ဖျက်ပြီးပါပြီ။")
     else:
-        await update.message.reply_text("ပယ်ဖျက်ရန် စောင့်နေသော Voice-over မရှိပါ။")
+        await update.message.reply_text("ပယ်ဖျက်ရန် စောင့်နေသော အလုပ်မရှိပါ။")
 
 
 async def voiceover_notes_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -444,15 +445,16 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
     message = update.message
     pending = context.user_data.get("pending_voice_profile")
-    if pending and (message.audio or message.voice):
-        media = message.audio or message.voice
+    if pending and (message.audio or message.voice or message.document):
+        media = message.audio or message.voice or message.document
+        filename_in = getattr(media, "file_name", None) or ("voice_profile.ogg" if message.voice else "voice_profile.mp3")
         media_file = await media.get_file()
         if (getattr(media_file, "file_size", 0) or 0) > 20 * 1024 * 1024:
             await message.reply_text("အသံဖိုင်သည် ၂၀ MB အောက် ဖြစ်ရပါမယ်။")
             return
         buffer = BytesIO()
         await media_file.download_to_memory(out=buffer)
-        filename = (message.audio.file_name if message.audio else None) or ("voice_profile.ogg" if message.voice else "voice_profile.mp3")
+        filename = filename_in
         try:
             store_voice_profile(context.user_data.setdefault("custom_voice_profiles", {}), pending, filename, buffer.getvalue())
         except ValueError as exc:
@@ -832,7 +834,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("voiceover", voiceover_cmd))
     telegram_app.add_handler(CommandHandler("voiceover3", voiceover3_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
-    telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE, video_media_message))
+    telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))
     telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, voiceover_notes_message))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
