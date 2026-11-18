@@ -251,5 +251,49 @@ class WikidataMetadataTests(unittest.TestCase):
         self.assertTrue(result["found"])
 
 
+
+    @patch("wikidata_metadata.urlopen")
+    def test_exact_alias_prefers_unique_anime_series_over_manga_and_franchise(self, mock_urlopen):
+        search = {"search": [
+            {"id": "Q115792176", "label": "Frieren",
+             "description": "Japanese anime television series",
+             "match": {"type": "alias", "text": "Frieren: Beyond Journey's End"}},
+            {"id": "Q98642652", "label": "Frieren",
+             "description": "Japanese manga series",
+             "match": {"type": "alias", "text": "Frieren: Beyond Journey's End"}},
+            {"id": "Q120087412", "label": "Frieren",
+             "description": "Japanese media franchise",
+             "match": {"type": "alias", "text": "Frieren: Beyond Journey's End"}},
+        ]}
+        entity = {"entities": {"Q115792176": {"claims": {"P495": [claim("Q884")]}}}}
+        labels = {"entities": {"Q884": {"labels": {"en": {"value": "Japan"}}}}}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search).encode()),
+            Response(json.dumps(entity).encode()),
+            Response(json.dumps(labels).encode()),
+        ]
+        result = fetch_wikidata_metadata("Frieren: Beyond Journey's End")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["entity_id"], "Q115792176")
+        self.assertEqual(result["countries"], ["Japan"])
+
+    @patch("wikidata_metadata.urlopen")
+    def test_multiple_primary_screen_work_matches_remain_ambiguous(self, mock_urlopen):
+        search = {"search": [
+            {"id": "Q901", "label": "Example",
+             "description": "Japanese anime television series",
+             "match": {"type": "alias", "text": "Example"}},
+            {"id": "Q902", "label": "Example",
+             "description": "Japanese animated film",
+             "match": {"type": "alias", "text": "Example"}},
+        ]}
+        mock_urlopen.return_value = Response(json.dumps(search).encode())
+        result = fetch_wikidata_metadata("Example")
+        self.assertFalse(result["found"])
+        self.assertIn("candidates", result)
+        self.assertEqual(len(result["candidates"]), 2)
+        self.assertEqual(mock_urlopen.call_count, 1)
+
+
 if __name__ == "__main__":
     unittest.main()
