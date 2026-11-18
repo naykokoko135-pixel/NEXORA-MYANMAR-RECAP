@@ -16,6 +16,7 @@ from srt_builder import build_srt
 from subtitle_builder import build_burmese_srt
 from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
 from scene_tts import parse_scene_script
+from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
@@ -66,6 +67,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/tts <preset> - မြန်မာ MP3 အသံထုတ်ရန်\n"
             "/ttssrt <preset> - MP3 နှင့် အချိန်ကိုက် SRT တွဲထုတ်ရန်\n"
             "/voices - အသံပုံစံအားလုံးကြည့်ရန်\n"
+            "/voiceprofile <name> - ကိုယ်ပိုင်အသံဖိုင် သိမ်းရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60 မိနစ်\n"
@@ -407,13 +409,61 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    args = context.args
+    profiles = context.user_data.setdefault("custom_voice_profiles", {})
+    if not args:
+        await update.message.reply_text("အသုံးပြုပုံ: /voiceprofile <အမည်> ပြီးနောက် ကိုယ်ပိုင် MP3/M4A/WAV/OGG အသံဖိုင် ပို့ပါ။\n/voiceprofile list\n/voiceprofile delete <အမည်>")
+        return
+    if args[0].lower() == "list":
+        names = list(profiles)
+        await update.message.reply_text("သိမ်းထားသောအသံများ: " + (", ".join(names) if names else "မရှိသေးပါ") + "\nSession ထဲတွင်သာ ယာယီသိမ်းထားပြီး TTS voice cloning မဟုတ်ပါ။")
+        return
+    if args[0].lower() == "delete":
+        try:
+            name = normalize_profile_name(" ".join(args[1:]))
+            delete_voice_profile(profiles, name)
+        except ValueError as exc:
+            await update.message.reply_text(str(exc))
+            return
+        await update.message.reply_text("အသံ Profile ကို ဖျက်ပြီးပါပြီ။")
+        return
+    try:
+        name = normalize_profile_name(" ".join(args))
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    context.user_data["pending_voice_profile"] = name
+    await update.message.reply_text(f"{name} အတွက် ကိုယ်ပိုင်အသံ MP3/M4A/WAV/OGG ဖိုင် (၂၀ MB အောက်) ပို့ပါ။ မလုပ်တော့ပါက /cancel ပို့ပါ။")
+
+
 async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
+        return
+    message = update.message
+    pending = context.user_data.get("pending_voice_profile")
+    if pending and (message.audio or message.voice):
+        media = message.audio or message.voice
+        media_file = await media.get_file()
+        if (getattr(media_file, "file_size", 0) or 0) > 20 * 1024 * 1024:
+            await message.reply_text("အသံဖိုင်သည် ၂၀ MB အောက် ဖြစ်ရပါမယ်။")
+            return
+        buffer = BytesIO()
+        await media_file.download_to_memory(out=buffer)
+        filename = (message.audio.file_name if message.audio else None) or ("voice_profile.ogg" if message.voice else "voice_profile.mp3")
+        try:
+            store_voice_profile(context.user_data.setdefault("custom_voice_profiles", {}), pending, filename, buffer.getvalue())
+        except ValueError as exc:
+            await message.reply_text(str(exc))
+            return
+        context.user_data.pop("pending_voice_profile", None)
+        await message.reply_text(f"{pending} အသံဖိုင် သိမ်းပြီးပါပြီ။ /voiceprofile list ဖြင့် ကြည့်နိုင်ပါတယ်။ ဒီဖိုင်သည် အသံသွင်းထားသော narration ကို တိုက်ရိုက်ပြန်သုံးရန်ဖြစ်ပြီး စာသားအသစ်ကို TTS ပြောင်းပေးခြင်း မဟုတ်ပါ။")
         return
     session = context.user_data.get("video_render")
     if session is None:
         return
-    message = update.message
     media_file = None
     filename = ""
     kind = ""
@@ -791,6 +841,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("tts", tts_cmd))
     telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
     telegram_app.add_handler(CommandHandler("scenetts", scenetts_cmd))
+    telegram_app.add_handler(CommandHandler("voiceprofile", voiceprofile_cmd))
     telegram_app.add_handler(CommandHandler("voices", voices_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
