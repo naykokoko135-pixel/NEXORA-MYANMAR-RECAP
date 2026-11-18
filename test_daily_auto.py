@@ -3,7 +3,7 @@ from datetime import date
 
 from daily_auto import (
     MOVIE_ROTATION, TITLE_CATEGORIES, build_daily_message, category_for_title,
-    region_for_title, select_daily_movie, split_telegram_text,
+    region_for_title, format_for_title, select_daily_movie, split_telegram_text,
 )
 
 
@@ -36,6 +36,23 @@ class DailyAutoTests(unittest.TestCase):
         self.assertIn("Train to Busan", TITLE_CATEGORIES["International Movies"])
         self.assertNotIn("Train to Busan", TITLE_CATEGORIES["3D Animation"])
         self.assertEqual(category_for_title("Train to Busan"), "International Movies")
+
+    def test_media_format_distinguishes_series_and_animated_films(self):
+        self.assertEqual(format_for_title("Frieren: Beyond Journey's End"), "Animated Series")
+        self.assertEqual(format_for_title("Spirited Away"), "Animated Film")
+        self.assertEqual(format_for_title("Ne Zha"), "Animated Film")
+
+    def test_international_movies_are_live_action_only(self):
+        for title in TITLE_CATEGORIES["International Movies"]:
+            self.assertEqual(format_for_title(title), "Live-action Film")
+        self.assertEqual(format_for_title("Spider-Man: Into the Spider-Verse"), "Animated Film")
+
+    def test_unknown_media_format_is_not_guessed(self):
+        self.assertIn("Official Source", format_for_title("Unknown New Title"))
+
+    def test_daily_message_shows_media_format(self):
+        result = build_daily_message("Train to Busan", "Research leads")
+        self.assertIn("မီဒီယာပုံစံ: Live-action Film", result)
 
     def test_daily_message_includes_optional_wikidata_metadata(self):
         result = build_daily_message("Train to Busan", "Wikipedia research", "Wikidata metadata cross-check")
