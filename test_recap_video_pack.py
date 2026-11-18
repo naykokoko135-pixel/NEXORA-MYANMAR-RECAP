@@ -1,6 +1,6 @@
 import unittest
 from recap_video_pack import MAX_RECAP_SCRIPT_CHARS, parse_recap_video_request, validate_non_indian_wikidata_metadata
-from licensed_narrated_clip import _subtitle_duration_seconds, LicensedClipError
+from licensed_narrated_clip import _subtitle_duration_seconds, LicensedClipError, build_licensed_attribution_note
 PRESETS = {"narrator", "hero", "female"}
 
 class RecapVideoPackTests(unittest.TestCase):
@@ -22,6 +22,25 @@ class RecapVideoPackTests(unittest.TestCase):
             parse_recap_video_request("/recapvideo Example\nunknown\nဇာတ်လမ်း", PRESETS),
             ("Example", "narrator", "unknown\nဇာတ်လမ်း"),
         )
+    def test_attribution_note_contains_license_creator_and_source(self):
+        note = build_licensed_attribution_note(
+            {
+                "title": "File:Example.webm",
+                "artist": "<a href='https://example.org'>Creator</a>",
+                "attribution": "Creator — CC BY",
+                "license": "CC BY-SA 4.0",
+                "usage_terms": "Share alike",
+                "source_page": "https://commons.wikimedia.org/wiki/File:Example.webm",
+            },
+            "Example Show",
+            "https://www.wikidata.org/wiki/Q123",
+        )
+        self.assertIn("Creator", note)
+        self.assertNotIn("<a href", note)
+        self.assertIn("CC BY-SA 4.0", note)
+        self.assertIn("https://commons.wikimedia.org/wiki/File:Example.webm", note)
+        self.assertIn("Share-Alike", note)
+
     def test_subtitle_duration_is_read_without_truncation(self):
         self.assertAlmostEqual(
             _subtitle_duration_seconds("1\n00:00:00,000 --> 00:00:05,250\nမြန်မာစာ\n"),
