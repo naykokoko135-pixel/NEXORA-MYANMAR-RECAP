@@ -14,7 +14,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 from srt_builder import build_srt
 from subtitle_builder import build_burmese_srt
-from tts_builder import synthesize_burmese_speech, validate_tts_request
+from tts_builder import synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
@@ -593,6 +593,43 @@ async def tts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def ttssrt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generate Burmese MP3 and word-aligned SRT together."""
+    if not update.message or not update.message.text:
+        return
+    first_line, separator, script = update.message.text.partition("\\n")
+    parts = first_line.split(maxsplit=1)
+    voice = parts[1].strip().lower() if len(parts) > 1 else ""
+    if not separator or not script.strip() or voice not in {"female", "male"}:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ:\\n/ttssrt female\\nပြီးနောက် မြန်မာ Voice-over စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\\n"
+            "အမျိုးသားအသံအတွက် /ttssrt male ကို သုံးပါ။"
+        )
+        return
+    try:
+        validate_tts_request(script, voice)
+        await update.message.reply_text("MP3 အသံနှင့် အချိန်ကိုက် SRT ကို တစ်ပြိုင်နက် ဖန်တီးနေပါတယ်...")
+        audio, srt_text = await synthesize_burmese_speech_with_srt(script, voice)
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    except RuntimeError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    audio_file = BytesIO(audio)
+    audio_file.name = "nexora_burmese_voiceover.mp3"
+    await update.message.reply_document(
+        document=InputFile(audio_file, filename=audio_file.name),
+        caption="မြန်မာ Voice-over MP3 ဖိုင်ပါ။"
+    )
+    subtitle_file = BytesIO(srt_text.encode("utf-8-sig"))
+    subtitle_file.name = "nexora_burmese_aligned_subtitles.srt"
+    await update.message.reply_document(
+        document=InputFile(subtitle_file, filename=subtitle_file.name),
+        caption="အသံထုတ်လုပ်စဉ်ရရှိသော WordBoundary အချိန်မှတ်တမ်းဖြင့် ချိန်ညှိထားသည့် SRT ဖိုင်ပါ။ ထုတ်ဝေမီ ပြန်စစ်ပါ။"
+    )
+
+
 async def srtmy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Create Burmese captions with estimated timing from a supplied script."""
     if not update.message or not update.message.text:
@@ -688,6 +725,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
     telegram_app.add_handler(CommandHandler("srtmy", srtmy_cmd))
     telegram_app.add_handler(CommandHandler("tts", tts_cmd))
+    telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
     telegram_app.add_handler(CommandHandler("settings", settings_cmd))
