@@ -37,6 +37,21 @@ class VoiceProfileBackupTests(unittest.TestCase):
         with self.assertRaises(VoiceProfileBackupError):
             import_voice_profile_backup(buffer.getvalue())
 
+    def test_non_object_manifest_rejected(self):
+        buffer = BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            archive.writestr("manifest.json", '[]')
+        with self.assertRaises(VoiceProfileBackupError):
+            import_voice_profile_backup(buffer.getvalue())
+
+    def test_non_string_profile_name_rejected(self):
+        buffer = BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            archive.writestr("manifest.json", '{"format":"nexora-voice-profiles","version":1,"profiles":[{"name":123,"file":"audio/00.mp3","size":4}]}')
+            archive.writestr("audio/00.mp3", b"hero")
+        with self.assertRaises(VoiceProfileBackupError):
+            import_voice_profile_backup(buffer.getvalue())
+
     def test_unlisted_file_rejected(self):
         buffer = BytesIO()
         with zipfile.ZipFile(buffer, "w") as archive:
