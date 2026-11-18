@@ -36,6 +36,37 @@ class VideoRendererValidationTests(unittest.TestCase):
             self.assertIn("[2:a]aresample=44100", command[command.index("-filter_complex") + 1])
             self.assertEqual(command[command.index("-t") + 1], "5.000")
 
+
+    def test_platform_dimensions_and_embedded_burmese_srt(self):
+        for platform, dimensions in {"youtube": "1280:720", "facebook": "864:1080", "tiktok": "720:1280"}.items():
+            with self.subTest(platform=platform), tempfile.TemporaryDirectory() as temp:
+                output = Path(temp) / "out.mp4"
+                def fake_render(command, **kwargs):
+                    output.write_bytes(b"mp4")
+                    return type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+                fake_ffmpeg = SimpleNamespace(get_ffmpeg_exe=lambda: "ffmpeg")
+                with patch.dict(sys.modules, {"imageio_ffmpeg": fake_ffmpeg}), \
+                     patch("video_renderer._duration_seconds", return_value=2.0), \
+                     patch("subprocess.run", side_effect=fake_render) as run:
+                    render_slideshow([("cover.jpg", b"image")], ("voice.mp3", b"audio"), output,
+                        platform=platform,
+                        subtitle=("captions.srt", "1\\n00:00:00,000 --> 00:00:02,000\\nမြန်မာစာတန်း\\n".encode("utf-8")))
+                command = run.call_args.args[0]
+                self.assertIn(f"scale={dimensions}", command[command.index("-vf") + 1])
+                self.assertIn("setsar=1", command[command.index("-vf") + 1])
+                self.assertIn("mov_text", command)
+                self.assertIn("language=bur", command)
+                self.assertIn("2:s:0", command)
+
+    def test_rejects_invalid_subtitle_file(self):
+        with self.assertRaises(VideoRenderError):
+            render_slideshow([("cover.jpg", b"image")], ("voice.mp3", b"audio"), "out.mp4",
+                subtitle=("captions.txt", b"not srt"))
+
+    def test_rejects_invalid_platform(self):
+        with self.assertRaises(VideoRenderError):
+            render_slideshow([("cover.jpg", b"image")], ("voice.mp3", b"audio"), "out.mp4", platform="unknown")
+
     def test_rejects_empty_image_list(self):
         with self.assertRaises(VideoRenderError):
             render_slideshow([], ("voice.mp3", b"audio"), "out.mp4")
