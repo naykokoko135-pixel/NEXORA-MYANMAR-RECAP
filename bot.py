@@ -68,6 +68,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
             "/srtmy - မြန်မာစာသားမှ SRT ထုတ်ရန်\n"
             "/tts <preset> - မြန်မာ MP3 အသံထုတ်ရန်\n"
+            "/voicedemo <preset> - အသံပုံစံ နမူနာ MP3 နားထောင်ရန်\n"
             "/ttssrt <preset> - MP3 နှင့် အချိန်ကိုက် SRT တွဲထုတ်ရန်\n"
             "/tts-local - Local MyanmarTTS WAV ထုတ်ရန် (စမ်းသပ်ဆဲ၊ host enable လိုအပ်)\n"
             "/voices - အသံပုံစံအားလုံးကြည့်ရန်\n"
@@ -770,6 +771,46 @@ async def tts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+
+async def voicedemo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generate a short audition clip for one available Burmese delivery preset."""
+    if not update.message or not update.message.text:
+        return
+    parts = update.message.text.split(maxsplit=1)
+    preset = parts[1].strip().lower() if len(parts) > 1 else ""
+    if preset not in VOICE_PRESETS:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /voicedemo <preset>\n"
+            "ဥပမာ: /voicedemo narrator\n"
+            "ရွေးချယ်စရာများ: " + ", ".join(VOICE_PRESETS) +
+            "\nအသံအခြေခံ Nilar/Thiha နှစ်မျိုးသာဖြစ်ပြီး preset သည် ပြောဟန်ပြောင်းပေးခြင်းသာ ဖြစ်ပါတယ်။"
+        )
+        return
+    sample = (
+        "ဒီနေ့ ဇာတ်လမ်းထဲမှာ မမျှော်လင့်ထားတဲ့ အဖြစ်အပျက်တစ်ခု ဖြစ်လာတော့မယ်။ "
+        "သူတို့ရဲ့ ဆုံးဖြတ်ချက်က အရာအားလုံးကို ပြောင်းလဲသွားစေနိုင်ပါတယ်။"
+    )
+    try:
+        await update.message.reply_text(
+            f"{VOICE_PRESETS[preset]['label']} အသံပုံစံကို စမ်းသပ်ဖန်တီးနေပါတယ်..."
+        )
+        audio = await synthesize_burmese_speech(sample, preset)
+    except (ValueError, RuntimeError) as exc:
+        await update.message.reply_text(f"အသံနမူနာ မဖန်တီးနိုင်ပါ: {exc}")
+        return
+    file_obj = BytesIO(audio)
+    file_obj.name = f"nexora_voice_demo_{preset}.mp3"
+    await update.message.reply_audio(
+        audio=InputFile(file_obj, filename=file_obj.name),
+        title=f"NEXORA Voice Demo — {preset}",
+        caption=(
+            f"Preset: {preset} — {VOICE_PRESETS[preset]['label']}\n"
+            f"Base voice: {'Nilar' if VOICE_PRESETS[preset]['voice'] == 'female' else 'Thiha'}။ "
+            "ဤသည် အသံပုံစံစမ်းသပ်နမူနာဖြစ်ပြီး သရုပ်ဆောင်အသစ်တစ်ဦး၏ အသံမဟုတ်ပါ။"
+        ),
+    )
+
+
 async def ttslocal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate a WAV using the optional local MyanmarTTS model."""
     if not update.message or not update.message.text:
@@ -890,7 +931,7 @@ async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     for key, preset in VOICE_PRESETS.items():
         lines.append(f"/tts {key} — {preset['label']}")
-    lines.append("MP3 + SRT တွဲလိုပါက /ttssrt <preset> ကို သုံးပါ။")
+    lines.append("MP3 + SRT တွဲလိုပါက /ttssrt <preset> ကို သုံးပါ။ အသံကို အရင်နားထောင်လိုပါက /voicedemo <preset> ကို သုံးပါ။")
     lines.append("မြန်မာ Role များ: [ဇာတ်ကြောင်း], [မင်းသား], [မင်းသမီး], [ဗီလိန်], [လူကြီး], [ကလေး], [ဟာသ], [လျှို့ဝှက်], [အက်ရှင်]")
     lines.append("English Role များ: [narrator], [protagonist], [heroine], [antagonist], [supporting], [elder], [child], [comic], [suspense], [action]")
     lines.append("Role များသည် ရှိပြီးသား preset များသို့ ချိတ်ဆက်ထားခြင်းသာဖြစ်ပြီး Nilar/Thiha အသံအခြေခံကို မပြောင်းပါ။")
@@ -994,6 +1035,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
     telegram_app.add_handler(CommandHandler("srtmy", srtmy_cmd))
     telegram_app.add_handler(CommandHandler("tts", tts_cmd))
+    telegram_app.add_handler(CommandHandler("voicedemo", voicedemo_cmd))
     telegram_app.add_handler(CommandHandler("tts-local", ttslocal_cmd))
     telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
     telegram_app.add_handler(CommandHandler("scenetts", scenetts_cmd))
