@@ -15,8 +15,8 @@ FACEBOOK_GRAPH_VERSION = os.getenv("FACEBOOK_GRAPH_VERSION", "v27.0")
 MAX_REPLIES_PER_PLATFORM_PER_CYCLE = 3
 
 MYANMAR_POSITIVE = ("ကျေးဇူး", "ကောင်းတယ်", "အရမ်းကောင်း", "ကြိုက်တယ်", "မိုက်တယ်")
-ENGLISH_POSITIVE = re.compile(r"\\b(?:thank|thanks|thankyou|nice|good|great|love|amazing|awesome)\\b", re.I)
-ENGLISH_NEGATIVE = re.compile(r"\\b(?:not|bad|hate|dislike|terrible|worst|wrong|issue|problem|scam|fake|stop|refund)\\b", re.I)
+ENGLISH_POSITIVE = re.compile(r"\b(?:thank|thanks|thankyou|nice|good|great|love|amazing|awesome)\b", re.I)
+ENGLISH_NEGATIVE = re.compile(r"\b(?:not|bad|hate|dislike|terrible|worst|wrong|issue|problem|scam|fake|stop|refund)\b", re.I)
 URL_OR_CONTACT = re.compile(r"(https?://|www\.|\b\S+@\S+\.[A-Za-z]{2,}\b|\+?\d[\d\s().-]{7,}\d)", re.I)
 
 
