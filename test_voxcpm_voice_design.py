@@ -9,6 +9,7 @@ from voxcpm_voice_design import (
     VOICE_DESIGNS,
     synthesize_designed_burmese_voice,
     validate_voice_design_request,
+    _validate_wav_bytes,
 )
 
 
@@ -45,11 +46,15 @@ class VoxCPMVoiceDesignTests(unittest.TestCase):
                 self.kwargs = kwargs
                 return [0.0, 0.1, -0.1]
 
-        import io
+        import wave
         class FakeSoundFile:
             @staticmethod
             def write(file_obj, audio, sample_rate, format, subtype):
-                file_obj.write(b"RIFF" + b"fake-wav-data")
+                with wave.open(file_obj, "wb") as wav_file:
+                    wav_file.setnchannels(1)
+                    wav_file.setsampwidth(2)
+                    wav_file.setframerate(sample_rate)
+                    wav_file.writeframes(b"\\x00\\x00" * len(audio))
 
         fake_voxcpm = types.SimpleNamespace(VoxCPM=types.SimpleNamespace(
             from_pretrained=lambda *args, **kwargs: FakeModel()
@@ -65,6 +70,22 @@ class VoxCPMVoiceDesignTests(unittest.TestCase):
                         synthesize_designed_burmese_voice("မင်္ဂလာပါ", "story_male")
                     )
         self.assertTrue(audio.startswith(b"RIFF"))
+        _validate_wav_bytes(audio)
+
+    def test_malformed_wav_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, "WAV"):
+            _validate_wav_bytes(b"RIFF\\x00\\x00\\x00\\x00not-a-wave-file")
+
+    def test_empty_wav_is_rejected(self):
+        import io
+        import wave
+        output = io.BytesIO()
+        with wave.open(output, "wb") as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(48000)
+        with self.assertRaisesRegex(RuntimeError, "WAV"):
+            _validate_wav_bytes(output.getvalue())
 
 
 if __name__ == "__main__":
