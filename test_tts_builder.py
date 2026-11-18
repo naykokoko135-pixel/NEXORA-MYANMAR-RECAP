@@ -23,7 +23,9 @@ class BurmeseTtsValidationTests(unittest.TestCase):
             {"text": " နေကောင်းလား။", "offset": 12_500_000, "duration": 15_000_000},
         ])
         self.assertIn("00:00:00,000 --> 00:00:01,200", srt)
-        self.assertIn("မင်္ဂလာပါ။ နေကောင်းလား။", srt)
+        self.assertIn("မင်္ဂလာပါ။", srt)
+        self.assertIn("နေကောင်းလား။", srt)
+        self.assertIn("00:00:01,250 --> 00:00:02,750", srt)
 
     def test_empty_word_boundaries_rejected(self):
         with self.assertRaises(ValueError):
