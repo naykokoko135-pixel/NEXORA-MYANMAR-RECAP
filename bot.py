@@ -37,6 +37,7 @@ from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
 from verified_plot_narration import generate_burmese_plot_narration
 from anilist_synopsis import fetch_anilist_synopsis
 from tvmaze_synopsis import fetch_tvmaze_synopsis
+from tvmaze_synopsis import fetch_tvmaze_episode_summaries
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
@@ -780,6 +781,46 @@ async def movieplotresearch_cmd(update: Update, context: ContextTypes.DEFAULT_TY
     except Exception:
         log.exception("Movie plot research failed")
         await update.message.reply_text("Movie Plot ရင်းမြစ်ကို ယခုဖတ်မရပါ။ နောက်မှ ထပ်စမ်းပါ။")
+
+
+async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show brief TVMaze episode synopsis excerpts for an exact animated series."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /animationepisodes <Cartoon/Donghua အမည်>\\n"
+            "TVmaze မှ Animation genre ပါသော Series ရဲ့ Episode summary အတိုများကို ရှာပေးပါမယ်။"
+        )
+        return
+    await update.message.reply_text("Animation Series ကို အတည်ပြုပြီး Episode summary ရှာနေပါတယ်...")
+    result = await asyncio.to_thread(fetch_tvmaze_episode_summaries, query, 5)
+    if not result.get("found"):
+        await update.message.reply_text(result.get("status", "Episode ရင်းမြစ် မရရှိပါ။"))
+        return
+    lines = [
+        f"Episode Research — {result.get('title', query)}",
+        f"နိုင်ငံ: {result.get('country') or 'မဖော်ပြထား'}",
+        "TVmaze ရင်းမြစ်မှ Episode summary အတိုများ (တစ်ခုလျှင် စာလုံး ၂၄၀ အထိ)။",
+        "",
+    ]
+    for episode in result.get("episodes", []):
+        season = episode.get("season") or "?"
+        number = episode.get("number") or "?"
+        lines.append(
+            f"S{season} E{number} — {episode.get('title', 'Untitled')} "
+            f"({episode.get('airdate') or 'ရက်စွဲမရှိ'})"
+        )
+        lines.append(episode.get("summary_excerpt", ""))
+        if episode.get("source"):
+            lines.append("Source: " + episode["source"])
+        lines.append("")
+    lines.append(
+        "သတိပြုရန်: ဒီအချက်အလက်တွေဟာ TVmaze ရဲ့ community-maintained Episode summary အတိုများသာဖြစ်ပြီး "
+        "အပြည့်အစုံ Recap script၊ ဇာတ်ဝင်ခန်း transcript သို့မဟုတ် အတည်ပြုပြီးဖြစ်ရပ်မှန် မဟုတ်ပါ။"
+    )
+    await update.message.reply_text("\\n".join(lines), disable_web_page_preview=True)
 
 
 async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1565,6 +1606,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/autoplotclip <title> သည် မြန်မာ Wikipedia ဇာတ်လမ်းအကျဉ်း ရှိမှသာ ရင်းမြစ်အခြေပြု narration preview ထုတ်သည်။\n"
             "/animesynopsis <title> သည် AniList မှ Anime series synopsis ကို research အဖြစ်ပြသည်။ Episode recap မဟုတ်ပါ။\\n"
             "/seriesresearch <title> သည် TVmaze မှ Animation genre ပါသော Cartoon/Donghua series overview ကို ပြသည်။ Episode recap မဟုတ်ပါ။\\n"
+            "/animationepisodes <title> သည် TVmaze မှ Animation Series Episode summary အတိုများကို ရင်းမြစ်နှင့်ပြသည်။\\n"
             "/movieplotresearch <title> သည် exact Wikidata-English Wikipedia ချိတ်ဆက်ထားသော နိုင်ငံခြားရုပ်ရှင် Plot section ကို research အဖြစ်ပြသည်။\\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
@@ -1621,6 +1663,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("autoplotclip", autoplotclip_cmd))
     telegram_app.add_handler(CommandHandler("animesynopsis", animesynopsis_cmd))
     telegram_app.add_handler(CommandHandler("seriesresearch", seriesresearch_cmd))
+    telegram_app.add_handler(CommandHandler("animationepisodes", animationepisodes_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
     telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
