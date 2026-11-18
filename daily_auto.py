@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from auto_research import search_movie_sources
 from script_writer import generate_episode_selection_guide
 from trend_sources import fetch_anime_trends, format_anime_trends
+from pageview_trends import fetch_category_pageviews, format_category_pageviews
 
 # Broad, evergreen candidate rotation across the four requested animation categories.
 # This is a curated catalogue, not a live popularity/trending ranking.
@@ -150,7 +151,8 @@ def main() -> None:
     movie = select_daily_movie(local_today)
     research = search_movie_sources(movie)
     trend_report = format_anime_trends(fetch_anime_trends())
-    message = build_daily_message(movie, research) + "\n\n" + trend_report
+    pageview_report = format_category_pageviews(fetch_category_pageviews(TITLE_CATEGORIES))
+    message = build_daily_message(movie, research) + "\n\n" + trend_report + "\n\n" + pageview_report
     send_telegram_message(token, chat_id, message)
 
 
