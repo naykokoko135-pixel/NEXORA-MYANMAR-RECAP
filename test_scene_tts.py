@@ -57,7 +57,7 @@ class SceneTtsTests(unittest.TestCase):
         script = "\n".join(
             f"[narrator]\nအခန်း {i}" for i in range(1, 10)
         )
-        with self.assertRaisesRegex(ValueError, "အများဆုံး ၈ ခန်း"):
+        with self.assertRaisesRegex(ValueError, "အများဆုံး 8 ခန်း"):
             parse_scene_script(script)
 
     def test_role_aliases_map_to_existing_presets(self):
