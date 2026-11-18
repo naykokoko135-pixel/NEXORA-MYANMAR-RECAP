@@ -49,6 +49,22 @@ class AutoResearchTests(unittest.TestCase):
         self.assertIn("ဆက်စပ်ရလဒ်", result)
 
     @patch("auto_research.urlopen")
+    def test_excludes_unrelated_search_hits(self, mock_urlopen):
+        payload = {
+            "query": {"pages": [
+                {"title": "9th Crunchyroll Anime Awards", "extract": "Awards ceremony.", "fullurl": "https://example.com/awards"},
+                {"title": "Atsumi Tanezaki", "extract": "Voice actress.", "fullurl": "https://example.com/voice"},
+                {"title": "Demon Slayer: Kimetsu no Yaiba", "extract": "Different anime.", "fullurl": "https://example.com/demonslayer"},
+            ]}
+        }
+        mock_urlopen.return_value = Response(json.dumps(payload).encode("utf-8"))
+        result = search_movie_sources("Frieren: Beyond Journey's End")
+        self.assertIn("ကိုက်ညီမှုရှိသော Wikipedia ဆောင်းပါး မတွေ့ပါ", result)
+        self.assertNotIn("Atsumi Tanezaki", result)
+        self.assertNotIn("Demon Slayer", result)
+        self.assertNotIn("Crunchyroll Anime Awards", result)
+
+    @patch("auto_research.urlopen")
     def test_uses_rest_fallback_when_action_api_fails(self, mock_urlopen):
         rest_payload = {
             "pages": [{
