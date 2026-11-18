@@ -22,6 +22,7 @@ from video_renderer import render_slideshow, VideoRenderError
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
+from comment_autoreply import build_reply, platform_comment_capabilities, run_comment_autoreply_cycle
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -37,6 +38,7 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET")
 PUBLIC_URL = os.getenv("RENDER_EXTERNAL_URL")
 telegram_app: Application | None = None
+comment_autoreply_task: asyncio.Task | None = None
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -61,6 +63,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60 မိနစ်\n"
             "/settings - လက်ရှိရွေးချယ်မှုကြည့်ရန်\n"
+            "/commentstatus - Comment Auto-Reply အခြေအနေ\n"
+            "/commentdraft <platform> <comment> - Reply Draft ထုတ်ရန်\n"
             "/help - အကူအညီ"
         )
 
@@ -84,8 +88,74 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "AI API: မချိတ်ထားပါ (အခပေး API မသုံးပါ)\n"
             "လုပ်ဆောင်နိုင်မှု: Auto research + Worksheets + Voice-over TXT + SRT + Image/Audio MP4 render\n"
             "Daily Auto: GitHub Actions မှ မနက် ၅ နာရီ (ထိုင်းစံတော်ချိန်) Research ပို့နိုင်သည်။\n"
-            "Social auto-upload: မပါဝင်သေးပါ။"
+            "Social auto-upload: မပါဝင်သေးပါ။\n"
+            "Comment Auto-Reply: YouTube/Facebook API ချိတ်ဆက်ပြီး Enable လုပ်မှ အလုပ်လုပ်မည်။ TikTok သည် Draft-only ဖြစ်သည်။ /commentstatus ဖြင့် စစ်ပါ။"
         )
+
+
+async def comment_status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+    enabled = os.getenv("COMMENT_AUTOREPLY_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
+    yt_ready = all(os.getenv(key, "").strip() for key in (
+        "YOUTUBE_COMMENT_ACCESS_TOKEN", "YOUTUBE_CHANNEL_ID", "YOUTUBE_COMMENT_VIDEO_IDS"
+    ))
+    fb_ready = all(os.getenv(key, "").strip() for key in (
+        "FACEBOOK_PAGE_ACCESS_TOKEN", "FACEBOOK_PAGE_ID", "FACEBOOK_POST_IDS"
+    ))
+    await update.message.reply_text(
+        "NEXORA Comment စနစ်\n"
+        f"Auto-Reply Master Switch: {'ON' if enabled else 'OFF'}\n"
+        f"YouTube API Config: {'ပြင်ဆင်ပြီး' if yt_ready else 'မပြင်ဆင်ရသေး'}\n"
+        f"Facebook Page API Config: {'ပြင်ဆင်ပြီး' if fb_ready else 'မပြင်ဆင်ရသေး'}\n"
+        "TikTok: Reply စာသား Draft သာ (တရားဝင် Creator Reply API မရရှိသေး)\n\n"
+        "မှတ်ချက်: Token တန်ဖိုးများကို Chat ထဲ မပို့ပါနှင့်။ Review လိုသော မေးခွန်း/တိုင်ကြားမှု/ကိုယ်ရေးအချက်အလက်ပါ Comment များကို အလိုအလျောက် မပြန်ပါ။"
+    )
+
+
+async def comment_draft_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+    parts = update.message.text.split(maxsplit=2)
+    if len(parts) < 3 or parts[1].lower() not in {"youtube", "facebook", "tiktok"}:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /commentdraft youtube Comment စာသား\n"
+            "Platform: youtube | facebook | tiktok"
+        )
+        return
+    platform, comment = parts[1].lower(), parts[2].strip()
+    reply = build_reply(comment)
+    if reply is None:
+        await update.message.reply_text(
+            f"{platform.upper()} Comment ကို လူကိုယ်တိုင် စစ်ဆေးရန် လိုအပ်ပါတယ်။\n"
+            "အကြောင်းရင်း: မေးခွန်း၊ ဝေဖန်မှု၊ မရှင်းလင်းသောစာသား သို့မဟုတ် ကိုယ်ရေးအချက်အလက် ပါဝင်နိုင်သည်။\n"
+            "အလိုအလျောက် ပြန်စာမပို့ထားပါ။"
+        )
+        return
+    await update.message.reply_text(
+        f"{platform.upper()} Reply Draft:\n{reply}\n\n"
+        "ဤသည် Draft သာဖြစ်ပြီး Platform ပေါ်သို့ မပို့ရသေးပါ။"
+    )
+
+
+async def comment_autoreply_loop():
+    """Poll enabled official API adapters at a bounded interval."""
+    while True:
+        try:
+            result = await asyncio.to_thread(run_comment_autoreply_cycle)
+            if result.get("enabled") and (result.get("youtube_sent") or result.get("facebook_sent")):
+                log.info(
+                    "Comment replies sent: YouTube=%s Facebook=%s",
+                    result.get("youtube_sent", 0), result.get("facebook_sent", 0)
+                )
+        except Exception:
+            # Do not log exception details; they may contain user content or request metadata.
+            log.warning("Comment auto-reply cycle failed")
+        try:
+            interval = int(os.getenv("COMMENT_POLL_SECONDS", "300"))
+        except ValueError:
+            interval = 300
+        await asyncio.sleep(max(120, min(interval, 3600)))
 
 
 async def research_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -499,6 +569,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Wikipedia /auto ရလဒ်တိုများကို တိုက်ရိုက်သုံးရန် မလုံလောက်ပါ။ Source link များကို ပြန်စစ်ပြီး ကိုယ်တိုင် Notes ရေးပါ။\n"
             "/auto Avatar ပြီးနောက် /draft3 Avatar ပို့လျှင် ရှာထားသော Notes ကို အလိုအလျောက် ထည့်ပေးသည်။\n"
             "/render ဖြင့် ပုံများနှင့် narration အသံမှ MP4 slideshow ထုတ်နိုင်သည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
+            "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော English စာသားမှ .srt ဖိုင်ထုတ်နိုင်သည်။"
         )
@@ -525,7 +596,7 @@ async def on_telegram_error(update: object, context: ContextTypes.DEFAULT_TYPE):
 
 @asynccontextmanager
 async def lifespan(web_app: FastAPI):
-    global telegram_app
+    global telegram_app, comment_autoreply_task
     if not TOKEN:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is missing")
     if not WEBHOOK_SECRET:
@@ -554,11 +625,15 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
     telegram_app.add_handler(CommandHandler("settings", settings_cmd))
+    telegram_app.add_handler(CommandHandler("commentstatus", comment_status_cmd))
+    telegram_app.add_handler(CommandHandler("commentdraft", comment_draft_cmd))
     telegram_app.add_handler(CommandHandler("help", help_cmd))
     telegram_app.add_error_handler(on_telegram_error, block=False)
 
     await telegram_app.initialize()
     await telegram_app.start()
+    if os.getenv("COMMENT_AUTOREPLY_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}:
+        comment_autoreply_task = asyncio.create_task(comment_autoreply_loop())
     try:
         await telegram_app.bot.set_webhook(
             url=f"{PUBLIC_URL.rstrip('/')}/telegram-webhook",
@@ -571,6 +646,13 @@ async def lifespan(web_app: FastAPI):
     finally:
         # Keep the Telegram webhook registered when Render stops or sleeps the service.
         # Telegram can retry pending updates after the service starts again.
+        if comment_autoreply_task is not None:
+            comment_autoreply_task.cancel()
+            try:
+                await comment_autoreply_task
+            except asyncio.CancelledError:
+                pass
+            comment_autoreply_task = None
         await telegram_app.stop()
         await telegram_app.shutdown()
         telegram_app = None

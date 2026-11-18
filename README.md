@@ -122,3 +122,26 @@ To enable it:
 4. Save changes and let Render redeploy.
 
 The token is stored only in Render Environment; never paste it into Telegram, ChatGPT, GitHub source files, or screenshots. The reporter excludes Telegram message text, user/chat IDs, exception messages, and environment values. Duplicate errors with the same code fingerprint are limited to one report per 10 minutes per running process. If the token is not configured, normal bot operation continues and no GitHub report is sent. This reports unhandled Telegram handler exceptions; it does not automatically diagnose or modify code.
+
+
+## Comment reply assistant
+
+NEXORA includes a conservative comment-reply module:
+- YouTube and Facebook Page: official API adapters can reply to short, unambiguous positive comments only.
+- Questions, complaints, long/unclear comments, links, and contact details are left for human review.
+- TikTok: reply text drafts only. TikTok's public Research API documents reading comments, not posting creator replies.
+- Duplicate protection: YouTube threads with existing replies and Facebook comments already replied to by the Page are skipped.
+- Safety defaults: `COMMENT_AUTOREPLY_ENABLED` is OFF unless explicitly enabled; at most 3 replies per platform per polling cycle.
+
+Telegram commands:
+- `/commentstatus` — show whether platform configuration is present (never displays tokens).
+- `/commentdraft youtube|facebook|tiktok <comment>` — preview a safe reply draft; it does not post.
+
+Render environment configuration (enter values privately in Render; never paste tokens into chat or commit them):
+- `COMMENT_AUTOREPLY_ENABLED=true` — explicit master switch (leave unset/false until tested).
+- `COMMENT_POLL_SECONDS=300` — polling interval; the app clamps it to 120–3600 seconds.
+- YouTube: `YOUTUBE_COMMENT_ACCESS_TOKEN`, `YOUTUBE_CHANNEL_ID`, `YOUTUBE_COMMENT_VIDEO_IDS` (comma-separated video IDs). OAuth authorization needs the YouTube comment scope.
+- Facebook Page: `FACEBOOK_PAGE_ACCESS_TOKEN`, `FACEBOOK_PAGE_ID`, `FACEBOOK_POST_IDS` (comma-separated post IDs), and the Page's approved comment read/reply permissions.
+- TikTok has no auto-posting adapter in this release.
+
+The module is disabled by default. Configure and test one platform at a time. API permissions, valid tokens, and platform approval are required; a configured variable alone does not prove that replies are working. The current reply text is deterministic and does not use a paid AI API.
