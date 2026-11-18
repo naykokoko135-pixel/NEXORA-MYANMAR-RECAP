@@ -34,7 +34,7 @@ def _search_mediawiki(title: str) -> list:
     params = {
         "action": "query",
         "generator": "search",
-        "gsrsearch": title + " film movie",
+        "gsrsearch": f'"{title}"',
         "gsrnamespace": 0,
         "gsrlimit": SEARCH_LIMIT,
         "prop": "extracts|info",
@@ -50,7 +50,7 @@ def _search_mediawiki(title: str) -> list:
 
 def _search_rest(title: str) -> list:
     """Fallback to Wikimedia's REST search when the Action API is unavailable."""
-    params = urlencode({"q": title + " film movie", "limit": SEARCH_LIMIT})
+    params = urlencode({"q": title, "limit": SEARCH_LIMIT})
     payload = _request_json(REST_SEARCH_URL + "?" + params)
     pages = []
     for item in payload.get("pages", []):
@@ -63,6 +63,13 @@ def _search_rest(title: str) -> list:
             "fullurl": "https://en.wikipedia.org/wiki/" + quote(page_key or page_title.replace(" ", "_"), safe="()_"),
         })
     return pages
+
+
+def _title_tokens(value: str) -> set:
+    """Return meaningful title words for a conservative relevance check."""
+    stop_words = {"the", "and", "for", "with", "from", "into", "of", "a", "an"}
+    words = re.findall(r"[a-z0-9]+", (value or "").casefold())
+    return {word for word in words if len(word) >= 3 and word not in stop_words}
 
 
 def search_movie_sources(topic: str) -> str:
@@ -100,13 +107,31 @@ def search_movie_sources(topic: str) -> str:
             value = value.split(" (", 1)[0]
         return " ".join(value.split())
 
+    target_tokens = _title_tokens(title)
+    # Never present merely popular anime/voice-actor search hits as related
+    # sources for a different title. A shared meaningful title word is the
+    # minimum bar; exact title matches are always retained.
+    relevant_pages = []
+    for page in pages:
+        page_title = str(page.get("title", ""))
+        is_exact = normalized(page_title) == normalized(title)
+        page_tokens = _title_tokens(page_title)
+        if is_exact or (target_tokens and target_tokens.intersection(page_tokens)):
+            relevant_pages.append(page)
     pages = sorted(
-        pages,
+        relevant_pages,
         key=lambda page: (
             normalized(str(page.get("title", ""))) != normalized(title),
             str(page.get("title", "")).casefold(),
         ),
     )
+    if not pages:
+        return (
+            f"🔎 NEXORA Auto Research — {title}\n\n"
+            "ခေါင်းစဉ်နှင့် ကိုက်ညီမှုရှိသော Wikipedia ဆောင်းပါး မတွေ့ပါ။ "
+            "မသက်ဆိုင်သော ရလဒ်များကို ဖယ်ထားသည်။ Official source ဖြင့် ထပ်မံရှာဖွေပါ။"
+        )
+
     exact_pages = [
         page for page in pages
         if normalized(str(page.get("title", ""))) == normalized(title)
