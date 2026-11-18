@@ -24,8 +24,7 @@ from voice_profile_backup import export_voice_profile_backup, import_voice_profi
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
-from tvmaze_series import fetch_series_episode_guide, format_series_episode_guide
-from wikidata_metadata import fetch_wikidata_metadata, format_wikidata_episode_guide
+from seriesguide_command import series_guide_cmd
 from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
 from video_renderer import render_slideshow, VideoRenderError
@@ -216,29 +215,6 @@ async def auto_research_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for start_at in range(0, len(result), 3900):
         await update.message.reply_text(result[start_at:start_at + 3900])
 
-
-async def series_guide_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Look up a series guide using TVmaze first and Wikidata total counts as fallback."""
-    if not update.message:
-        return
-    title = " ".join(context.args).strip()
-    if not title:
-        await update.message.reply_text("အသုံးပြုပုံ: /seriesguide Frieren: Beyond Journey's End")
-        return
-
-    await update.message.reply_text("Season / Episode အချက်အလက်ကို အခမဲ့ရင်းမြစ်များမှ စစ်ဆေးနေပါတယ်...")
-    tvmaze_result = await asyncio.to_thread(fetch_series_episode_guide, title)
-    if tvmaze_result.get("found"):
-        report = format_series_episode_guide(tvmaze_result)
-    else:
-        wikidata_result = await asyncio.to_thread(fetch_wikidata_metadata, title)
-        report = (
-            "TVmaze စစ်ဆေးမှု: " + tvmaze_result.get("status", "မှတ်တမ်းမရရှိပါ။")
-            + "\n\n" + format_wikidata_episode_guide(wikidata_result)
-        )
-
-    for start_at in range(0, len(report), 3900):
-        await update.message.reply_text(report[start_at:start_at + 3900])
 
 
 async def allplatforms_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
