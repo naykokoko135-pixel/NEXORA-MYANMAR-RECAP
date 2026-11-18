@@ -1,7 +1,7 @@
 import json
 import unittest
 from io import BytesIO
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from unittest.mock import patch
 
 from tvmaze_series import fetch_series_episode_guide, format_series_episode_guide
@@ -90,6 +90,34 @@ class TVmazeSeriesTests(unittest.TestCase):
         self.assertFalse(result["found"])
         self.assertEqual(result["episode_count"], 0)
         self.assertIn("Episode အချက်အလက် မရရှိပါ", result["status_note"])
+
+    @patch("tvmaze_series.time.sleep")
+    @patch("tvmaze_series.urlopen")
+    def test_rate_limit_retries_once_with_bounded_retry_after(self, mock_urlopen, mock_sleep):
+        search = [{
+            "show": {
+                "id": 101, "name": "Example Series", "status": "Ended",
+            },
+        }]
+        episodes = [
+            {"season": 1, "number": 1, "name": "Pilot", "airdate": "2020-01-01"},
+        ]
+        rate_limited = HTTPError(
+            "https://api.tvmaze.com/search/shows?q=Example+Series",
+            429, "Too Many Requests", {"Retry-After": "0"}, None,
+        )
+        mock_urlopen.side_effect = [
+            rate_limited,
+            Response(json.dumps(search).encode()),
+            Response(json.dumps(episodes).encode()),
+        ]
+
+        result = fetch_series_episode_guide("Example Series")
+
+        self.assertTrue(result["found"])
+        self.assertEqual(result["episode_count"], 1)
+        mock_sleep.assert_called_once_with(0.0)
+        self.assertEqual(mock_urlopen.call_count, 3)
 
     def test_invalid_title_is_rejected(self):
         result = fetch_series_episode_guide("")
