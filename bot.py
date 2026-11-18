@@ -602,7 +602,7 @@ async def ttssrt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     first_line, separator, script = update.message.text.partition("\n")
     parts = first_line.split(maxsplit=1)
     voice = parts[1].strip().lower() if len(parts) > 1 else ""
-    if not separator or not script.strip() or voice not in {"female", "male"}:
+    if not separator or not script.strip() or voice not in VOICE_PRESETS:
         await update.message.reply_text(
             "အသုံးပြုပုံ: /ttssrt narrator သို့ /ttssrt hero\n"
             "အသံပုံစံစာရင်းအတွက် /voices ကို သုံးပါ။"
@@ -643,7 +643,7 @@ async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for key, preset in VOICE_PRESETS.items():
         lines.append(f"/tts {key} — {preset['label']}")
     lines.append("MP3 + SRT တွဲလိုပါက /ttssrt <preset> ကို သုံးပါ။")
-    await update.message.reply_text("\\n".join(lines))
+    await update.message.reply_text("\n".join(lines))
 
 
 async def srtmy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
