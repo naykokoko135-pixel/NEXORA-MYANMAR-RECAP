@@ -398,12 +398,12 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with tempfile.TemporaryDirectory(prefix="nexora_video_") as temp:
                 output = os.path.join(temp, "nexora_video.mp4")
                 audio_input = session["audio_tracks"] if session.get("audio_tracks") else session["audio"]
-                await asyncio.to_thread(render_slideshow, session["images"], audio_input, output)
+                await asyncio.to_thread(render_slideshow, session["images"], audio_input, output, session.get("platform", "youtube"))
                 with open(output, "rb") as video_file:
                     await update.message.reply_video(
                         video=InputFile(video_file, filename="nexora_video.mp4"),
                         supports_streaming=True,
-                        caption="NEXORA MP4 ပြီးပါပြီ။ အသုံးပြုခွင့်ရှိသော ပုံ/အသံများကိုသာ ထည့်သုံးပါ။",
+                        caption=f"NEXORA {session.get('platform', 'youtube').upper()} MP4 ပြီးပါပြီ။ အသုံးပြုခွင့်ရှိသော ပုံ/အသံများကိုသာ ထည့်သုံးပါ။",
                         read_timeout=120,
                         write_timeout=120,
                     )
