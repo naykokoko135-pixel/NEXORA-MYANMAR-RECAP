@@ -17,7 +17,7 @@ SECTION_MARKERS = {
     "ending": ("အဆုံးသတ်", "climax", "ရလဒ်"),
     "commentary": ("သုံးသပ်", "ကိုယ်ပိုင်အမြင်", "သင်ခန်းစာ", "review"),
 }
-URL_RE = re.compile(r"https?://[^\\s<>]+", re.IGNORECASE)
+URL_RE = re.compile(r"https?://[^\s<>]+", re.IGNORECASE)
 
 
 def analyze_recap_script(category: str, title: str, script: str) -> dict:
@@ -66,8 +66,8 @@ def analyze_recap_script(category: str, title: str, script: str) -> dict:
     else:
         passed.append(f"ရင်းမြစ် URL {len(urls)} ခု တွေ့ရှိသည်။ အကြောင်းအရာကို ကိုယ်တိုင်ပြန်စစ်ရန် လိုသေးသည်။")
 
-    paragraphs = [re.sub(r"\\s+", " ", p).strip().casefold()
-                  for p in re.split(r"\\n\\s*\\n", body) if p.strip()]
+    paragraphs = [re.sub(r"\s+", " ", p).strip().casefold()
+                  for p in re.split(r"\n\s*\n", body) if p.strip()]
     duplicates = len(paragraphs) - len(set(paragraphs))
     if duplicates:
         issues.append(f"တူညီသော paragraph {duplicates} ခု ထပ်နေသည်။")
@@ -80,7 +80,7 @@ def analyze_recap_script(category: str, title: str, script: str) -> dict:
     else:
         passed.append("Media rights ဆိုင်ရာ မှတ်ချက်တစ်ခု ပါဝင်သည်။")
 
-    status = "NOT READY" if any("ဖယ်ထုတ်ထားသည်" in item for item in issues) else ("REVIEW" if issues else "CHECK REQUIRED")
+    status = "NOT READY" if any("ဖယ်ထုတ်ထားသည်" in item for item in issues) else ("REVIEW" if issues else "READY FOR HUMAN REVIEW")
     return {
         "status": status,
         "category": category.strip(),
@@ -113,4 +113,4 @@ def format_recap_qa_report(report: dict) -> str:
     if not report["issues"]:
         lines.append("• ဖွဲ့စည်းပုံအရ ထင်ရှားသော ပြဿနာ မတွေ့ပါ။ သို့သော် လူကိုယ်တိုင် စစ်ဆေးရန် လိုသည်။")
     lines.extend(["", report["disclaimer"]])
-    return "\\n".join(lines)
+    return "\n".join(lines)
