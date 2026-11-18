@@ -3,6 +3,8 @@ import os
 import sys
 import types
 import unittest
+import wave
+from io import BytesIO
 from unittest.mock import patch
 
 from local_myanmar_tts import synthesize_local_burmese_speech
@@ -27,7 +29,26 @@ class LocalMyanmarTtsTests(unittest.TestCase):
     def test_text_limit(self):
         with patch.dict(os.environ, {"NEXORA_LOCAL_TTS_ENABLED": "1"}):
             with self.assertRaises(ValueError):
-                asyncio.run(synthesize_local_burmese_speech("က" * 1201))
+                asyncio.run(synthesize_local_burmese_speech("က" * 6001))
+
+    def test_long_text_is_synthesized_in_bounded_chunks(self):
+        calls = []
+
+        class FakeModel:
+            def inference(self, text, ref_audio, language, **kwargs):
+                calls.append(text)
+                return [0.0, 0.1, -0.1], None
+
+        with patch.dict(os.environ, {"NEXORA_LOCAL_TTS_ENABLED": "1"}):
+            with patch("local_myanmar_tts._get_model_and_reference", return_value=(FakeModel(), "/fake/reference.wav")):
+                audio = asyncio.run(synthesize_local_burmese_speech("က" * 1201))
+
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(all(0 < len(chunk) <= 1200 for chunk in calls))
+        with wave.open(BytesIO(audio), "rb") as wav:
+            self.assertEqual(wav.getnchannels(), 1)
+            self.assertEqual(wav.getframerate(), 44100)
+            self.assertGreater(wav.getnframes(), 6)
 
     def test_low_level_api_receives_reference_audio(self):
         calls = {}
