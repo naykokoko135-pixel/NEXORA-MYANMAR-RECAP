@@ -15,8 +15,9 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/duration <minutes>` — choose a duration valid for the selected platform
 - `/settings` — show the current user's selections
 - `/mode free|ai` — choose a mode label; AI provider is not connected
-- `/srt` — convert timestamped subtitle lines into an SRT file\n- `/srtmy` — split a supplied Burmese narration script into estimated-time Burmese SRT captions\n- `/tts female|male` — create a Burmese MP3 voice-over from supplied Burmese text
-- `/ttssrt female|male` — create an MP3 and word-boundary-timed Burmese SRT together
+- `/srt` — convert timestamped subtitle lines into an SRT file\n- `/srtmy` — split a supplied Burmese narration script into estimated-time Burmese SRT captions\n- `/tts <preset>` — create a Burmese MP3 using a selected delivery-style preset
+- `/voices` — list Burmese voice identities and delivery-style presets
+- `/ttssrt <preset>` — create an MP3 and word-boundary-timed Burmese SRT together
 
 ## Three-part YouTube worksheets
 Use `/draft3 <movie title>` and put your checked research notes on the following lines in the same Telegram message. NEXORA creates three distinct planning worksheets:
@@ -165,3 +166,22 @@ The module is disabled by default. Configure and test one platform at a time. AP
 ## Burmese MP3 with word-aligned subtitles
 
 Send `/ttssrt female` or `/ttssrt male`, then put the Burmese narration script on the next line. NEXORA streams the speech audio and word-boundary timing metadata from the online TTS service, then returns an MP3 and an SRT built from those timing events. This is more closely aligned than the estimated timestamps from `/srtmy`, but still review the SRT against the finished audio before publishing. The service may change its metadata behavior, and punctuation or unusual pronunciations can require manual correction. The same online-service privacy and availability cautions as `/tts` apply.
+
+
+## Burmese voice style presets
+
+The current no-key Burmese TTS voice list provides two Burmese neural speaker identities: Nilar (female) and Thiha (male). NEXORA therefore offers selectable delivery-style presets, not additional native speakers. Presets adjust speaking rate and pitch while retaining one of those two base voices:
+
+- female, male — standard voices
+- narrator — measured story narration
+- hero — brighter, quicker male delivery
+- villain — slower, lower male delivery
+- elder — slower male character style
+- youth — brighter, quicker female delivery
+- emotional — slower, softer female delivery
+- energetic — faster action delivery
+- mystery — slower, lower female delivery
+- comedy — quicker, brighter female delivery
+- calm — slower, lower male delivery
+
+Use `/voices` in Telegram to list them. Then use `/tts <preset>` for MP3 or `/ttssrt <preset>` for MP3 plus timed SRT. These settings change rate and pitch only; they do not create separate actors or guarantee emotional acting. Listen and review before publishing.
