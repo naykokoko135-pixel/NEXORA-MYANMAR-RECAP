@@ -1,28 +1,49 @@
 """Scene-by-scene Burmese voice assignment for NEXORA.
 
-Each [preset] heading starts a new independently generated scene track.
-Presets alter delivery using the two currently available Burmese neural voices;
-they do not create additional speaker identities.
+Scene headers may use a delivery preset or a character-role alias. Aliases map
+onto the existing Nilar/Thiha voice presets; they are not new speaker identities.
 """
 import re
 
 from tts_builder import VOICE_PRESETS, MAX_TEXT_CHARS
 
 MAX_SCENES = 8
-HEADER_RE = re.compile(r"^\[([a-zA-Z_-]+)\]\s*$")
+HEADER_RE = re.compile(r"^\\[([a-zA-Z_-]+)\\]\\s*$")
+
+# Character/scene roles are convenient aliases for existing delivery presets.
+# They do not create additional voices or clone any speaker.
+ROLE_PRESETS = {
+    "narrator": "narrator",
+    "protagonist": "hero",
+    "male_lead": "hero",
+    "heroine": "female",
+    "female_lead": "female",
+    "antagonist": "villain",
+    "supporting": "calm",
+    "elder": "elder",
+    "child": "youth",
+    "comic": "comedy",
+    "suspense": "mystery",
+    "action": "energetic",
+}
 
 
 def parse_scene_script(script: str) -> list[dict]:
-    """Parse a script containing one [preset] header per scene."""
+    """Parse one [preset-or-role] header per scene."""
     scenes = []
+    current_role = None
     current_preset = None
     current_lines = []
 
     def flush():
         nonlocal current_lines
-        text = "\n".join(current_lines).strip()
+        text = "\\n".join(current_lines).strip()
         if text:
-            scenes.append({"preset": current_preset, "text": text})
+            scenes.append({
+                "role": current_role,
+                "preset": current_preset,
+                "text": text,
+            })
         current_lines = []
 
     for raw_line in (script or "").splitlines():
@@ -30,10 +51,11 @@ def parse_scene_script(script: str) -> list[dict]:
         match = HEADER_RE.fullmatch(line)
         if match:
             flush()
-            current_preset = match.group(1).lower()
+            current_role = match.group(1).lower()
+            current_preset = ROLE_PRESETS.get(current_role, current_role)
             if current_preset not in VOICE_PRESETS:
                 raise ValueError(
-                    f"အသံ Preset မသိပါ: {current_preset}။ /voices မှ ရွေးပါ။"
+                    f"အသံ Role/Preset မသိပါ: {current_role}။ /voices မှ ရွေးပါ။"
                 )
             if len(scenes) >= MAX_SCENES:
                 raise ValueError(f"ဇာတ်ဝင်ခန်း အများဆုံး {MAX_SCENES} ခန်းသာ ခွင့်ပြုပါတယ်။")
