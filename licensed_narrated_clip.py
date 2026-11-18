@@ -11,6 +11,8 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
+from licensed_video_pipeline import ALLOWED_HOST, MAX_SOURCE_BYTES, LicensedClipError
+
 
 def render_licensed_narrated_preview(
     source: dict,
