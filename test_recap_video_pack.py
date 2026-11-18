@@ -10,11 +10,11 @@ class RecapVideoPackTests(unittest.TestCase):
             "1\\n00:00:00,000 --> 00:00:01,000\\nမြန်မာစာ\\n",
         )
         self.assertEqual(audio, b"fake-mp3")
-        self.assertTrue(subtitles.startswith(b"\\xef\\xbb\\xbf"))
+        self.assertTrue(subtitles.startswith(b"\xef\xbb\xbf"))
         self.assertIn("မြန်မာစာ".encode("utf-8"), subtitles)
 
     def test_rejects_invalid_sidecar_assets(self):
-        for audio, srt in ((b"", "1\\n00:00:00,000 --> 00:00:01,000\\nစာ"), (b"mp3", "")):
+        for audio, srt in ((b"", "1\n00:00:00,000 --> 00:00:01,000\nစာ"), (b"mp3", "")):
             with self.assertRaises(ValueError):
                 build_recap_video_sidecars(audio, srt)
 
