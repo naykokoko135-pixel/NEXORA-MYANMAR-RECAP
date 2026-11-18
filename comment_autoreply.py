@@ -28,7 +28,7 @@ def classify_comment(comment: str) -> str:
         return "review"
     if any(word in text for word in MYANMAR_POSITIVE) or any(word in text for word in ENGLISH_POSITIVE):
         return "auto_safe"
-    if all(ch in "❤️💖💕👍🙏👏🔥✨😊🙂😀😁🥰😍! .," or ch == "\\ufe0f" for ch in text):
+    if all(ch in "❤️💖💕👍🙏👏🔥✨😊🙂😀😁🥰😍! .," or ch == "\ufe0f" for ch in text):
         return "auto_safe"
     return "review"
 
