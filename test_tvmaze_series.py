@@ -74,6 +74,23 @@ class TVmazeSeriesTests(unittest.TestCase):
         self.assertFalse(result["found"])
         self.assertIn("မခန့်မှန်းထားပါ", result["status"])
 
+
+    @patch("tvmaze_series.urlopen")
+    def test_empty_episode_list_allows_fallback_sources(self, mock_urlopen):
+        search = [{
+            "show": {
+                "id": 101, "name": "Example Series", "status": "Running",
+            },
+        }]
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search).encode()),
+            Response(json.dumps([]).encode()),
+        ]
+        result = fetch_series_episode_guide("Example Series")
+        self.assertFalse(result["found"])
+        self.assertEqual(result["episode_count"], 0)
+        self.assertIn("Episode အချက်အလက် မရရှိပါ", result["status_note"])
+
     def test_invalid_title_is_rejected(self):
         result = fetch_series_episode_guide("")
         self.assertFalse(result["found"])
