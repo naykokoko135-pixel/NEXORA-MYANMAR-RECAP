@@ -21,6 +21,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/ttssrt <preset>` — create an MP3 and word-boundary-timed Burmese SRT together
 - `/voicedemo <preset>` — audition an existing Burmese Edge TTS delivery style
 - `/tts-design <voice_name>` followed by Burmese text — create a fictional synthetic voice WAV (optional compatible host only)
+- `/scenedesign` followed by `[ai:story_female]` scene headers and Burmese text — create separate fictional AI voice WAV files per scene (optional compatible GPU host only)
 
 ## Three-part YouTube worksheets
 Use `/draft3 <movie title>` and put your checked research notes on the following lines in the same Telegram message. NEXORA creates three distinct planning worksheets:
@@ -310,3 +311,22 @@ To verify actual synthetic Burmese audio on a separate compatible machine (not t
 5. Play `voxcpm_voice_design_smoke.wav` and review Burmese pronunciation and voice quality.
 
 You can choose any name listed by `python smoke_voxcpm_voice_design.py --help`, pass a short script with `--text`, and change the output path with `--output`. The smoke test loads the model and generates a real sample; first startup may take time to download model weights. This script does not upload audio, change Render settings, or enable the bot backend. Keep the generated audio private if the script contains personal information.
+
+
+## AI-designed voices per scene
+
+Use `/scenedesign` and put each scene under an `[ai:voice_name]` header. Example:
+
+```text
+/scenedesign
+[ai:story_female]
+ဒီနေ့ ဇာတ်လမ်းကို စတင်မိတ်ဆက်ပါမယ်။
+[ai:young_male]
+ကျွန်တော် ဒီနေရာကို ပထမဆုံး ရောက်ဖူးတာပါ။
+[ai:villain]
+မင်း ဒီအကြောင်းကို ဘယ်သူ့ကိုမှ မပြောရဘူး။
+[ai:mystery]
+ဒါပေမဲ့ အဲဒီညမှာ ထူးဆန်းတဲ့အရာတစ်ခု ဖြစ်လာခဲ့တယ်။
+```
+
+The bot sends one WAV per scene. It accepts up to 4 scenes, up to 1,500 characters per scene and 6,000 characters total. This feature uses the optional VoxCPM2 backend and therefore requires a compatible GPU host with `NEXORA_VOXCPM_ENABLED=1`; it is not enabled on Render Free by default. These are fictional prompt-designed synthetic voices, not recordings or copies of real actors. Audio generation is sequential and may take time. This command does not create aligned SRT files; use the existing `/scenetts` command for the Edge TTS MP3 + SRT workflow.
