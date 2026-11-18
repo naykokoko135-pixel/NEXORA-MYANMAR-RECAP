@@ -25,3 +25,31 @@ def test_license_filter_accepts_only_reusable_license_families():
     assert not LICENSE_PATTERN.match("CC BY-NC 4.0")
     assert not LICENSE_PATTERN.match("CC BY-ND 4.0")
     assert not LICENSE_PATTERN.match("CC BY-NC-SA 4.0")
+
+
+def test_narrated_renderer_rejects_non_reusable_license_before_network():
+    import pytest
+    from licensed_narrated_clip import render_licensed_narrated_preview
+    from licensed_video_pipeline import LicensedClipError
+
+    with pytest.raises(LicensedClipError):
+        render_licensed_narrated_preview(
+            {"license": "CC BY-NC 4.0", "url": "https://upload.wikimedia.org/example.webm"},
+            b"fake-mp3",
+            "1\\n00:00:00,000 --> 00:00:01,000\\nမင်္ဂလာပါ\\n",
+            "unused.mp4",
+        )
+
+
+def test_narrated_renderer_rejects_invalid_srt_before_network():
+    import pytest
+    from licensed_narrated_clip import render_licensed_narrated_preview
+    from licensed_video_pipeline import LicensedClipError
+
+    with pytest.raises(LicensedClipError):
+        render_licensed_narrated_preview(
+            {"license": "CC BY 4.0", "url": "https://upload.wikimedia.org/example.webm"},
+            b"fake-mp3",
+            "caption without timestamps",
+            "unused.mp4",
+        )
