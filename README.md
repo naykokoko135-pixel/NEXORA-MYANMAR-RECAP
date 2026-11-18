@@ -190,3 +190,8 @@ Use `/voices` in Telegram to list them. Then use `/tts <preset>` for MP3 or `/tt
 ## Custom voice recordings
 
 Use /voiceprofile <name>, then send your own MP3/M4A/WAV/OGG recording (up to 20 MB). Use /voiceprofile list to view saved clips and /voiceprofile delete <name> to remove one. Up to 12 clips are held in the current Telegram session and may be lost when the bot restarts. This stores prerecorded audio only; it does not clone a voice or synthesize new words. Use only your own recordings or recordings with clear permission.
+
+
+### Use saved character voices in MP4
+
+Start a render with `/render`, send your authorized still images, then add saved recordings in order with `/render voice narrator`, `/render voice hero`, `/render voice villain`, etc. Up to 12 audio clips are concatenated sequentially into one narration track. The combined audio is limited to 20 MB and 10 minutes. Finish with `/render finish`. A normal narration audio upload remains supported when no saved voice tracks are selected. The clips are concatenated, not automatically synchronized to character dialogue or subtitles.
