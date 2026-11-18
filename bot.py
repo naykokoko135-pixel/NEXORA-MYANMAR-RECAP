@@ -38,6 +38,7 @@ from verified_plot_narration import generate_burmese_plot_narration
 from anilist_synopsis import fetch_anilist_synopsis
 from tvmaze_synopsis import fetch_tvmaze_synopsis
 from tvmaze_synopsis import fetch_tvmaze_episode_summaries, fetch_tvmaze_top_rated_episodes
+from animated_episode_pack import format_animated_episode_pack
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
@@ -85,6 +86,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/autofactsclip <အမည်> - Wikidata အချက်အလက်မှ မြန်မာအသံ + Licensed footage Preview အလိုအလျောက်ထုတ်ရန်\n"
             "/growthpack <category>|<title>|<summary optional> - Channel ထုတ်ဝေမှု Pack ထုတ်ရန်\n"
             "/topratedepisodes <အမည်> - TVmaze rating အမြင့်ဆုံး Animation Episode များ ရှာရန်\\n"
+            "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -825,6 +827,54 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
         "အပြည့်အစုံ Recap script၊ ဇာတ်ဝင်ခန်း transcript သို့မဟုတ် အတည်ပြုပြီးဖြစ်ရပ်မှန် မဟုတ်ပါ။"
     )
     await update.message.reply_text("\\n".join(lines), disable_web_page_preview=True)
+
+
+async def episodepack_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Build an animated episode research brief and seek a licensed footage candidate."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /episodepack <Anime/Cartoon/Donghua Series အမည်>\n"
+            "TVmaze မှ rating အမြင့်ဆုံး Episode ၅ ခုနှင့် ကိုက်ညီနိုင်သော CC/Public Domain footage ကို ရှာပေးပါမယ်။"
+        )
+        return
+    await update.message.reply_text("Episode rating၊ ဇာတ်လမ်းအကျဉ်းနှင့် လိုင်စင်ရှိ Footage ကို စစ်ဆေးနေပါတယ်...")
+    try:
+        research = await asyncio.to_thread(fetch_tvmaze_top_rated_episodes, query, 5)
+        if not research.get("found"):
+            await update.message.reply_text(research.get("status", "Episode research မရရှိပါ။"))
+            return
+        candidates = []
+        for episode in research.get("episodes", [])[:3]:
+            episode_title = str(episode.get("title") or "").strip()
+            search_query = " ".join(x for x in (research.get("title"), episode_title) if x)
+            if not search_query:
+                continue
+            try:
+                found = await asyncio.to_thread(search_licensed_video, search_query, 5)
+                candidate = choose_matching_source(search_query, found)
+                if candidate:
+                    candidates.append(candidate)
+                    break
+            except ClipSourceError:
+                continue
+        pack = format_animated_episode_pack(research, candidates[0] if candidates else None)
+        if len(pack) <= 3900:
+            await update.message.reply_text(pack, disable_web_page_preview=True)
+        else:
+            file_obj = BytesIO(pack.encode("utf-8-sig"))
+            file_obj.name = "nexora_animated_episode_pack.txt"
+            await update.message.reply_document(
+                document=InputFile(file_obj, filename=file_obj.name),
+                caption="Episode Production Pack — အသုံးမပြုမီ Episode နှင့် Footage ကို လူကိုယ်တိုင် ပြန်စစ်ပါ။",
+            )
+    except ValueError as exc:
+        await update.message.reply_text(str(exc)[:500])
+    except Exception:
+        log.exception("Animated episode pack failed")
+        await update.message.reply_text("Episode Production Pack မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
 
 
 async def topratedepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1775,6 +1825,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("seriesresearch", seriesresearch_cmd))
     telegram_app.add_handler(CommandHandler("animationepisodes", animationepisodes_cmd))
     telegram_app.add_handler(CommandHandler("topratedepisodes", topratedepisodes_cmd))
+    telegram_app.add_handler(CommandHandler("episodepack", episodepack_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
     telegram_app.add_handler(CommandHandler("recapqa", recapqa_cmd))
