@@ -5,11 +5,11 @@ from subtitle_builder import build_burmese_srt
 
 class BurmeseSubtitleTests(unittest.TestCase):
     def test_builds_sequential_burmese_srt(self):
-        result = build_burmese_srt("ဒီနေ့ ဇာတ်လမ်းကို စတင်ကြည့်ကြရအောင်။\\nအဓိကဇာတ်ကောင်က ခရီးတစ်ခုကို စတင်ခဲ့ပါတယ်။")
+        result = build_burmese_srt("ဒီနေ့ ဇာတ်လမ်းကို စတင်ကြည့်ကြရအောင်။\nအဓိကဇာတ်ကောင်က ခရီးတစ်ခုကို စတင်ခဲ့ပါတယ်။")
         self.assertIn("00:00:00,000 -->", result)
         self.assertIn("ဒီနေ့", result)
         self.assertIn("အဓိကဇာတ်ကောင်", result)
-        self.assertTrue(result.endswith("\\n"))
+        self.assertTrue(result.endswith("\n"))
 
     def test_splits_long_text(self):
         result = build_burmese_srt("ဇာတ်လမ်းအကြောင်း " * 20)
