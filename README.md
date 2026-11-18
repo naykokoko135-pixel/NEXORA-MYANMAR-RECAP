@@ -86,6 +86,12 @@ GitHub's scheduled workflow can start a little later than the exact minute. The 
 
 
 
+## Free Telegram backup for voice profiles
+
+Render Free services do not provide a persistent disk. To avoid losing the only copy of a voice profile when the container restarts, NEXORA sends a fresh ZIP backup to the same Telegram chat after a profile is added, deleted, or imported. Keep the latest \`nexora_voice_profiles_latest.zip\` document in the chat (or save a private copy in Telegram Saved Messages).
+
+After a Render restart/redeploy, the free container's local SQLite database may be empty. Send \`/voiceprofile import\`, then upload the latest ZIP document from the chat. NEXORA restores the profiles and sends a new backup. This is a manual restore workflow; Telegram Bot API does not let the bot browse old chat messages to restore a previous backup automatically. The backup is private voice data: do not share it publicly, and only store recordings you own or are authorized to use.
+
 ## Persistent voice profile storage
 
 Voice Profile audio is stored in a per-Telegram-user SQLite database by `voice_profile_storage.py`. The default database path is `data/nexora_voice_profiles.sqlite3`. This survives process restarts only when that path is on persistent storage; a normal Render container filesystem is ephemeral and can be replaced during redeploys.
