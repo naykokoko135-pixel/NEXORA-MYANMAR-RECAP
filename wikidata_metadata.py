@@ -57,6 +57,21 @@ def _candidate_matches_exact_title(item, normalized_title):
     )
 
 
+
+def _candidate_is_primary_screen_work(item):
+    """Prefer a clearly described screen adaptation over manga/franchise records."""
+    description = _normalize_title(item.get("description", ""))
+    excluded = ("manga series", "media franchise", "literary series", "novel series")
+    if any(term in description for term in excluded):
+        return False
+    preferred = (
+        "anime television series", "animated television series",
+        "television series", "anime film", "animated film",
+        "television film", "feature film", "film",
+    )
+    return any(term in description for term in preferred)
+
+
 def _claim_entity_ids(claims, property_id):
     values = []
     for claim in claims.get(property_id, []):
@@ -131,10 +146,28 @@ def fetch_wikidata_metadata(title):
                 "status": "Wikidata တွင် အမည်တိတိကျကျ သို့မဟုတ် Alternate title ကိုက်ညီသော မှတ်တမ်း မတွေ့ပါ။",
             }
         if len(exact_by_id) > 1:
-            return {
-                "found": False,
-                "status": "ခေါင်းစဉ်နှင့် ကိုက်ညီသော Wikidata မှတ်တမ်းများ အများအပြားရှိနေသည်။ မမှန်ကန်သောဇာတ်ကားကို မရွေးရန် အတည်ပြုမှုလိုအပ်ပါသည်။",
+            # Prefer one clearly described screen work over manga/franchise
+            # records, but never choose between multiple films or series.
+            screen_work_matches = {
+                entity_id: item for entity_id, item in exact_by_id.items()
+                if _candidate_is_primary_screen_work(item)
             }
+            if len(screen_work_matches) == 1:
+                exact_by_id = screen_work_matches
+            else:
+                return {
+                    "found": False,
+                    "status": "ခေါင်းစဉ်နှင့် ကိုက်ညီသော Wikidata မှတ်တမ်းများ အများအပြားရှိနေသည်။ အမျိုးအစားကို မခွဲနိုင်သေးသဖြင့် အတည်ပြုမှုလိုအပ်ပါသည်။",
+                    "candidates": [
+                        {
+                            "entity_id": entity_id,
+                            "title": item.get("label", ""),
+                            "description": item.get("description", "မရရှိပါ"),
+                            "source": "https://www.wikidata.org/wiki/" + entity_id,
+                        }
+                        for entity_id, item in exact_by_id.items()
+                    ],
+                }
 
         selected = next(iter(exact_by_id.values()))
         entity_id = selected.get("id", "")
