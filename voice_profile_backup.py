@@ -84,6 +84,8 @@ def import_voice_profile_backup(data: bytes, existing: dict | None = None) -> di
             if archive.getinfo(MANIFEST_NAME).file_size > 64 * 1024:
                 raise VoiceProfileBackupError("Backup manifest အရွယ်အစား မမှန်ပါ။")
             manifest = json.loads(archive.read(MANIFEST_NAME).decode("utf-8"))
+            if not isinstance(manifest, dict):
+                raise VoiceProfileBackupError("Backup manifest ပုံစံ မမှန်ပါ။")
             if manifest.get("format") != "nexora-voice-profiles" or manifest.get("version") != 1:
                 raise VoiceProfileBackupError("NEXORA Voice Profile Backup version မကိုက်ညီပါ။")
             entries = manifest.get("profiles")
@@ -93,10 +95,17 @@ def import_voice_profile_backup(data: bytes, existing: dict | None = None) -> di
             expected_files = {MANIFEST_NAME}
             restored = dict(existing or {})
             total = 0
+            restored_names = set()
             for item in entries:
                 if not isinstance(item, dict):
                     raise VoiceProfileBackupError("Backup metadata မမှန်ပါ။")
-                name = normalize_profile_name(item.get("name", ""))
+                raw_name = item.get("name", "")
+                if not isinstance(raw_name, str):
+                    raise VoiceProfileBackupError("Backup Profile အမည် မမှန်ပါ။")
+                name = normalize_profile_name(raw_name)
+                if any(name == existing_name for existing_name in restored_names):
+                    raise VoiceProfileBackupError("Backup ထဲတွင် Profile အမည် ထပ်နေပါတယ်။")
+                restored_names.add(name)
                 member = item.get("file")
                 if not isinstance(member, str) or PurePosixPath(member).parts[:1] != ("audio",) or len(PurePosixPath(member).parts) != 2:
                     raise VoiceProfileBackupError("Backup ထဲရှိ audio path မမှန်ပါ။")
