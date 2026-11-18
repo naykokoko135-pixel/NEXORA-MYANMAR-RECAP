@@ -414,7 +414,7 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /clipsource <Anime/ရုပ်ရှင်/Scene အမည်>\\n"
+            "အသုံးပြုပုံ: /clipsource <Anime/ရုပ်ရှင်/Scene အမည်>\n"
             "Wikimedia Commons နှင့် Europeana မှ CC0/CC BY/CC BY-SA/Public Domain Video မှတ်တမ်းများကို ရှာပေးမည်။"
         )
         return
@@ -432,7 +432,7 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except EuropeanaSearchError as exc:
         errors.append("Europeana: " + str(exc))
     if not results:
-        detail = ("\\n" + "\\n".join(errors)) if errors else ""
+        detail = ("\n" + "\n".join(errors)) if errors else ""
         await update.message.reply_text(
             "ဒီခေါင်းစဉ်နဲ့ ကိုက်ညီပြီး ခွင့်ပြုနိုင်သော လိုင်စင် metadata ရှိသည့် Video မှတ်တမ်း မတွေ့ပါ။ "
             "မသက်ဆိုင်သော footage ကို အစားထိုးမရွေးပါ။" + detail
@@ -447,15 +447,15 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "ထုတ်ဝေမီ လိုင်စင်နှင့် Attribution စည်းကမ်းကို ပြန်စစ်ပါ။"
         )
         await update.message.reply_text(
-            f"🎞 [{source_name}] {title}\\nလိုင်စင်: {item.get('license', 'မသိရှိ')}\\n"
-            f"ဖန်တီးသူ: {str(item.get('artist', 'Unknown'))[:250]}\\n"
-            f"အသုံးပြုမှု: {str(item.get('usage_terms', ''))[:250]}\\n"
-            f"ရင်းမြစ်: {item.get('source_page', '')}\\n"
-            f"Media URL: {item.get('url', '')}\\n{download_note}",
+            f"🎞 [{source_name}] {title}\nလိုင်စင်: {item.get('license', 'မသိရှိ')}\n"
+            f"ဖန်တီးသူ: {str(item.get('artist', 'Unknown'))[:250]}\n"
+            f"အသုံးပြုမှု: {str(item.get('usage_terms', ''))[:250]}\n"
+            f"ရင်းမြစ်: {item.get('source_page', '')}\n"
+            f"Media URL: {item.get('url', '')}\n{download_note}",
             disable_web_page_preview=True,
         )
     if errors:
-        await update.message.reply_text("တချို့ရင်းမြစ်များကို မရရှိပါ:\\n" + "\\n".join(errors)[:900])
+        await update.message.reply_text("တချို့ရင်းမြစ်များကို မရရှိပါ:\n" + "\n".join(errors)[:900])
 
 
 async def autoclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
