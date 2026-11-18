@@ -298,3 +298,15 @@ You can run the optional MyanmarTTS model test without installing the dependenci
 5. Extract and play `local_myanmar_tts_smoke.wav` to review pronunciation and audio quality.
 
 This workflow is manually triggered only. It installs the optional dependencies on a temporary GitHub-hosted runner, may download model assets from Hugging Face, and uploads the generated WAV as a short-lived artifact (3-day retention). It does not use repository secrets, change Render settings, or enable local TTS on the production bot. Runner memory/CPU limits may prevent the model from completing; a successful unit-test run does not prove that the real model has generated audio.
+
+## Optional VoxCPM2 real-model smoke test
+
+To verify actual synthetic Burmese audio on a separate compatible machine (not the Render Free service):
+
+1. Install the optional dependencies with `pip install -r requirements-voxcpm.txt` in Python 3.10–3.12.
+2. Make sure the machine has a compatible runtime and sufficient memory. For NVIDIA GPU inference, the upstream requirements include PyTorch 2.5+ and CUDA 12+; model VRAM use is approximately 8 GB.
+3. Set `NEXORA_VOXCPM_ENABLED=1` in the local shell.
+4. Run `python smoke_voxcpm_voice_design.py --voice story_female`.
+5. Play `voxcpm_voice_design_smoke.wav` and review Burmese pronunciation and voice quality.
+
+You can choose any name listed by `python smoke_voxcpm_voice_design.py --help`, pass a short script with `--text`, and change the output path with `--output`. The smoke test loads the model and generates a real sample; first startup may take time to download model weights. This script does not upload audio, change Render settings, or enable the bot backend. Keep the generated audio private if the script contains personal information.
