@@ -62,6 +62,15 @@ Use `/animationepisodes <title>` to retrieve up to five short episode-summary ex
 
 Use `/movieplotresearch <title>` to require an exact Wikidata title match, exclude Indian-origin entries and entries with animation-related genres, then retrieve an explicitly labelled Plot/Synopsis section from the linked English Wikipedia article. The result is a research excerpt only. English Wikipedia is community-edited, a missing Plot section is rejected, and the command does not translate the text or create a recap MP4. Confirm the title is a live-action international movie and verify plot facts against reliable sources before use.
 
+## Episode recap outline worksheet
+
+Use `/episodeoutline <series title>` after choosing a platform with `/platform youtube|facebook|tiktok`. NEXORA requests an exact TVmaze Animation series match, requires a known non-Indian country, and selects one highest-rated episode with a valid community rating and source URL. It creates a Burmese creator worksheet with an opening hook, setup, story-beat prompts, turning point, climax, ending, original commentary, and media-rights checks.
+
+The worksheet includes only a short TVmaze research lead. It does not translate or rewrite the episode plot, invent scene events, generate a finished script, synthesize narration, or render an MP4. Verify every plot point against the actual episode and write original commentary. TVmaze ratings are community ratings, not view counts or popularity. This command does not classify 3D animation; an Animation genre tag is not proof of 3D.
+
+Example:
+`/episodeoutline Frieren: Beyond Journey's End`
+
 ## Highest-rated animated episode research
 
 Use `/topratedepisodes <series title>` to retrieve up to five highest-rated episodes from TVMaze for an exact title match. The command requires the Animation genre and a known non-Indian country, includes episode source links, and omits episodes without a valid rating. It does not infer whether a series is 2D or 3D.
