@@ -375,15 +375,16 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     if action == "finish":
         session = context.user_data.get("video_render")
-        if not session or not session.get("images") or not session.get("audio"):
-            await update.message.reply_text("ပုံအနည်းဆုံး ၁ ပုံနဲ့ အသံဖိုင် ၁ ဖိုင် လိုပါတယ်။ /render ဖြင့် ပြန်စပါ။")
+        if not session or not session.get("images") or not (session.get("audio") or session.get("audio_tracks")):
+            await update.message.reply_text("ပုံအနည်းဆုံး ၁ ပုံနဲ့ အသံဖိုင်/Voice Profile အနည်းဆုံး ၁ ခု လိုပါတယ်။ /render ဖြင့် ပြန်စပါ။")
             return
         await update.message.reply_text("MP4 ထုတ်လုပ်နေပါတယ်။ ခဏစောင့်ပါ...")
         import tempfile
         try:
             with tempfile.TemporaryDirectory(prefix="nexora_video_") as temp:
                 output = os.path.join(temp, "nexora_video.mp4")
-                await asyncio.to_thread(render_slideshow, session["images"], session["audio"], output)
+                audio_input = session["audio_tracks"] if session.get("audio_tracks") else session["audio"]
+                await asyncio.to_thread(render_slideshow, session["images"], audio_input, output)
                 with open(output, "rb") as video_file:
                     await update.message.reply_video(
                         video=InputFile(video_file, filename="nexora_video.mp4"),
@@ -400,12 +401,37 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         finally:
             context.user_data.pop("video_render", None)
         return
-    context.user_data["video_render"] = {"images": [], "audio": None}
+    if action == "voice":
+        session = context.user_data.get("video_render")
+        if not session:
+            await update.message.reply_text("အရင်ဆုံး /render ပို့ပြီး Video session စတင်ပါ။")
+            return
+        if len(context.args) < 2:
+            await update.message.reply_text("အသုံးပြုပုံ: /render voice <profile အမည်>")
+            return
+        try:
+            profile_name = normalize_profile_name(" ".join(context.args[1:]))
+        except ValueError as exc:
+            await update.message.reply_text(str(exc))
+            return
+        profile = context.user_data.get("custom_voice_profiles", {}).get(profile_name)
+        if not profile:
+            await update.message.reply_text("အဲဒီ Voice Profile မတွေ့ပါ။ /voiceprofile list ဖြင့် စစ်ပါ။")
+            return
+        tracks = session.setdefault("audio_tracks", [])
+        if len(tracks) >= 12:
+            await update.message.reply_text("Voice Track ၁၂ ခု ပြည့်ပါပြီ။")
+            return
+        tracks.append((profile["filename"], profile["audio"]))
+        await update.message.reply_text(f"{profile_name} အသံ Track ထည့်ပြီးပါပြီ။ လက်ရှိ Track {len(tracks)}/12။ ထပ်ထည့်ရန် /render voice <အမည်> ကို သုံးပါ။")
+        return
+    context.user_data["video_render"] = {"images": [], "audio": None, "audio_tracks": []}
     await update.message.reply_text(
         "Video ဖန်တီးမှု စတင်ပါပြီ။\n"
         "၁) ပုံ JPG/PNG/WEBP အများဆုံး ၁၂ ပုံ ပို့ပါ။\n"
-        "၂) Narration အသံ MP3/M4A/WAV/OGG တစ်ဖိုင် ပို့ပါ (၂၀ MB အောက်၊ ၁၀ မိနစ်အောက်)။\n"
-        "၃) ပြီးရင် /render finish ပို့ပါ။ မလုပ်တော့ပါက /render cancel ပို့ပါ။\n"
+        "၂) Narration အသံဖိုင် ပို့ပါ၊ သို့မဟုတ် /render voice <profile အမည်> ဖြင့် သိမ်းထားသော အသံ Track များရွေးပါ။\n"
+        "၃) Voice Track များကို အစဉ်လိုက် ပေါင်းစပ်မည်။ Track စုစုပေါင်း ၂၀ MB/၁၀ မိနစ်အောက် ဖြစ်ရပါမယ်။\n"
+        "၄) ပြီးရင် /render finish ပို့ပါ။ မလုပ်တော့ပါက /render cancel ပို့ပါ။\n"
         "ကိုယ်ပိုင် သို့မဟုတ် အသုံးပြုခွင့်ရှိသော ပုံ/အသံကိုသာ သုံးပါ။"
     )
 
