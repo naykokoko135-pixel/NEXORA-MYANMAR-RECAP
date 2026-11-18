@@ -64,6 +64,8 @@ def fetch_tvmaze_synopsis(title):
             (show.get("webChannel") or {}).get("country") or {}
         )
         country_name = country.get("name") or ""
+        if not country_name:
+            return {"found": False, "status": "မူရင်းနိုင်ငံအချက်အလက် မရှိသဖြင့် အိန္ဒိယမဟုတ်ကြောင်း မအတည်ပြုနိုင်ပါ။"}
         if country_name.casefold() in {"india", "republic of india"}:
             return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယခေါင်းစဉ်များ မထည့်ထားပါ။"}
         summary = _plain(show.get("summary"))
