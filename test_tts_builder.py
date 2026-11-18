@@ -131,6 +131,23 @@ class BurmeseTtsValidationTests(unittest.TestCase):
         self.assertEqual(scene["role"], "mystery")
         self.assertEqual(scene["preset"], "mystery")
 
+    def test_burmese_scene_role_aliases(self):
+        scenes = parse_scene_script(
+            "[ဇာတ်ကြောင်း]\nမိတ်ဆက်စာသား\n"
+            "[မင်းသား]\nသူရဲကောင်းစာသား\n"
+            "[မင်းသမီး]\nဇာတ်ဆောင်စာသား\n"
+            "[ဗီလိန်]\nဆန့်ကျင်ဘက်ဇာတ်ကောင်စာသား\n"
+            "[ဟာသ]\nဟာသစာသား"
+        )
+        self.assertEqual(
+            [scene["preset"] for scene in scenes],
+            ["narrator", "hero", "female", "villain", "comedy"],
+        )
+
+    def test_burmese_role_unknown_header_is_rejected(self):
+        with self.assertRaises(ValueError):
+            parse_scene_script("[မသိသောအခန်း]\nစာသား")
+
 
 if __name__ == "__main__":
     unittest.main()

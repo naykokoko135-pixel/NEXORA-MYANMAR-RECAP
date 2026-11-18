@@ -236,3 +236,20 @@ Example:
 Each scene still produces its own MP3/SRT pair. These aliases select existing delivery presets only; the free Burmese TTS service has two speaker identities (Nilar and Thiha). They do not create new actors or clone a voice. For actual recorded character audio, use creator-owned or authorized recordings with `/voiceprofile`; those recordings are reused as-is, not converted into new spoken text.
 
 The clips are concatenated, not automatically synchronized to character dialogue or subtitles.
+
+
+### မြန်မာ Role ခေါင်းစဉ်များ
+
+`/scenetts` တွင် English မရေးဘဲ မြန်မာလိုလည်း ခေါင်းစဉ်တပ်နိုင်သည်။
+
+- `[ဇာတ်ကြောင်း]` — Narrator
+- `[မင်းသား]` — Hero delivery
+- `[မင်းသမီး]` — Female delivery
+- `[ဗီလိန်]` — Villain delivery
+- `[လူကြီး]` — Elder delivery
+- `[ကလေး]` — Youth delivery
+- `[ဟာသ]` — Comedy delivery
+- `[လျှို့ဝှက်]` — Mystery delivery
+- `[အက်ရှင်]` — Energetic delivery
+
+မြန်မာ Role များသည် ရှိပြီးသား preset များသို့ ချိတ်ဆက်ထားခြင်းသာဖြစ်သည်။ သီးခြားအသံသရုပ်ဆောင်အသစ် သို့မဟုတ် Voice Cloning မဟုတ်ပါ။
