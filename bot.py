@@ -13,6 +13,7 @@ from telegram import InputFile, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from srt_builder import build_srt
+from subtitle_builder import build_burmese_srt
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
@@ -553,6 +554,30 @@ async def srt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption="NEXORA English Subtitle SRT ဖိုင်"
     )
 
+async def srtmy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Create Burmese captions with estimated timing from a supplied script."""
+    if not update.message or not update.message.text:
+        return
+    script = update.message.text.partition("\\n")[2].strip()
+    if not script:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /srtmy ပြီးနောက် မြန်မာ Voice-over စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\\n"
+            "မှတ်ချက်: အချိန်ကို စာလုံးအရေအတွက်ဖြင့် ခန့်မှန်းထားခြင်းဖြစ်ပြီး အသံနှင့် ကိုက်ညီအောင် ပြန်ညှိပါ။"
+        )
+        return
+    try:
+        srt_text = build_burmese_srt(script)
+    except ValueError as exc:
+        await update.message.reply_text(f"မြန်မာစာတန်းထိုး မထုတ်နိုင်ပါ: {exc}")
+        return
+    file_obj = BytesIO(srt_text.encode("utf-8-sig"))
+    file_obj.name = "nexora_burmese_subtitles.srt"
+    await update.message.reply_document(
+        document=InputFile(file_obj, filename=file_obj.name),
+        caption="မြန်မာစာတန်းထိုး SRT ဖိုင်ပါ။ အချိန်များကို ခန့်မှန်းထားသောကြောင့် အသံနှင့် ပြန်ညှိပါ။"
+    )
+
+
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(
@@ -571,7 +596,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/render ဖြင့် ပုံများနှင့် narration အသံမှ MP4 slideshow ထုတ်နိုင်သည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
-            "/srt ဖြင့် timestamp ပါသော English စာသားမှ .srt ဖိုင်ထုတ်နိုင်သည်။"
+            "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။"
         )
 
 
@@ -622,6 +647,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, voiceover_notes_message))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
+    telegram_app.add_handler(CommandHandler("srtmy", srtmy_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
     telegram_app.add_handler(CommandHandler("settings", settings_cmd))
