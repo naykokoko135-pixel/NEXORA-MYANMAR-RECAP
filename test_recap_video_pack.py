@@ -1,5 +1,5 @@
 import unittest
-from recap_video_pack import MAX_RECAP_SCRIPT_CHARS, parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars
+from recap_video_pack import MAX_RECAP_SCRIPT_CHARS, parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message
 from licensed_narrated_clip import _subtitle_duration_seconds, LicensedClipError, build_licensed_attribution_note
 PRESETS = {"narrator", "hero", "female"}
 
@@ -62,6 +62,13 @@ class RecapVideoPackTests(unittest.TestCase):
         )
         with self.assertRaises(LicensedClipError):
             _subtitle_duration_seconds("not an SRT")
+
+    def test_no_licensed_footage_message_explains_safe_stop(self):
+        message = format_no_licensed_footage_message("Frieren: Beyond Journey's End")
+        self.assertIn("Frieren: Beyond Journey's End", message)
+        self.assertIn("Wikimedia Commons", message)
+        self.assertIn("မသက်ဆိုင်သော footage", message)
+        self.assertIn("MP4 မထုတ်ထားပါ", message)
 
     def test_requires_known_non_indian_country(self):
         self.assertEqual(validate_non_indian_wikidata_metadata({"found": True, "countries": ["Japan"]}), ["Japan"])
