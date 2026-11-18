@@ -1,3 +1,4 @@
 # Optional only: do not add to the default Render Free build.
-# Install on a separate local machine or a host with enough RAM/CPU.
+# CPU-capable host; TorchCodec is needed by torchaudio's audio decoder.
 myanmartts==1.0.2
+torchcodec
