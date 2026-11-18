@@ -27,3 +27,15 @@ def test_profile_limit():
     profiles = {str(i): {"filename": "x.mp3", "audio": b"x"} for i in range(12)}
     with pytest.raises(ValueError):
         store_voice_profile(profiles, "extra", "x.mp3", b"x")
+
+
+def test_accept_burmese_profile_name():
+    assert normalize_profile_name("မေ") == "မေ"
+
+
+def test_total_storage_budget():
+    from voice_profiles import MAX_TOTAL_PROFILE_BYTES
+    profiles = {}
+    store_voice_profile(profiles, "one", "one.mp3", b"x" * (MAX_TOTAL_PROFILE_BYTES - 2))
+    with pytest.raises(ValueError):
+        store_voice_profile(profiles, "two", "two.mp3", b"xxx")
