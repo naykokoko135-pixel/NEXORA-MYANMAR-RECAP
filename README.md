@@ -185,3 +185,4 @@ The current no-key Burmese TTS voice list provides two Burmese neural speaker id
 - calm — slower, lower male delivery
 
 Use `/voices` in Telegram to list them. Then use `/tts <preset>` for MP3 or `/ttssrt <preset>` for MP3 plus timed SRT. These settings change rate and pitch only; they do not create separate actors or guarantee emotional acting. Listen and review before publishing.
+\n\n## Scene-based Burmese voice tracks\n\nUse `/scenetts` to create separate MP3 and word-aligned SRT files for up to 8 scenes. Start each scene with a supported preset header such as `[narrator]`, `[hero]`, `[villain]`, `[emotional]`, or `[mystery]`, then put that scene's Burmese text on the following lines. Each scene is exported as its own MP3/SRT pair so the editor can arrange the tracks. The current free Edge TTS integration still has only two Burmese speaker identities (Nilar and Thiha); presets change delivery rate/pitch, not the underlying speaker identity.\n
