@@ -180,5 +180,22 @@ class WikidataMetadataTests(unittest.TestCase):
         self.assertEqual(result["countries_my"], ["ဂျပန်"])
 
 
+    @patch("wikidata_metadata.urlopen")
+    def test_returns_exact_burmese_wikipedia_sitelink(self, mock_urlopen):
+        search = {"search": [{"id": "Q654", "label": "Example Film"}]}
+        entity = {"entities": {"Q654": {
+            "claims": {},
+            "sitelinks": {"mywiki": {"title": "ဥပမာ ရုပ်ရှင်"}},
+        }}}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search).encode()),
+            Response(json.dumps(entity).encode()),
+        ]
+        result = fetch_wikidata_metadata("Example Film")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["mywiki_title"], "ဥပမာ ရုပ်ရှင်")
+        self.assertIn("my.wikipedia.org/wiki/", result["mywiki_source"])
+
+
 if __name__ == "__main__":
     unittest.main()
