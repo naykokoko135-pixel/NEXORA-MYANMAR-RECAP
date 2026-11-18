@@ -4,7 +4,8 @@ import types
 import unittest
 from unittest.mock import patch
 
-from tts_builder import VOICE_MAP, VOICE_PRESETS, get_tts_preset, validate_tts_request, build_word_aligned_srt\nfrom scene_tts import parse_scene_script
+from tts_builder import VOICE_MAP, VOICE_PRESETS, get_tts_preset, validate_tts_request, build_word_aligned_srt
+from scene_tts import parse_scene_script
 
 
 class BurmeseTtsValidationTests(unittest.TestCase):
