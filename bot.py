@@ -29,6 +29,7 @@ from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
 from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError
 from clip_source_finder import search_licensed_video, ClipSourceError
+from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -68,6 +69,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/voiceover <ဇာတ်ကားအမည်> - Notes မှ Voice-over မူကြမ်းဖိုင်ထုတ်ရန်\n"
             "/voiceover3 <ဇာတ်ကားအမည်> - Notes မှ Voice-over ဖိုင် ၃ ဖိုင်ထုတ်ရန်\n"
             "/clipsource <အမည်> - CC/Public Domain Video ရင်းမြစ်ရှာရန်\n"
+            "/autoclip <အမည်> - လိုင်စင်ရှိ Video မှ MP4 Preview ထုတ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -407,6 +409,51 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🎞 {title}\nလိုင်စင်: {item['license']}\nဖန်တီးသူ: {item['artist'][:250]}\n"
             f"အသုံးပြုမှု: {item['usage_terms'][:250]}\nရင်းမြစ်/Attribution: {item['source_page']}"
         )
+
+
+async def autoclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Find a strongly title-matching reusable Commons video and render a short preview."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text("အသုံးပြုပုံ: /autoclip <အမည်>\nခွင့်ပြုထားသော Commons Video ကိုသာ ရှာပြီး MP4 Preview ထုတ်ပေးပါမယ်။")
+        return
+    await update.message.reply_text("လိုင်စင်ရှိသော Video ကို ရှာပြီး ခေါင်းစဉ်ကိုက်ညီမှု စစ်ဆေးနေပါတယ်...")
+    try:
+        sources = await asyncio.to_thread(search_licensed_video, query, 8)
+        source = choose_matching_source(query, sources)
+        if not source:
+            await update.message.reply_text(
+                "ခေါင်းစဉ်နှင့် ယုံကြည်စိတ်ချရလောက်အောင် ကိုက်ညီသော CC/Public Domain Video မတွေ့ပါ။ "
+                "မကိုက်ညီသော Video ကို အလိုအလျောက် မရွေးထားပါ။ /clipsource ဖြင့် ရင်းမြစ်စာရင်းကို စစ်နိုင်ပါတယ်။"
+            )
+            return
+        import tempfile
+        platform = context.user_data.get("platform", "youtube")
+        with tempfile.TemporaryDirectory(prefix="nexora_autoclip_") as temp:
+            output = os.path.join(temp, "nexora_licensed_preview.mp4")
+            await asyncio.to_thread(render_licensed_preview, source, output, platform)
+            with open(output, "rb") as video_file:
+                await update.message.reply_video(
+                    video=InputFile(video_file, filename="nexora_licensed_preview.mp4"),
+                    supports_streaming=True,
+                    caption=(
+                        f"NEXORA {platform.upper()} — 45 စက္ကန့်အထိ Licensed Preview\n"
+                        f"ရင်းမြစ်: {source.get('source_page', '')}\n"
+                        f"လိုင်စင်: {source.get('license', '')}\n"
+                        f"ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:180]}\n"
+                        "ဤ Preview သည် မူရင်းဇာတ်လမ်းအခန်းကို အတည်ပြုထားခြင်းမဟုတ်ပါ။ "
+                        "ထုတ်ဝေမီ လိုင်စင်နှင့် Attribution စည်းကမ်းကို ပြန်စစ်ပါ။"
+                    ),
+                    read_timeout=120,
+                    write_timeout=120,
+                )
+    except (ClipSourceError, LicensedClipError) as exc:
+        await update.message.reply_text(str(exc))
+    except Exception:
+        log.exception("Automatic licensed clip preview failed")
+        await update.message.reply_text("Licensed Preview မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
 
 
 async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1186,6 +1233,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/auto Avatar ပြီးနောက် /draft3 Avatar ပို့လျှင် ရှာထားသော Notes ကို အလိုအလျောက် ထည့်ပေးသည်။\n"
             "/seriesguide <title> ဖြင့် TVmaze ကို အရင်စစ်ပါမည်။ Anime စာရင်းထဲမှ ခေါင်းစဉ်များကို AniList ဖြင့် ထပ်စစ်ပြီး နောက်ဆုံးတွင် Wikidata ကို စစ်ပါမည်။ ရင်းမြစ်မတွေ့ပါက အရေအတွက်ကို မခန့်မှန်းပါ။\n"
             "/platform youtube|facebook|tiktok ကို အရင်ရွေးပါ။ /render ဖြင့် Slideshow၊ /render timeline ဖြင့် Scene တစ်ခုစီ ပုံ/အသံ အချိန်ကိုက် MP4 ထုတ်နိုင်သည်။ /render scene <အမည်> ဖြင့် Scene ဖွင့်ပါ။ .srt ပို့လျှင် ရွေးဖွင့်နိုင်သော Track ထည့်မည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
+            "/clipsource နှင့် /autoclip ဖြင့် လိုင်စင်ရှိ Video ရင်းမြစ်ရှာပြီး Preview MP4 ထုတ်နိုင်သည်။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
@@ -1235,6 +1283,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("voiceover", voiceover_cmd))
     telegram_app.add_handler(CommandHandler("voiceover3", voiceover3_cmd))
     telegram_app.add_handler(CommandHandler("clipsource", clipsource_cmd))
+    telegram_app.add_handler(CommandHandler("autoclip", autoclip_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
     telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))

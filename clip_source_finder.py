@@ -8,9 +8,10 @@ from __future__ import annotations
 import json
 import urllib.parse
 import urllib.request
+import re
 
 API = "https://commons.wikimedia.org/w/api.php"
-ALLOWED_LICENSES = ("CC0", "CC BY", "CC BY-SA", "Public domain", "public domain")
+LICENSE_PATTERN = re.compile(r"^(?:CC0(?:\s|$)|CC BY(?:-SA)?(?:\s|$)|Public domain$)", re.IGNORECASE)
 
 
 class ClipSourceError(ValueError):
@@ -56,7 +57,7 @@ def search_licensed_video(query: str, limit: int = 8) -> list[dict]:
         meta = info.get("extmetadata") or {}
         license_name = str((meta.get("LicenseShortName") or {}).get("value", "")).strip()
         usage_terms = str((meta.get("UsageTerms") or {}).get("value", "")).strip()
-        if not any(term.lower() in license_name.lower() for term in ALLOWED_LICENSES):
+        if not LICENSE_PATTERN.match(license_name):
             continue
         results.append({
             "title": page.get("title", ""),
