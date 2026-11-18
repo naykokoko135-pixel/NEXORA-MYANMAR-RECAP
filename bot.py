@@ -234,7 +234,7 @@ async def series_guide_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         wikidata_result = await asyncio.to_thread(fetch_wikidata_metadata, title)
         report = (
             "TVmaze စစ်ဆေးမှု: " + tvmaze_result.get("status", "မှတ်တမ်းမရရှိပါ။")
-            + "\\n\\n" + format_wikidata_episode_guide(wikidata_result)
+            + "\n\n" + format_wikidata_episode_guide(wikidata_result)
         )
 
     for start_at in range(0, len(report), 3900):
