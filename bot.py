@@ -66,7 +66,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/allplatforms <အမည်> - YouTube/Facebook/TikTok အပိုင်းနှင့် ကြာချိန်ခွဲပြရန်\n"
             "/voiceover <ဇာတ်ကားအမည်> - Notes မှ Voice-over မူကြမ်းဖိုင်ထုတ်ရန်\n"
             "/voiceover3 <ဇာတ်ကားအမည်> - Notes မှ Voice-over ဖိုင် ၃ ဖိုင်ထုတ်ရန်\n"
-            "/render - ပုံများ + အသံဖိုင်မှ MP4 ထုတ်ရန်\n"
+            "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
             "/srtmy - မြန်မာစာသားမှ SRT ထုတ်ရန်\n"
@@ -445,9 +445,10 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tracks.append((profile["filename"], profile["audio"]))
         await update.message.reply_text(f"{profile_name} အသံ Track ထည့်ပြီးပါပြီ။ လက်ရှိ Track {len(tracks)}/12။ ထပ်ထည့်ရန် /render voice <အမည်> ကို သုံးပါ။")
         return
-    context.user_data["video_render"] = {"images": [], "audio": None, "audio_tracks": []}
+    platform = context.user_data.get("platform", "youtube")
+    context.user_data["video_render"] = {"images": [], "audio": None, "audio_tracks": [], "platform": platform}
     await update.message.reply_text(
-        "Video ဖန်တီးမှု စတင်ပါပြီ။\n"
+        f"Video ဖန်တီးမှု စတင်ပါပြီ။\nPlatform: {PLATFORM_NAMES.get(platform, platform)}\n"
         "၁) ပုံ JPG/PNG/WEBP အများဆုံး ၁၂ ပုံ ပို့ပါ။\n"
         "၂) Narration အသံဖိုင် ပို့ပါ၊ သို့မဟုတ် /render voice <profile အမည်> ဖြင့် သိမ်းထားသော အသံ Track များရွေးပါ။\n"
         "၃) Voice Track များကို အစဉ်လိုက် ပေါင်းစပ်မည်။ Track စုစုပေါင်း ၂၀ MB/၁၀ မိနစ်အောက် ဖြစ်ရပါမယ်။\n"
@@ -1079,7 +1080,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Wikipedia /auto ရလဒ်တိုများကို တိုက်ရိုက်သုံးရန် မလုံလောက်ပါ။ Source link များကို ပြန်စစ်ပြီး ကိုယ်တိုင် Notes ရေးပါ။\n"
             "/auto Avatar ပြီးနောက် /draft3 Avatar ပို့လျှင် ရှာထားသော Notes ကို အလိုအလျောက် ထည့်ပေးသည်။\n"
             "/seriesguide <title> ဖြင့် TVmaze ကို အရင်စစ်ပါမည်။ Anime စာရင်းထဲမှ ခေါင်းစဉ်များကို AniList ဖြင့် ထပ်စစ်ပြီး နောက်ဆုံးတွင် Wikidata ကို စစ်ပါမည်။ ရင်းမြစ်မတွေ့ပါက အရေအတွက်ကို မခန့်မှန်းပါ။\n"
-            "/render ဖြင့် ပုံများနှင့် narration အသံမှ MP4 slideshow ထုတ်နိုင်သည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
+            "/platform youtube|facebook|tiktok ကို အရင်ရွေးပြီး /render ဖြင့် Platform အချိုးအစားကိုက် MP4 ထုတ်နိုင်သည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
