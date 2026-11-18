@@ -8,10 +8,8 @@ import re
 from tts_builder import VOICE_PRESETS, MAX_TEXT_CHARS
 
 MAX_SCENES = 8
-HEADER_RE = re.compile(r"^\\[([a-zA-Z_-]+)\\]\\s*$")
+HEADER_RE = re.compile(r"^\[([a-zA-Z_-]+)\]\s*$")
 
-# Character/scene roles are convenient aliases for existing delivery presets.
-# They do not create additional voices or clone any speaker.
 ROLE_PRESETS = {
     "narrator": "narrator",
     "protagonist": "hero",
@@ -37,7 +35,7 @@ def parse_scene_script(script: str) -> list[dict]:
 
     def flush():
         nonlocal current_lines
-        text = "\\n".join(current_lines).strip()
+        text = "\n".join(current_lines).strip()
         if text:
             scenes.append({
                 "role": current_role,
