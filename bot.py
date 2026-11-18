@@ -69,6 +69,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/ttssrt <preset> - MP3 နှင့် အချိန်ကိုက် SRT တွဲထုတ်ရန်\n"
             "/voices - အသံပုံစံအားလုံးကြည့်ရန်\n"
             "/voiceprofile <name> - ကိုယ်ပိုင်အသံဖိုင် သိမ်းရန်\n"
+            "/voiceprofile export|import - အသံ Profile Backup ထုတ်/ပြန်သွင်းရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60 မိနစ်\n"
