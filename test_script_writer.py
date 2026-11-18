@@ -18,6 +18,12 @@ class TitleClassificationTests(unittest.TestCase):
         self.assertIn("အတည်ပြုရန်", category)
         self.assertIn("အတည်ပြုရန်", region)
 
+    def test_indian_titles_are_excluded_not_classified(self):
+        for title in ("Motu Patlu", "Chhota Bheem"):
+            category, region = classify_recap_title(title)
+            self.assertEqual(category, "Project မှ ဖယ်ထုတ်ထားသည်")
+            self.assertNotIn("India", region)
+
     def test_plan_shows_resolved_category(self):
         plan = generate_all_platform_plan("Pororo")
         self.assertIn("3D Animation / Children's Series", plan)

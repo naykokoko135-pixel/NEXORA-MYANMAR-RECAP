@@ -176,8 +176,6 @@ TITLE_CLASSIFICATIONS = {
     "miraculous: tales of ladybug & cat noir": ("3D CGI Animated Series", "France"),
     "shaun the sheep": ("Stop-motion Animated Series", "United Kingdom"),
     "klaus": ("2D Animated Film", "Spain"),
-    "motu patlu": ("3D Animation / Comedy Series", "India"),
-    "chhota bheem": ("2D Animated Children's Series", "India"),
     "the king's avatar": ("Donghua", "China"),
     "soul land": ("Donghua / 3D Animation", "China"),
     "the daily life of the immortal king": ("Donghua", "China"),
@@ -192,6 +190,8 @@ TITLE_CLASSIFICATIONS = {
 def classify_recap_title(topic: str) -> tuple[str, str]:
     """Return verified known category/region or an explicit verification label."""
     key = " ".join((topic or "").casefold().split()).strip()
+    if key in {"motu patlu", "chhota bheem"}:
+        return ("Project မှ ဖယ်ထုတ်ထားသည်", "မဖော်ပြပါ")
     return TITLE_CLASSIFICATIONS.get(
         key, ("အမျိုးအစားကို ရင်းမြစ်ဖြင့် အတည်ပြုရန်", "နိုင်ငံ/ဒေသကို ရင်းမြစ်ဖြင့် အတည်ပြုရန်")
     )
