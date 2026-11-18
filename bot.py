@@ -43,6 +43,7 @@ from episode_recap_outline import format_episode_recap_outline
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
+from recap_voice_pack import parse_recap_voice_request
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -89,6 +90,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/topratedepisodes <အမည်> - TVmaze rating အမြင့်ဆုံး Animation Episode များ ရှာရန်\\n"
             "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\\n"
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
+            "/recapvoice [preset] - ကိုယ်ရေးထားသော Recap Script မှ MP3 + အသံနှင့်ကိုက်ညီသော SRT ထုတ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -1575,6 +1577,50 @@ async def ttssrt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def recapvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Create one Burmese narration MP3 and its word-aligned SRT from a creator script."""
+    if not update.message or not update.message.text:
+        return
+    try:
+        preset, script = parse_recap_voice_request(update.message.text, VOICE_PRESETS)
+        validate_tts_request(script, preset)
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+
+    await update.message.reply_text(
+        f"မြန်မာ narration ကို {VOICE_PRESETS[preset]['label']} preset ဖြင့် ဖန်တီးပြီး "
+        "အသံနှင့်အချိန်ကိုက် SRT ကိုပါ ပြင်ဆင်နေပါတယ်..."
+    )
+    try:
+        audio, srt_text = await synthesize_burmese_speech_with_srt(script, preset)
+    except (ValueError, RuntimeError) as exc:
+        await update.message.reply_text(f"Recap အသံ/စာတန်း ဖန်တီးမရပါ: {exc}")
+        return
+    except Exception:
+        log.exception("/recapvoice synthesis failed")
+        await update.message.reply_text("Recap အသံ/စာတန်း ဖန်တီးရာတွင် မမျှော်လင့်ထားသော အမှားရှိပါတယ်။")
+        return
+
+    audio_file = BytesIO(audio)
+    audio_file.name = "nexora_recap_voiceover.mp3"
+    await update.message.reply_document(
+        document=InputFile(audio_file, filename=audio_file.name),
+        caption=(
+            f"🎙️ Burmese Recap Voice-over — {VOICE_PRESETS[preset]['label']}\n"
+            "ကိုယ်တိုင်ရေးထားသော Script မှ ဖန်တီးထားသည်။ အသံထွက်နှင့် အမည်များကို ပြန်စစ်ပါ။"
+        ),
+        read_timeout=120,
+        write_timeout=120,
+    )
+    subtitle_file = BytesIO(srt_text.encode("utf-8-sig"))
+    subtitle_file.name = "nexora_recap_subtitles_aligned.srt"
+    await update.message.reply_document(
+        document=InputFile(subtitle_file, filename=subtitle_file.name),
+        caption="အသံထုတ်လုပ်စဉ် WordBoundary အချိန်မှတ်တမ်းဖြင့် ချိန်ညှိထားသော မြန်မာ SRT ဖြစ်သည်။ ထုတ်ဝေမီ ပြန်စစ်ပါ။",
+    )
+
+
 async def scenetts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate separate MP3 and aligned SRT files for each tagged scene."""
     if not update.message or not update.message.text:
@@ -1867,6 +1913,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("topratedepisodes", topratedepisodes_cmd))
     telegram_app.add_handler(CommandHandler("episodepack", episodepack_cmd))
     telegram_app.add_handler(CommandHandler("episodeoutline", episodeoutline_cmd))
+    telegram_app.add_handler(CommandHandler("recapvoice", recapvoice_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
     telegram_app.add_handler(CommandHandler("recapqa", recapqa_cmd))

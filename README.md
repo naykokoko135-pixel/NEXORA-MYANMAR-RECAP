@@ -62,6 +62,18 @@ Use `/animationepisodes <title>` to retrieve up to five short episode-summary ex
 
 Use `/movieplotresearch <title>` to require an exact Wikidata title match, exclude Indian-origin entries and entries with animation-related genres, then retrieve an explicitly labelled Plot/Synopsis section from the linked English Wikipedia article. The result is a research excerpt only. English Wikipedia is community-edited, a missing Plot section is rejected, and the command does not translate the text or create a recap MP4. Confirm the title is a live-action international movie and verify plot facts against reliable sources before use.
 
+## Recap voice + synchronized subtitles
+
+Use `/recapvoice [preset]` followed by creator-written Burmese narration in the same Telegram message. If no preset is supplied, NEXORA uses `narrator`. It generates one MP3 and one SRT using Edge TTS word-boundary timing. Available presets are listed by `/voices`; presets reuse the two currently available Burmese neural voices (Nilar and Thiha), not separate cloned actors. The script limit is 6,000 characters.
+
+Example:
+```
+/recapvoice narrator
+ဒီနေ့ ဇာတ်လမ်းရဲ့ အဓိကဖြစ်ရပ်တွေကို ပြောပြပါမယ်။
+```
+
+This step does not attach footage or render an MP4. Edge TTS requires network access; proofread names and subtitle timing before publishing.
+
 ## Episode recap outline worksheet
 
 Use `/episodeoutline <series title>` after choosing a platform with `/platform youtube|facebook|tiktok`. NEXORA requests an exact TVmaze Animation series match, requires a known non-Indian country, and selects one highest-rated episode with a valid community rating and source URL. It creates a Burmese creator worksheet with an opening hook, setup, story-beat prompts, turning point, climax, ending, original commentary, and media-rights checks.
