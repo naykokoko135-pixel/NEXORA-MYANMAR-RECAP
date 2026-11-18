@@ -44,7 +44,7 @@ from english_plot_research import fetch_english_plot_section, EnglishPlotError
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
 from recap_voice_pack import parse_recap_voice_request
-from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars
+from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -507,7 +507,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         source = choose_matching_source(query, sources, search_titles)
         if not source:
-            await update.message.reply_text("ခေါင်းစဉ်နှင့် metadata ကိုက်ညီမှုခိုင်မာသော CC/Public Domain footage မတွေ့ပါ။ မသက်ဆိုင်သော video ကို အစားထိုးမရွေးထားပါ။")
+            await update.message.reply_text(format_no_licensed_footage_message(metadata.get("title", query)))
             return
         await update.message.reply_text("လိုင်စင်အမျိုးအစားနှင့် ခေါင်းစဉ်ကို စစ်ပြီး narration + အချိန်ကိုက် SRT + MP4 ပြင်ဆင်နေပါတယ်...")
         audio, srt_text = await synthesize_burmese_speech_with_srt(script, voice)
