@@ -49,3 +49,21 @@ def test_network_error_is_safe_message():
             assert "ရှာမရပါ" in str(exc)
         else:
             assert False, "expected ClipSourceError"
+
+
+
+def test_searches_verified_alternate_title_when_primary_has_no_result():
+    primary = _response({"query": {"pages": {}}})
+    alias = _response({"query": {"pages": {
+        "7": {"title": "File:Frieren Beyond Journey End.webm",
+              "canonicalurl": "https://commons.wikimedia.org/wiki/File:Frieren_Beyond_Journey_End.webm",
+              "imageinfo": [{"mime": "video/webm",
+                             "url": "https://upload.wikimedia.org/alias.webm",
+                             "size": 456,
+                             "extmetadata": {"LicenseShortName": {"value": "CC BY 4.0"}}}]}
+    }}})
+    with patch("clip_source_finder.urllib.request.urlopen", side_effect=[primary, alias]) as mocked:
+        result = search_licensed_video("Frieren: Beyond Journey's End", alternate_queries=["Sousou no Frieren"])
+    assert mocked.call_count == 2
+    assert len(result) == 1
+    assert result[0]["license"] == "CC BY 4.0"
