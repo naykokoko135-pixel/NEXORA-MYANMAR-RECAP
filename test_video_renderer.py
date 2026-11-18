@@ -1,5 +1,7 @@
 import unittest
 import tempfile
+from types import SimpleNamespace
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,7 +18,9 @@ class VideoRendererValidationTests(unittest.TestCase):
                 output.write_bytes(b"mp4")
                 return type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
 
-            with patch("video_renderer._duration_seconds", side_effect=[2.0, 3.0]), \
+            fake_ffmpeg = SimpleNamespace(get_ffmpeg_exe=lambda: "ffmpeg")
+            with patch.dict(sys.modules, {"imageio_ffmpeg": fake_ffmpeg}), \
+                 patch("video_renderer._duration_seconds", side_effect=[2.0, 3.0]), \
                  patch("subprocess.run", side_effect=fake_render) as run:
                 result = render_slideshow(
                     [("cover.jpg", b"image")],
