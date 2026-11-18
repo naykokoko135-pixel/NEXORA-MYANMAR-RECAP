@@ -82,23 +82,23 @@ class BurmeseTtsValidationTests(unittest.TestCase):
 
     def test_scene_script_parses_multiple_presets(self):
         scenes = parse_scene_script(
-            "[narrator]\\nဇာတ်လမ်းကို စတင်မိတ်ဆက်မယ်။\\n"
-            "[hero]\\nငါ အရှုံးမပေးဘူး။\\n"
-            "[villain]\\nမင်း ငါ့ကို မတားနိုင်ဘူး။"
+            "[narrator]\nဇာတ်လမ်းကို စတင်မိတ်ဆက်မယ်။\n"
+            "[hero]\nငါ အရှုံးမပေးဘူး။\n"
+            "[villain]\nမင်း ငါ့ကို မတားနိုင်ဘူး။"
         )
         self.assertEqual([scene["preset"] for scene in scenes], ["narrator", "hero", "villain"])
         self.assertEqual(scenes[1]["text"], "ငါ အရှုံးမပေးဘူး။")
 
     def test_scene_script_rejects_unknown_preset(self):
         with self.assertRaises(ValueError):
-            parse_scene_script("[unknown]\\nစာသား")
+            parse_scene_script("[unknown]\nစာသား")
 
     def test_scene_script_requires_header(self):
         with self.assertRaises(ValueError):
             parse_scene_script("ခေါင်းစဉ်မပါသော စာသား")
 
     def test_scene_script_limits_scene_count(self):
-        script = "\\n".join(f"[narrator]\\nအခန်း {i}" for i in range(9))
+        script = "\n".join(f"[narrator]\nအခန်း {i}" for i in range(9))
         with self.assertRaises(ValueError):
             parse_scene_script(script)
 
