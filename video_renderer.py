@@ -105,8 +105,14 @@ def render_slideshow(
                    "pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
             "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
             *(
-                ["-filter_complex", "".join(f"[{i}:a]" for i in range(len(audio_paths))) +
-                 f"concat=n={len(audio_paths)}:v=0:a=1[aout]", "-map", "0:v", "-map", "[aout]"]
+                ["-filter_complex",
+                 "".join(
+                     f"[{i + 1}:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo[a{i}];"
+                     for i in range(len(audio_paths))
+                 ) +
+                 "".join(f"[a{i}]" for i in range(len(audio_paths))) +
+                 f"concat=n={len(audio_paths)}:v=0:a=1[aout]",
+                 "-map", "0:v", "-map", "[aout]"]
                 if len(audio_paths) > 1 else ["-map", "0:v", "-map", "1:a"]
             ),
             "-c:a", "aac", "-b:a", "128k", "-shortest", "-t", f"{duration:.3f}",
