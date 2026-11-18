@@ -13,6 +13,7 @@ from io import BytesIO
 MAX_TEXT_CHARS = 3000
 MAX_AUDIO_BYTES = 20 * 1024 * 1024
 MODEL_ID = "openbmb/VoxCPM2"
+_ENABLED_VALUES = {"1", "true", "yes", "on"}
 
 VOICE_DESIGNS = {
     "story_male": {
@@ -59,6 +60,28 @@ VOICE_DESIGNS = {
 
 _model = None
 _model_lock = threading.Lock()
+
+
+def voice_design_host_unavailable_reason() -> str | None:
+    """Return a clear reason when VoxCPM2 cannot run on this host."""
+    if os.getenv("NEXORA_VOXCPM_ENABLED", "").strip().lower() not in _ENABLED_VALUES:
+        return (
+            "VoxCPM2 Voice Design ကို လက်ရှိ Free host မှာ ပိတ်ထားပါတယ်။ "
+            "GPU host မရှိသေးလို့ WAV မထုတ်နိုင်ပါ။ အခမဲ့အစားထိုးနည်းအဖြစ် /scenetts ကို သုံးနိုင်ပါတယ်။"
+        )
+    try:
+        import torch
+    except ImportError:
+        return (
+            "ဒီ host မှာ PyTorch မရှိသေးပါ။ VoxCPM2 အတွက် GPU setup မပြည့်စုံပါ။ "
+            "အခမဲ့အစားထိုးနည်းအဖြစ် /scenetts ကို သုံးနိုင်ပါတယ်။"
+        )
+    if not torch.cuda.is_available():
+        return (
+            "ဒီ host မှာ CUDA GPU မတွေ့ပါ။ Render Free မှာ VoxCPM2 WAV မထုတ်နိုင်ပါ။ "
+            "အခမဲ့အစားထိုးနည်းအဖြစ် /scenetts ကို သုံးနိုင်ပါတယ်။"
+        )
+    return None
 
 
 def validate_voice_design_request(text: str, voice: str) -> str:
@@ -135,8 +158,7 @@ def _synthesize_sync(text: str, voice: str) -> bytes:
 async def synthesize_designed_burmese_voice(text: str, voice: str) -> bytes:
     """Create a Burmese WAV using a fictional text-described synthetic voice."""
     selected = validate_voice_design_request(text, voice)
-    if os.getenv("NEXORA_VOXCPM_ENABLED", "").strip().lower() not in {"1", "true", "yes", "on"}:
-        raise RuntimeError(
-            "VoxCPM2 Voice Design ကို ဒီ host မှာ မဖွင့်ထားပါ။ သင့်တော်သော GPU host နှင့် NEXORA_VOXCPM_ENABLED=1 လိုအပ်ပါတယ်။"
-        )
+    unavailable = voice_design_host_unavailable_reason()
+    if unavailable:
+        raise RuntimeError(unavailable)
     return await asyncio.to_thread(_synthesize_sync, text.strip(), selected)
