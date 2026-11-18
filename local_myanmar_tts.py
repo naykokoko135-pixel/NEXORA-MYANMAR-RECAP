@@ -102,7 +102,7 @@ def _split_text(text: str) -> list[str]:
     """Split narration at sentence/paragraph boundaries, preserving a hard limit."""
     sentences = [
         part.strip()
-        for part in re.split(r"(?<=[။.!?])\\s+|\\n+", text)
+        for part in re.split(r"(?<=[။.!?])\s+|\n+", text)
         if part.strip()
     ]
     chunks = []
