@@ -47,3 +47,14 @@ def build_recap_video_sidecars(audio_mp3: bytes, subtitles_srt: str) -> tuple[by
     return audio_mp3, subtitle_bytes
 
 
+
+
+def format_no_licensed_footage_message(title: str) -> str:
+    """Explain why recapvideo stops when no strongly matched reusable video exists."""
+    clean_title = " ".join(str(title or "").split())[:120] or "ဤခေါင်းစဉ်"
+    return (
+        f"{clean_title} အတွက် Wikimedia Commons တွင် ခေါင်းစဉ်နှင့် metadata ကိုက်ညီမှုခိုင်မာသော "
+        "CC/Public Domain ဗီဒီယို မတွေ့ပါ။ Commons သည် အခမဲ့ပြန်သုံးခွင့်ရှိသော မီဒီယာကိုသာ လက်ခံပြီး "
+        "မူပိုင်ခွင့်ရှိသော TV/DVD ဇာတ်ဝင်ခန်းများကို ပုံမှန်အားဖြင့် လက်မခံပါ။ "
+        "မသက်ဆိုင်သော footage ကို အစားမထိုးထားပါ။ MP4 မထုတ်ထားပါ။"
+    )
