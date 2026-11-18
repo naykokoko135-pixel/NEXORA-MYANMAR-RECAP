@@ -8,7 +8,7 @@ import re
 from tts_builder import VOICE_PRESETS, MAX_TEXT_CHARS
 
 MAX_SCENES = 8
-HEADER_RE = re.compile(r"^\[([a-zA-Z_-]+)\]\s*$")
+HEADER_RE = re.compile(r"^\[([\w-]+)\]\s*$")
 
 ROLE_PRESETS = {
     "narrator": "narrator",
@@ -23,6 +23,18 @@ ROLE_PRESETS = {
     "comic": "comedy",
     "suspense": "mystery",
     "action": "energetic",
+    "ဇာတ်ကြောင်း": "narrator",
+    "မိတ်ဆက်": "narrator",
+    "မင်းသား": "hero",
+    "သူရဲကောင်း": "hero",
+    "မင်းသမီး": "female",
+    "အမျိုးသမီး": "female",
+    "ဗီလိန်": "villain",
+    "လူကြီး": "elder",
+    "ကလေး": "youth",
+    "ဟာသ": "comedy",
+    "လျှို့ဝှက်": "mystery",
+    "အက်ရှင်": "energetic",
 }
 
 
