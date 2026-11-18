@@ -60,7 +60,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/voiceover3 <ဇာတ်ကားအမည်> - Notes မှ Voice-over ဖိုင် ၃ ဖိုင်ထုတ်ရန်\n"
             "/render - ပုံများ + အသံဖိုင်မှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
-            "/srt - English စာတန်းထိုး SRT ဖိုင်ထုတ်ရန်\n"
+            "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
+            "/srtmy - မြန်မာစာသားမှ SRT ထုတ်ရန်\n"
+            "/tts female|male - မြန်မာ MP3 အသံထုတ်ရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60 မိနစ်\n"
@@ -618,7 +620,7 @@ async def srtmy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(
-            "Commands:\n/start\n/status\n/create <topic>\n/mode free|ai\n/srt\n/platform youtube|tiktok|facebook\n/duration <minutes>\n/settings\n/help\n\n"
+            "Commands:\n/start\n/status\n/create <topic>\n/mode free|ai\n/srt\n/srtmy\n/tts female|male\n/platform youtube|tiktok|facebook\n/duration <minutes>\n/settings\n/help\n\n"
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60\n"
             "TikTok: 1-3, 3-5\nFacebook: 3-5, 5-7, 8-10, 10-15\n\n"
             "/auto သည် Wikipedia မှ source lead များရှာပေးသည်၊ အချက်အလက်ကို ကိုယ်တိုင်ပြန်စစ်ပါ။\n"
