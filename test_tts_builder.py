@@ -107,6 +107,30 @@ class BurmeseTtsValidationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_tts_request("က" * 6001, "female")
 
+    def test_scene_script_maps_character_roles_to_existing_presets(self):
+        scenes = parse_scene_script(
+            "[narrator]\\nမိတ်ဆက်စာသား\\n"
+            "[protagonist]\\nသူရဲကောင်းစာသား\\n"
+            "[heroine]\\nအမျိုးသမီးဇာတ်ဆောင်စာသား\\n"
+            "[antagonist]\\nဗီလိန်စာသား\\n"
+            "[comic]\\nဟာသစာသား"
+        )
+        self.assertEqual(
+            [(scene["role"], scene["preset"]) for scene in scenes],
+            [
+                ("narrator", "narrator"),
+                ("protagonist", "hero"),
+                ("heroine", "female"),
+                ("antagonist", "villain"),
+                ("comic", "comedy"),
+            ],
+        )
+
+    def test_direct_preset_header_remains_supported(self):
+        scene = parse_scene_script("[mystery]\\nလျှို့ဝှက်စာသား")[0]
+        self.assertEqual(scene["role"], "mystery")
+        self.assertEqual(scene["preset"], "mystery")
+
 
 if __name__ == "__main__":
     unittest.main()
