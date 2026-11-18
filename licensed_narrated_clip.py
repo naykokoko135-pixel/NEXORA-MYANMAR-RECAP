@@ -6,12 +6,52 @@ The source video's original audio is deliberately discarded.
 from __future__ import annotations
 
 import re
+from html import unescape
 import subprocess
 import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
 from licensed_video_pipeline import ALLOWED_HOST, MAX_SOURCE_BYTES, LicensedClipError
+
+
+def _clean_attribution_value(value: object) -> str:
+    """Remove markup from Commons extmetadata before writing a plain-text credit note."""
+    text = unescape(str(value or ""))
+    text = re.sub(r"<[^>]*>", " ", text)
+    return " ".join(text.split())
+
+
+def build_licensed_attribution_note(source: dict, work_title: str, metadata_source: str = "") -> str:
+    """Create a reusable plain-text attribution/checklist for the selected Commons file."""
+    if not isinstance(source, dict):
+        raise LicensedClipError("Footage attribution metadata မမှန်ကန်ပါ။")
+    fields = [
+        ("Project title", work_title),
+        ("Commons file", _clean_attribution_value(source.get("title"))),
+        ("Creator / Artist", _clean_attribution_value(source.get("artist")) or "Not supplied — verify on source page"),
+        ("Attribution text", _clean_attribution_value(source.get("attribution")) or "Not supplied — create attribution from the source page"),
+        ("License", _clean_attribution_value(source.get("license")) or "Not supplied — do not publish until verified"),
+        ("Usage terms", _clean_attribution_value(source.get("usage_terms")) or "Check the source page for full terms"),
+        ("Commons source page", str(source.get("source_page") or "")),
+        ("Wikidata metadata source", str(metadata_source or "")),
+    ]
+    lines = [
+        "NEXORA — FOOTAGE ATTRIBUTION NOTE",
+        "Use this as a credit checklist, not as legal advice.",
+        "",
+    ]
+    lines.extend(f"{label}: {value}" for label, value in fields)
+    lines.extend([
+        "",
+        "Before publishing:",
+        "- Confirm the downloaded file is the same work shown on the Commons source page.",
+        "- Verify the exact license version and follow attribution requirements.",
+        "- For CC BY-SA, check Share-Alike requirements for adaptations.",
+        "- Keep the creator name, source link, license, and any required changes/credit text.",
+        "- Manually inspect the clip; file-title matching does not prove scene accuracy.",
+    ])
+    return "\n".join(lines) + "\n"
 
 
 def _subtitle_duration_seconds(subtitles_srt: str) -> float:
