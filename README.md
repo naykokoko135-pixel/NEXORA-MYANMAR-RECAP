@@ -208,4 +208,31 @@ Use /voiceprofile <name>, then send your own MP3/M4A/WAV/OGG recording (up to 20
 
 ### Use saved character voices in MP4
 
-Start a render with `/render`, send your authorized still images, then add saved recordings in order with `/render voice narrator`, `/render voice hero`, `/render voice villain`, etc. Up to 12 audio clips are concatenated sequentially into one narration track. The combined audio is limited to 20 MB and 10 minutes. Finish with `/render finish`. A normal narration audio upload remains supported when no saved voice tracks are selected. The clips are concatenated, not automatically synchronized to character dialogue or subtitles.
+Start a render with `/render`, send your authorized still images, then add saved recordings in order with `/render voice narrator`, `/render voice hero`, `/render voice villain`, etc. Up to 12 audio clips are concatenated sequentially into one narration track. The combined audio is limited to 20 MB and 10 minutes. Finish with `/render finish`. A normal narration audio upload remains supported when no saved voice tracks are selected. 
+
+## Character-role scene voice presets
+
+Use `/scenetts` and give each scene a role header. Character aliases make scripts easier to organize:
+- `[narrator]` — narrator
+- `[protagonist]` or `[male_lead]` — hero delivery
+- `[heroine]` or `[female_lead]` — standard female delivery
+- `[antagonist]` — villain delivery
+- `[supporting]` — calm delivery
+- `[elder]`, `[child]`, `[comic]`, `[suspense]`, `[action]` — matching existing style presets
+
+Example:
+```text
+/scenetts
+[narrator]
+ဇာတ်လမ်းကို မိတ်ဆက်ကြမယ်။
+[protagonist]
+ငါ ဒီအခက်အခဲကို ကျော်ဖြတ်မယ်။
+[antagonist]
+မင်း ငါ့ကို တားနိုင်မှာ မဟုတ်ဘူး။
+[heroine]
+ငါတို့ အတူတူ ဖြေရှင်းကြမယ်။
+```
+
+Each scene still produces its own MP3/SRT pair. These aliases select existing delivery presets only; the free Burmese TTS service has two speaker identities (Nilar and Thiha). They do not create new actors or clone a voice. For actual recorded character audio, use creator-owned or authorized recordings with `/voiceprofile`; those recordings are reused as-is, not converted into new spoken text.
+
+The clips are concatenated, not automatically synchronized to character dialogue or subtitles.
