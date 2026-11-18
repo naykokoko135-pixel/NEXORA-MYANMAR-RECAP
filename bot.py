@@ -1674,12 +1674,12 @@ async def recapqa_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Run deterministic editorial checks on a creator-supplied recap script."""
     if not update.message or not update.message.text:
         return
-    parts = update.message.text.split("\\n", 1)
+    parts = update.message.text.split("\n", 1)
     header = parts[0].split(maxsplit=1)
     if len(header) < 2 or len(parts) < 2:
         await update.message.reply_text(
-            "အသုံးပြုပုံ:\\n/recapqa Anime|Frieren: Beyond Journey's End\\n"
-            "ပြီးနောက် Script ကို စာကြောင်းအသစ်မှ ထည့်ပါ။\\n"
+            "အသုံးပြုပုံ:\n/recapqa Anime|Frieren: Beyond Journey's End\n"
+            "ပြီးနောက် Script ကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
             "Category: Anime | 3D Animation | Cartoon | Donghua | International Movies"
         )
         return
@@ -1690,7 +1690,6 @@ async def recapqa_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     report = analyze_recap_script(fields[0], fields[1], parts[1])
     output = format_recap_qa_report(report)
     await update.message.reply_text(output[:3900])
-
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
