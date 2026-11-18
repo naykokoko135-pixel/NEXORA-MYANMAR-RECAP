@@ -103,7 +103,7 @@ class VideoRendererValidationTests(unittest.TestCase):
         with self.assertRaises(VideoRenderError):
             render_slideshow(
                 [("cover.jpg", b"image")], ("voice.mp3", b"audio"), "out.mp4",
-                subtitle=("captions.srt", b"\\xff-->"),
+                subtitle=("captions.srt", bytes([255]) + b"-->"),
             )
 
     def test_rejects_empty_image_list(self):
