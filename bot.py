@@ -14,7 +14,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 from srt_builder import build_srt
 from subtitle_builder import build_burmese_srt
-from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
+from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request\nfrom scene_tts import parse_scene_script
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
@@ -632,6 +632,51 @@ async def ttssrt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def scenetts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generate separate MP3 and aligned SRT files for each tagged scene."""
+    if not update.message or not update.message.text:
+        return
+    script = update.message.text.partition("\\n")[2].strip()
+    try:
+        scenes = parse_scene_script(script)
+    except ValueError as exc:
+        await update.message.reply_text(
+            f"{exc}\\n\\nအသုံးပြုပုံ: /scenetts ပြီးနောက် [narrator]၊ [hero]၊ [villain] "
+            "စသည့် ခေါင်းစဉ်များနှင့် စာသားကို အခန်းလိုက်ထည့်ပါ။"
+        )
+        return
+
+    await update.message.reply_text(
+        f"ဇာတ်ဝင်ခန်း {len(scenes)} ခန်းကို အသံပုံစံအလိုက် သီးခြားဖန်တီးနေပါတယ်။"
+    )
+    for index, scene in enumerate(scenes, start=1):
+        try:
+            audio, srt_text = await synthesize_burmese_speech_with_srt(
+                scene["text"], scene["preset"]
+            )
+        except (ValueError, RuntimeError) as exc:
+            await update.message.reply_text(
+                f"အခန်း {index} ({scene['preset']}) မှာ ရပ်သွားပါတယ်: {exc}\\n"
+                "အရင်အခန်းဖိုင်များကို ရရှိပြီးပါက ဆက်လက်အသုံးပြုနိုင်ပါတယ်။"
+            )
+            return
+
+        audio_name = f"nexora_scene_{index}_{scene['preset']}.mp3"
+        audio_file = BytesIO(audio)
+        audio_file.name = audio_name
+        await update.message.reply_document(
+            document=InputFile(audio_file, filename=audio_name),
+            caption=f"🎙️ အခန်း {index}/{len(scenes)} — {scene['preset']} ({VOICE_PRESETS[scene['preset']]['label']})"
+        )
+        srt_name = f"nexora_scene_{index}_{scene['preset']}.srt"
+        subtitle_file = BytesIO(srt_text.encode("utf-8-sig"))
+        subtitle_file.name = srt_name
+        await update.message.reply_document(
+            document=InputFile(subtitle_file, filename=srt_name),
+            caption=f"အခန်း {index} အတွက် အသံနှင့်အချိန်ကိုက် SRT"
+        )
+
+
 async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """List Burmese voice identities and delivery-style presets."""
     if not update.message:
@@ -642,7 +687,7 @@ async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     for key, preset in VOICE_PRESETS.items():
         lines.append(f"/tts {key} — {preset['label']}")
-    lines.append("MP3 + SRT တွဲလိုပါက /ttssrt <preset> ကို သုံးပါ။")
+    lines.append("MP3 + SRT တွဲလိုပါက /ttssrt <preset> ကို သုံးပါ။")\n    lines.append("ဇာတ်ဝင်ခန်းတစ်ခုစီအတွက် မတူသော preset သုံးရန် /scenetts ကို သုံးပါ။")\n    lines.append("မှတ်ချက်: Nilar/Thiha အသံပိုင်ရှင် ၂ မျိုးကိုသာ အသုံးပြုပြီး preset များက သရုပ်ဆောင်အသံအသစ် မဟုတ်ပါ။")
     await update.message.reply_text("\n".join(lines))
 
 
@@ -741,7 +786,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("srt", srt_cmd))
     telegram_app.add_handler(CommandHandler("srtmy", srtmy_cmd))
     telegram_app.add_handler(CommandHandler("tts", tts_cmd))
-    telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
+    telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))\n    telegram_app.add_handler(CommandHandler("scenetts", scenetts_cmd))
     telegram_app.add_handler(CommandHandler("voices", voices_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
