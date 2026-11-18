@@ -111,8 +111,8 @@ def build_word_aligned_srt(boundaries: list[dict], max_chars: int = 42, max_dura
         raise ValueError("စာတန်းထိုးအတွက် အသံအချိန်မှတ်တမ်း မလုံလောက်ပါ။")
     blocks = []
     for index, (start, end, caption) in enumerate(captions, start=1):
-        blocks.append(f"{index}\\n{_format_srt_timestamp(start)} --> {_format_srt_timestamp(end)}\\n{caption}")
-    return "\\n\\n".join(blocks) + "\\n"
+        blocks.append(f"{index}\n{_format_srt_timestamp(start)} --> {_format_srt_timestamp(end)}\n{caption}")
+    return "\n\n".join(blocks) + "\n"
 
 
 async def synthesize_burmese_speech_with_srt(text: str, voice: str = "female") -> tuple[bytes, str]:
