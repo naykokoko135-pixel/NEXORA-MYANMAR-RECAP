@@ -51,6 +51,7 @@ def load_voice_profiles(user_id: int | str) -> dict:
         ).fetchall()
     for name, filename, audio in rows:
         store_voice_profile(profiles, name, filename, bytes(audio))
+        profiles[name]["filename"] = filename
     return profiles
 
 
