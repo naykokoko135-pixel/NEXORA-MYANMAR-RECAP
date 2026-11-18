@@ -962,13 +962,13 @@ async def scenedesign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate separate fictional VoxCPM2 WAV files for tagged scenes."""
     if not update.message or not update.message.text:
         return
-    script = update.message.text.partition("\\n")[2].strip()
+    script = update.message.text.partition("\n")[2].strip()
     try:
         scenes = parse_voice_design_scene_script(script)
     except ValueError as exc:
         await update.message.reply_text(
-            f"{exc}\\n\\nအသုံးပြုပုံ: /scenedesign ပြီးနောက် [ai:story_female]၊ "
-            "[ai:villain] ကဲ့သို့ ခေါင်းစဉ်များနှင့် စာသားကို အခန်းလိုက်ထည့်ပါ။\\n"
+            f"{exc}\n\nအသုံးပြုပုံ: /scenedesign ပြီးနောက် [ai:story_female]၊ "
+            "[ai:villain] ကဲ့သို့ ခေါင်းစဉ်များနှင့် စာသားကို အခန်းလိုက်ထည့်ပါ။\n"
             "အသံစာရင်းအတွက် /voices ကို သုံးပါ။"
         )
         return
@@ -983,7 +983,7 @@ async def scenedesign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             audio = await synthesize_designed_burmese_voice(scene["text"], voice)
         except (ValueError, RuntimeError) as exc:
             await update.message.reply_text(
-                f"AI အခန်း {index} ({voice}) မအောင်မြင်ပါ: {exc}\\n"
+                f"AI အခန်း {index} ({voice}) မအောင်မြင်ပါ: {exc}\n"
                 "အရင်အခန်း WAV များကို ရရှိပြီးပါက ဆက်လက်အသုံးပြုနိုင်ပါတယ်။"
             )
             return
@@ -994,7 +994,7 @@ async def scenedesign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_document(
             document=InputFile(audio_file, filename=audio_name),
             caption=(
-                f"AI အခန်း {index}/{len(scenes)} — {VOICE_DESIGNS[voice]['label']}\\n"
+                f"AI အခန်း {index}/{len(scenes)} — {VOICE_DESIGNS[voice]['label']}\n"
                 "စိတ်ကူးယဉ် synthetic voice ဖြစ်ပြီး တကယ့်လူတစ်ဦး၏အသံကို မကူးယူပါ။"
             ),
             read_timeout=120,
