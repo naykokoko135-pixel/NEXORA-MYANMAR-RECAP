@@ -116,8 +116,8 @@ def fetch_wikidata_metadata(title):
         entity_payload = _request_json({
             "action": "wbgetentities",
             "ids": entity_id,
-            "props": "labels|claims",
-            "languages": "en",
+            "props": "labels|descriptions|claims",
+            "languages": "my|en",
             "languagefallback": 1,
             "format": "json",
         })
@@ -138,7 +138,7 @@ def fetch_wikidata_metadata(title):
                 "action": "wbgetentities",
                 "ids": "|".join(linked_ids[:20]),
                 "props": "labels",
-                "languages": "en",
+                "languages": "my|en",
                 "languagefallback": 1,
                 "format": "json",
             })
@@ -147,23 +147,36 @@ def fetch_wikidata_metadata(title):
                 if label:
                     labels[linked_id] = label
 
-        def values_for(property_id):
-            return [
-                labels[item_id]
-                for item_id in _claim_entity_ids(claims, property_id)
-                if item_id in labels
-            ]
+        def values_for(property_id, language="en"):
+            output = []
+            for item_id in _claim_entity_ids(claims, property_id):
+                label_data = labels_payload.get("entities", {}).get(item_id, {}).get("labels", {})
+                label = (
+                    label_data.get(language, {}).get("value")
+                    or label_data.get("en", {}).get("value")
+                )
+                if label and label not in output:
+                    output.append(label)
+            return output
 
+        entity_labels = entity.get("labels", {})
+        entity_descriptions = entity.get("descriptions", {})
         return {
             "found": True,
             "title": selected.get("label", clean_title),
+            "title_my": entity_labels.get("my", {}).get("value", selected.get("label", clean_title)),
             "description": selected.get("description", ""),
+            "description_my": entity_descriptions.get("my", {}).get("value", ""),
             "entity_id": entity_id,
             "countries": values_for("P495"),
+            "countries_my": values_for("P495", "my"),
             "year": _date_year(claims),
             "directors": values_for("P57"),
+            "directors_my": values_for("P57", "my"),
             "genres": values_for("P136"),
+            "genres_my": values_for("P136", "my"),
             "languages": values_for("P364"),
+            "languages_my": values_for("P364", "my"),
             "episode_count": _quantity_value(claims, "P1113"),
             "season_count": _quantity_value(claims, "P2437"),
             "source": "https://www.wikidata.org/wiki/" + entity_id,
