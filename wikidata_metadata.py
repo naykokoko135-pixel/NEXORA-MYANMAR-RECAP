@@ -206,7 +206,7 @@ def format_wikidata_episode_guide(metadata):
     """Format only Wikidata's explicit total counts; never infer season breakdowns."""
     if not metadata or not metadata.get("found"):
         status = (metadata or {}).get("status", "Wikidata Episode အချက်အလက် မရရှိပါ။")
-        return "📺 Episode အရေအတွက် (Wikidata အစားထိုးရင်းမြစ်)\\n" + status
+        return "📺 Episode အရေအတွက် (Wikidata အစားထိုးရင်းမြစ်)\n" + status
 
     episode_count = metadata.get("episode_count")
     season_count = metadata.get("season_count")
@@ -221,4 +221,4 @@ def format_wikidata_episode_guide(metadata):
     ]
     if episode_count is None and season_count is None:
         lines.append("မှတ်ချက်: Wikidata တွင် Season/Episode အရေအတွက် မရရှိပါ။ မခန့်မှန်းထားပါ။")
-    return "\\n".join(lines)
+    return "\n".join(lines)
