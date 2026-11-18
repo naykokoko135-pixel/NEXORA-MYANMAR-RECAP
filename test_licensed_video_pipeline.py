@@ -53,3 +53,22 @@ def test_narrated_renderer_rejects_invalid_srt_before_network():
             "caption without timestamps",
             "unused.mp4",
         )
+
+
+
+def test_verified_alternate_title_can_match_commons_filename():
+    sources = [{"title": "File:Sousou no Frieren promotional video.webm"}]
+    assert choose_matching_source(
+        "Frieren: Beyond Journey's End",
+        sources,
+        alternate_titles=["Sousou no Frieren"],
+    ) is sources[0]
+
+
+def test_short_or_unrelated_alias_does_not_weaken_matching():
+    sources = [{"title": "File:Frieren unrelated compilation.webm"}]
+    assert choose_matching_source(
+        "Frieren: Beyond Journey's End",
+        sources,
+        alternate_titles=["Frieren"],
+    ) is None
