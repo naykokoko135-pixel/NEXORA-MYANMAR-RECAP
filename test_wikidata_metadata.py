@@ -185,7 +185,7 @@ class WikidataMetadataTests(unittest.TestCase):
         search = {"search": [{"id": "Q654", "label": "Example Film"}]}
         entity = {"entities": {"Q654": {
             "claims": {},
-            "sitelinks": {"mywiki": {"title": "ဥပမာ ရုပ်ရှင်"}},
+            "sitelinks": {"mywiki": {"title": "ဥပမာ ရုပ်ရှင်"}, "enwiki": {"title": "Example Film"}},
         }}}
         mock_urlopen.side_effect = [
             Response(json.dumps(search).encode()),
@@ -195,6 +195,8 @@ class WikidataMetadataTests(unittest.TestCase):
         self.assertTrue(result["found"])
         self.assertEqual(result["mywiki_title"], "ဥပမာ ရုပ်ရှင်")
         self.assertIn("my.wikipedia.org/wiki/", result["mywiki_source"])
+        self.assertEqual(result["enwiki_title"], "Example Film")
+        self.assertIn("en.wikipedia.org/wiki/Example_Film", result["enwiki_source"])
 
 
 if __name__ == "__main__":

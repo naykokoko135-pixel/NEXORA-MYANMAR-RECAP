@@ -36,6 +36,8 @@ from autofacts_narration import generate_burmese_facts_narration
 from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
 from verified_plot_narration import generate_burmese_plot_narration
 from anilist_synopsis import fetch_anilist_synopsis
+from tvmaze_synopsis import fetch_tvmaze_synopsis
+from english_plot_research import fetch_english_plot_section, EnglishPlotError
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -676,6 +678,108 @@ async def animesynopsis_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "အလိုအလျောက် recap MP4 အဖြစ် မသုံးထားပါ။"
     )
     await update.message.reply_text(message, disable_web_page_preview=True)
+
+
+async def seriesresearch_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show exact-match animation series overview from TVMaze; not episode plot."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /seriesresearch <Cartoon/Donghua အမည်>\\n"
+            "TVmaze မှ Animation genre ပါသော Series မိတ်ဆက်စာကို ရှာပေးပါမယ်။"
+        )
+        return
+    await update.message.reply_text("TVmaze မှ ခေါင်းစဉ်နှင့် Animation Series ရင်းမြစ်ကို စစ်ဆေးနေပါတယ်...")
+    result = await asyncio.to_thread(fetch_tvmaze_synopsis, query)
+    if not result.get("found"):
+        await update.message.reply_text(result.get("status", "Series ရင်းမြစ် မရရှိပါ။"))
+        return
+    if "animation" not in [str(x).casefold() for x in result.get("genres", [])]:
+        await update.message.reply_text(
+            "ဒီ TVmaze မှတ်တမ်းမှာ Animation genre ကို အတည်မပြုနိုင်ပါ။ "
+            "Cartoon/Donghua အဖြစ် မခန့်မှန်းထားပါ။"
+        )
+        return
+    message = (
+        f"Animation Series Research — {result.get('title', query)}\\n"
+        f"Genre: {', '.join(result.get('genres') or [])}\\n"
+        f"ထုတ်လွှင့်သည့်နေ့: {result.get('premiered') or 'မဖော်ပြထား'} | "
+        f"နိုင်ငံ: {result.get('country') or 'မဖော်ပြထား'}\\n\\n"
+        f"{result['summary'][:2500]}\\n\\n"
+        f"ရင်းမြစ်: {result.get('provider_url', '')}\\n"
+        "သတိပြုရန်: TVmaze သည် community-maintained ရင်းမြစ်ဖြစ်ပြီး ဒီစာသားသည် "
+        "Series မိတ်ဆက်စာသာဖြစ်သည်။ Episode recap မဟုတ်ပါ။ 2D/3D အမျိုးအစားကို "
+        "TVmaze genre တစ်ခုတည်းဖြင့် မဆုံးဖြတ်ထားပါ။"
+    )
+    await update.message.reply_text(message, disable_web_page_preview=True)
+
+
+async def movieplotresearch_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show an exact Wikidata-linked English Wikipedia movie plot section."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /movieplotresearch <နိုင်ငံခြား Live-action ရုပ်ရှင်အမည်>\\n"
+            "Wikidata အမည်တိတိကျကျနှင့် ချိတ်ထားသော English Wikipedia Plot section ကို ရှာပေးပါမယ်။"
+        )
+        return
+    await update.message.reply_text("Wikidata ခေါင်းစဉ်နှင့် English Wikipedia Plot ရင်းမြစ်ကို စစ်ဆေးနေပါတယ်...")
+    try:
+        metadata = await asyncio.to_thread(fetch_wikidata_metadata, query)
+        if not metadata.get("found"):
+            await update.message.reply_text(metadata.get("status", "Wikidata မှတ်တမ်း မရရှိပါ။"))
+            return
+        countries = [str(x).casefold() for x in metadata.get("countries", [])]
+        if not countries:
+            await update.message.reply_text("မူရင်းနိုင်ငံအချက်အလက် မရှိသေးပါ။ အိန္ဒိယခေါင်းစဉ် မဟုတ်ကြောင်း မအတည်ပြုနိုင်သဖြင့် ရပ်ထားပါတယ်။")
+            return
+        if any("india" in x or "အိန္ဒိယ" in x for x in countries):
+            await update.message.reply_text("ဒီ Project မှာ အိန္ဒိယဇာတ်ကားများ မထည့်ထားပါ။")
+            return
+        genres = [str(x).casefold() for x in metadata.get("genres", [])]
+        description = str(metadata.get("description", "")).casefold()
+        movie_markers = ("film", "movie", "motion picture")
+        animation_markers = ("animation", "animated", "cartoon")
+        if (
+            not genres
+            or not (any(marker in description for marker in movie_markers)
+                    or any("film" in genre or "movie" in genre for genre in genres))
+            or any(marker in description for marker in animation_markers)
+            or any(any(marker in genre for marker in animation_markers) for genre in genres)
+        ):
+            await update.message.reply_text(
+                "ဒီခေါင်းစဉ်ကို Live-action နိုင်ငံခြားရုပ်ရှင်အဖြစ် မအတည်ပြုနိုင်ပါ။ "
+                "Film/Genre အချက်အလက် မပြည့်စုံခြင်း သို့မဟုတ် Animation ဖြစ်နိုင်ခြေကြောင့် ရပ်ထားပါတယ်။"
+            )
+            return
+        enwiki_title = metadata.get("enwiki_title")
+        if not enwiki_title:
+            await update.message.reply_text("Wikidata မှာ English Wikipedia ဆောင်းပါးချိတ်ဆက်ထားခြင်း မတွေ့ပါ။")
+            return
+        plot = await asyncio.to_thread(fetch_english_plot_section, enwiki_title)
+        message = (
+            f"International Movie Plot Research — {metadata.get('title', query)}\\n"
+            f"နှစ်: {metadata.get('year') or 'မဖော်ပြထား'} | "
+            f"နိုင်ငံ: {', '.join(metadata.get('countries') or [])}\\n"
+            f"Genre: {', '.join(metadata.get('genres') or [])}\\n\\n"
+            f"{plot['plot_text'][:3000]}\\n\\n"
+            f"Wikidata: {metadata.get('source', '')}\\n"
+            f"English Wikipedia: {plot.get('source', '')}\\n"
+            "သတိပြုရန်: Wikipedia သည် လူထုတည်းဖြတ်ရင်းမြစ်ဖြစ်သည်။ "
+            "ဒီအကြောင်းအရာကို မြန်မာဘာသာပြန်ထားခြင်း၊ ထုတ်လုပ်သူရင်းမြစ်ဖြင့် အတည်ပြုထားခြင်း "
+            "သို့မဟုတ် Recap MP4 အဖြစ် အသုံးပြုထားခြင်း မရှိသေးပါ။ Live-action အမျိုးအစားကို "
+            "မူရင်းရုပ်ရှင်နှင့် ထပ်မံစစ်ဆေးပါ။"
+        )
+        await update.message.reply_text(message, disable_web_page_preview=True)
+    except EnglishPlotError as exc:
+        await update.message.reply_text(f"Plot ရင်းမြစ် မရရှိပါ: {str(exc)[:350]}")
+    except Exception:
+        log.exception("Movie plot research failed")
+        await update.message.reply_text("Movie Plot ရင်းမြစ်ကို ယခုဖတ်မရပါ။ နောက်မှ ထပ်စမ်းပါ။")
 
 
 async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1460,6 +1564,8 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/autofactsclip <title> သည် Wikidata အချက်အလက်နှင့် ခွင့်ပြုထားသော footage ကိုသုံးပြီး မိတ်ဆက် Video အလိုအလျောက်ထုတ်သည်။ ဇာတ်ကွက် recap မဟုတ်ပါ။\n"
             "/autoplotclip <title> သည် မြန်မာ Wikipedia ဇာတ်လမ်းအကျဉ်း ရှိမှသာ ရင်းမြစ်အခြေပြု narration preview ထုတ်သည်။\n"
             "/animesynopsis <title> သည် AniList မှ Anime series synopsis ကို research အဖြစ်ပြသည်။ Episode recap မဟုတ်ပါ။\\n"
+            "/seriesresearch <title> သည် TVmaze မှ Animation genre ပါသော Cartoon/Donghua series overview ကို ပြသည်။ Episode recap မဟုတ်ပါ။\\n"
+            "/movieplotresearch <title> သည် exact Wikidata-English Wikipedia ချိတ်ဆက်ထားသော နိုင်ငံခြားရုပ်ရှင် Plot section ကို research အဖြစ်ပြသည်။\\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
@@ -1514,6 +1620,8 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("autofactsclip", autofactsclip_cmd))
     telegram_app.add_handler(CommandHandler("autoplotclip", autoplotclip_cmd))
     telegram_app.add_handler(CommandHandler("animesynopsis", animesynopsis_cmd))
+    telegram_app.add_handler(CommandHandler("seriesresearch", seriesresearch_cmd))
+    telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
     telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))

@@ -169,6 +169,8 @@ def fetch_wikidata_metadata(title):
             "description_my": entity_descriptions.get("my", {}).get("value", ""),
             "entity_id": entity_id,
             "mywiki_title": entity.get("sitelinks", {}).get("mywiki", {}).get("title", ""),
+            "enwiki_title": entity.get("sitelinks", {}).get("enwiki", {}).get("title", ""),
+            "enwiki_source": ("https://en.wikipedia.org/wiki/" + entity.get("sitelinks", {}).get("enwiki", {}).get("title", "").replace(" ", "_")) if entity.get("sitelinks", {}).get("enwiki", {}).get("title") else "",
             "mywiki_source": ("https://my.wikipedia.org/wiki/" + entity.get("sitelinks", {}).get("mywiki", {}).get("title", "").replace(" ", "_")) if entity.get("sitelinks", {}).get("mywiki", {}).get("title") else "",
             "countries": values_for("P495"),
             "countries_my": values_for("P495", "my"),
