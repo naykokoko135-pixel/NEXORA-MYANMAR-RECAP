@@ -33,6 +33,8 @@ from licensed_video_pipeline import choose_matching_source, render_licensed_prev
 from licensed_narrated_clip import render_licensed_narrated_preview
 from wikidata_metadata import fetch_wikidata_metadata
 from autofacts_narration import generate_burmese_facts_narration
+from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
+from verified_plot_narration import generate_burmese_plot_narration
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -578,6 +580,74 @@ async def autofactsclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         log.exception("Automatic facts preview failed")
         await update.message.reply_text("အချက်အလက်မိတ်ဆက် Preview မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
+
+
+
+async def autoplotclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Create a short recap preview only from an exact Burmese Wikipedia plot section."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /autoplotclip <Anime/ရုပ်ရှင်အမည်>\\n"
+            "Wikidata အမည်တိတိကျကျနှင့် မြန်မာ Wikipedia ဇာတ်လမ်းအကျဉ်း ရှိမှသာ "
+            "ခွင့်ပြုထားသော footage + မြန်မာအသံ + SRT Preview ထုတ်ပေးပါမယ်။"
+        )
+        return
+    await update.message.reply_text(
+        "ခေါင်းစဉ်၊ မြန်မာဇာတ်လမ်းရင်းမြစ်နဲ့ ပြန်သုံးခွင့်ရှိတဲ့ footage ကို စစ်ဆေးနေပါတယ်..."
+    )
+    try:
+        metadata = await asyncio.to_thread(fetch_wikidata_metadata, query)
+        if not metadata.get("found"):
+            raise PlotResearchError(metadata.get("status", "Wikidata မှတ်တမ်း မရရှိပါ။"))
+        mywiki_title = metadata.get("mywiki_title")
+        if not mywiki_title:
+            raise PlotResearchError("ဒီခေါင်းစဉ်အတွက် Wikidata မှာ မြန်မာ Wikipedia ဆောင်းပါးချိတ်ဆက်ထားခြင်း မတွေ့ပါ။")
+        plot = await asyncio.to_thread(fetch_burmese_plot_section, mywiki_title)
+        script = generate_burmese_plot_narration(metadata, plot)
+        sources = await asyncio.to_thread(search_licensed_video, query, 10)
+        source = choose_matching_source(query, sources)
+        if not source:
+            await update.message.reply_text(
+                "ဇာတ်လမ်းရင်းမြစ် ရရှိပေမဲ့ ခေါင်းစဉ်နဲ့ ကိုက်ညီပြီး ပြန်သုံးခွင့်ရှိတဲ့ Commons footage မတွေ့ပါ။ "
+                "မသက်ဆိုင်တဲ့ footage ကို အစားထိုးမရွေးထားပါ။"
+            )
+            return
+        audio, srt_text = await synthesize_burmese_speech_with_srt(script, "narrator")
+        import tempfile
+        platform = context.user_data.get("platform", "youtube")
+        with tempfile.TemporaryDirectory(prefix="nexora_autoplot_") as temp:
+            output = os.path.join(temp, "nexora_plot_preview.mp4")
+            await asyncio.to_thread(
+                render_licensed_narrated_preview, source, audio, srt_text, output, platform
+            )
+            with open(output, "rb") as video_file:
+                await update.message.reply_video(
+                    video=InputFile(video_file, filename="nexora_plot_preview.mp4"),
+                    supports_streaming=True,
+                    caption=(
+                        f"NEXORA {platform.upper()} — ရင်းမြစ်အခြေပြု ဇာတ်လမ်း Preview\\n"
+                        f"Wikidata: {metadata.get('source', '')}\\n"
+                        f"မြန်မာ Wikipedia: {plot.get('source', '')}\\n"
+                        f"Commons: {source.get('source_page', '')}\\n"
+                        f"လိုင်စင်: {source.get('license', '')}\\n"
+                        f"ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\\n"
+                        "မှတ်ချက်: ဇာတ်လမ်းစာသားကို မြန်မာ Wikipedia မှ ရယူထားပြီး လူထုတည်းဖြတ်ရင်းမြစ်ဖြစ်သည်။ "
+                        "Commons footage ခေါင်းစဉ်ကိုက်ညီမှုသာ စစ်ထားပြီး တကယ့်ဇာတ်ဝင်ခန်းဟုတ်မဟုတ် မအတည်ပြုနိုင်ပါ။ "
+                        "မူရင်းဗီဒီယိုအသံကို ဖယ်ထားသည်။"
+                    ),
+                    read_timeout=120,
+                    write_timeout=120,
+                )
+    except (ValueError, PlotResearchError, ClipSourceError, LicensedClipError, RuntimeError) as exc:
+        await update.message.reply_text(f"ရင်းမြစ်အခြေပြု Preview မထုတ်နိုင်ပါ: {str(exc)[:450]}")
+    except Exception:
+        log.exception("Automatic plot preview failed")
+        await update.message.reply_text("ဇာတ်လမ်း Preview မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
+
+
 
 
 async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1360,6 +1430,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/clipsource နှင့် /autoclip ဖြင့် လိုင်စင်ရှိ Video ရင်းမြစ်ရှာပြီး Preview MP4 ထုတ်နိုင်သည်။\n"
             "/autonarrateclip <title>\n<preset>\n<script> ဖြင့် narration နှင့် selectable SRT track ထည့်နိုင်သည်။ ဇာတ်လမ်းအချက်အလက်ကို စစ်ပြီးမှ ထည့်ပါ။\n"
             "/autofactsclip <title> သည် Wikidata အချက်အလက်နှင့် ခွင့်ပြုထားသော footage ကိုသုံးပြီး မိတ်ဆက် Video အလိုအလျောက်ထုတ်သည်။ ဇာတ်ကွက် recap မဟုတ်ပါ။\n"
+            "/autoplotclip <title> သည် မြန်မာ Wikipedia ဇာတ်လမ်းအကျဉ်း ရှိမှသာ ရင်းမြစ်အခြေပြု narration preview ထုတ်သည်။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
@@ -1412,6 +1483,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("autoclip", autoclip_cmd))
     telegram_app.add_handler(CommandHandler("autonarrateclip", autonarrateclip_cmd))
     telegram_app.add_handler(CommandHandler("autofactsclip", autofactsclip_cmd))
+    telegram_app.add_handler(CommandHandler("autoplotclip", autoplotclip_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
     telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))
