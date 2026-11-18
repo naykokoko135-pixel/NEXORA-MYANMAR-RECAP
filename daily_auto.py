@@ -12,8 +12,8 @@ from script_writer import generate_episode_selection_guide
 from trend_sources import fetch_anime_trends, format_anime_trends
 from pageview_trends import fetch_category_pageviews, format_category_pageviews
 
-# Broad, evergreen candidate rotation across the four requested animation categories.
-# This is a curated catalogue, not a live popularity/trending ranking.
+# Four animation categories with titles from multiple countries/regions.
+# This curated rotation is not a live popularity or view-count ranking.
 TITLE_CATEGORIES = {
     "Anime": [
         "Spirited Away", "Your Name", "Demon Slayer: Kimetsu no Yaiba",
@@ -30,42 +30,106 @@ TITLE_CATEGORIES = {
         "Puss in Boots: The Last Wish", "The Super Mario Bros. Movie",
         "The Incredibles", "Ratatouille", "WALL-E", "Up", "Toy Story",
         "How to Train Your Dragon", "Kung Fu Panda", "The Mitchells vs. the Machines",
-        # International animated films and series
         "Miraculous: Tales of Ladybug & Cat Noir", "Pororo the Little Penguin",
-        "Shaun the Sheep",
-        "Klaus", "Motu Patlu", "Chhota Bheem",
+        "Shaun the Sheep", "Klaus",
+        "The Little Prince", "The Summit of the Gods", "The Breadwinner",
+        "The Secret of Kells", "The Song of the Sea", "The Wild Robot",
+        "The Boy and the Beast", "Ne Zha", "White Snake",
+        "The Legend of Sealed Book", "The King of Kings",
     ],
     "Cartoon": [
         "Avatar: The Last Airbender", "The Amazing World of Gumball",
         "Adventure Time", "Gravity Falls", "Regular Show", "Steven Universe",
         "The Owl House", "Rick and Morty", "SpongeBob SquarePants",
         "The Powerpuff Girls", "Ben 10", "Teen Titans",
-        # South Korean animation and web-animation candidates
-        "Larva", "Pucca",
-        "The Haunted House: The Secret of the Ghost Ball",
-        "Leafie, A Hen into the Wild",
+        "Larva", "Pucca", "The Haunted House: The Secret of the Ghost Ball",
+        "Leafie, A Hen into the Wild", "Masha and the Bear",
+        "The Fixies", "Grizzy and the Lemmings", "Oggy and the Cockroaches",
+        "The Amazing World of Gumball", "The Deep",
     ],
     "Donghua": [
         "The King's Avatar", "Soul Land", "The Daily Life of the Immortal King",
-        "Battle Through the Heavens", "Perfect World", "A Record of a Mortal's Journey to Immortality",
+        "Battle Through the Heavens", "Perfect World",
+        "A Record of a Mortal's Journey to Immortality",
         "Fog Hill of Five Elements", "Link Click", "Heaven Official's Blessing",
         "The Legend of Hei", "Scissor Seven", "White Cat Legend",
+        "The Ravages of Time", "The Outcast", "Dragon Raja",
+    ],
+    "International Movies": [
+        "Train to Busan", "Parasite", "The Wandering Earth", "The Raid",
+        "Crouching Tiger, Hidden Dragon", "Ip Man", "The Platform",
+        "Society of the Snow", "The Intouchables", "The Lives of Others",
+        "Inception", "Interstellar", "Dune", "Knives Out",
+        "The Dark Knight", "Extraction", "All Quiet on the Western Front",
+        "The Grand Budapest Hotel", "The Pursuit of Happyness",
+        "The Secret in Their Eyes",
     ],
 }
 
-# Verified country/region labels for selected additional international candidates.
-# Unknown titles deliberately remain unlabelled until checked against reliable sources.
+# Country/region labels are supplied only for titles with well-established origins.
+# Any title not listed remains explicitly marked for source verification.
 TITLE_REGIONS = {
+    "Spirited Away": "Japan", "Your Name": "Japan",
+    "Demon Slayer: Kimetsu no Yaiba": "Japan", "Attack on Titan": "Japan",
+    "Jujutsu Kaisen": "Japan", "One Piece": "Japan", "Naruto": "Japan",
+    "Fullmetal Alchemist: Brotherhood": "Japan", "Hunter x Hunter": "Japan",
+    "Death Note": "Japan", "My Hero Academia": "Japan",
+    "Frieren: Beyond Journey's End": "Japan", "Solo Leveling": "Japan / South Korea-origin web novel",
+    "Chainsaw Man": "Japan", "Haikyu!!": "Japan", "Violet Evergarden": "Japan",
+    "Suzume": "Japan", "A Silent Voice": "Japan", "Howl's Moving Castle": "Japan",
+    "Princess Mononoke": "Japan", "Weathering with You": "Japan",
+    "The Boy and the Heron": "Japan", "Dragon Ball Z": "Japan",
+    "Bleach": "Japan", "Mob Psycho 100": "Japan", "Spy × Family": "Japan",
+    "Vinland Saga": "Japan",
+    "Spider-Man: Into the Spider-Verse": "United States",
+    "Spider-Man: Across the Spider-Verse": "United States",
+    "Puss in Boots: The Last Wish": "United States",
+    "The Super Mario Bros. Movie": "United States / Japan",
+    "The Incredibles": "United States", "Ratatouille": "United States",
+    "WALL-E": "United States", "Up": "United States", "Toy Story": "United States",
+    "How to Train Your Dragon": "United States",
+    "Kung Fu Panda": "United States",
+    "The Mitchells vs. the Machines": "United States",
+    "Miraculous: Tales of Ladybug & Cat Noir": "France",
     "Pororo the Little Penguin": "South Korea",
-    "Larva": "South Korea",
-    "Pucca": "South Korea",
+    "Shaun the Sheep": "United Kingdom", "Klaus": "Spain",
+    "The Little Prince": "France",
+    "The Summit of the Gods": "France / Luxembourg",
+    "The Breadwinner": "Ireland / Canada / Luxembourg",
+    "The Secret of Kells": "Ireland / France / Belgium",
+    "The Song of the Sea": "Ireland / Denmark / Belgium / Luxembourg / France",
+    "The Wild Robot": "United States",
+    "The Boy and the Beast": "Japan", "Ne Zha": "China",
+    "White Snake": "China", "The Legend of Sealed Book": "China",
+    "The King of Kings": "South Korea / United States",
+    "Larva": "South Korea", "Pucca": "South Korea",
     "The Haunted House: The Secret of the Ghost Ball": "South Korea",
     "Leafie, A Hen into the Wild": "South Korea",
-    "Miraculous: Tales of Ladybug & Cat Noir": "France",
-    "Shaun the Sheep": "United Kingdom",
-    "Klaus": "Spain",
-    "Motu Patlu": "India",
-    "Chhota Bheem": "India",
+    "Masha and the Bear": "Russia",
+    "The Fixies": "Russia", "Grizzy and the Lemmings": "France",
+    "Oggy and the Cockroaches": "France",
+    "The Deep": "Australia / Canada",
+    "The King's Avatar": "China", "Soul Land": "China",
+    "The Daily Life of the Immortal King": "China",
+    "Battle Through the Heavens": "China", "Perfect World": "China",
+    "A Record of a Mortal's Journey to Immortality": "China",
+    "Fog Hill of Five Elements": "China", "Link Click": "China",
+    "Heaven Official's Blessing": "China", "The Legend of Hei": "China",
+    "Scissor Seven": "China", "White Cat Legend": "China",
+    "The Ravages of Time": "China", "The Outcast": "China",
+    "Dragon Raja": "China",
+    "Train to Busan": "South Korea", "Parasite": "South Korea",
+    "The Wandering Earth": "China", "The Raid": "Indonesia",
+    "Crouching Tiger, Hidden Dragon": "Taiwan / Hong Kong / United States / China",
+    "Ip Man": "Hong Kong", "The Platform": "Spain",
+    "Society of the Snow": "Spain / Uruguay", "The Intouchables": "France",
+    "The Lives of Others": "Germany", "Inception": "United States / United Kingdom",
+    "Interstellar": "United States / United Kingdom", "Dune": "United States / Canada",
+    "Knives Out": "United States", "The Dark Knight": "United States / United Kingdom",
+    "Extraction": "United States", "All Quiet on the Western Front": "Germany",
+    "The Grand Budapest Hotel": "United States / Germany",
+    "The Pursuit of Happyness": "United States",
+    "The Secret in Their Eyes": "Argentina / Spain",
 }
 
 
@@ -93,7 +157,7 @@ def build_daily_message(movie_title: str, research_text: str) -> str:
     """Append clear part lengths for all three publishing platforms."""
     category = category_for_title(movie_title)
     plan = (
-        "\n\n🎬 NEXORA — ANIMATION RECAP PLAN\n"
+        "\n\n🎬 NEXORA — RECAP PLAN\n"
         f"အမျိုးအစား: {category}\n"
         f"နိုင်ငံ/ဒေသ: {region_for_title(movie_title)}\n"
         f"ခေါင်းစဉ်: {movie_title}\n\n"
@@ -106,7 +170,8 @@ def build_daily_message(movie_title: str, research_text: str) -> str:
         "TIKTOK — ၃ ပိုင်း၊ တစ်ပိုင်း ၁–၃ မိနစ် (စုစုပေါင်း ၃–၉ မိနစ်)\n"
         "Part 1: Hook + စတင်ဖြစ်ရပ်။ Part 2: အဓိကပြဿနာ။ Part 3: အကျိုးဆက် + အမြင်။\n\n"
         "မှတ်ချက်: ဤစာသည် research lead နှင့် planning worksheet သာဖြစ်ပြီး ဇာတ်ညွှန်းအပြည့် သို့မဟုတ် ဗီဒီယိုမဟုတ်ပါ။ "
-        "နေ့စဉ်စာရင်းသည် အမျိုးအစား ၄ မျိုးပါ curated title rotation ဖြစ်ပြီး live trending/view-count ranking မဟုတ်ပါ။ "
+        "နေ့စဉ်စာရင်းသည် Anime၊ 3D Animation၊ Cartoon၊ Donghua နှင့် International Movies အမျိုးအစား ၅ မျိုးပါ curated international title rotation ဖြစ်ပြီး live trending/view-count ranking မဟုတ်ပါ။ Live-action ဇာတ်ကားများကို 3D Animation နှင့် မရောပါ။ အိန္ဒိယခေါင်းစဉ်များကို မထည့်ထားပါ။ "
+        "နိုင်ငံ/ဒေသအမည်သည် မူရင်းထုတ်လုပ်မှု သို့မဟုတ် ပူးတွဲထုတ်လုပ်မှုကို ဆိုလိုနိုင်သည်။ "
         "လက်ရှိလူကြည့်များမှုကို သီးခြား trend source ဖြင့် စစ်ဆေးရမည်။ "
         "အချက်အလက်ကို မူရင်းနှင့်ပြန်စစ်ပြီး ကိုယ်ပိုင် commentary ထည့်ပါ။ "
         "အသုံးပြုခွင့်ရှိသော visual/audio ကိုသာ သုံးပါ။"
