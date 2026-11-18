@@ -152,10 +152,9 @@ def fetch_wikidata_metadata(title):
             output = []
             for item_id in _claim_entity_ids(claims, property_id):
                 label_data = labels_payload.get("entities", {}).get(item_id, {}).get("labels", {})
-                label = (
-                    label_data.get(language, {}).get("value")
-                    or label_data.get("en", {}).get("value")
-                )
+                label = label_data.get(language, {}).get("value")
+                if not label and language == "en":
+                    label = label_data.get("en", {}).get("value")
                 if label and label not in output:
                     output.append(label)
             return output
