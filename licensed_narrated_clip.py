@@ -16,7 +16,7 @@ from licensed_video_pipeline import ALLOWED_HOST, MAX_SOURCE_BYTES, LicensedClip
 
 def _subtitle_duration_seconds(subtitles_srt: str) -> float:
     """Read the final SRT cue end time; reject malformed timing rather than truncate narration."""
-    end_times = re.findall(r"-->\\s*(\\d{2}):(\\d{2}):(\\d{2}),(\\d{3})", subtitles_srt)
+    end_times = re.findall(r"-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})", subtitles_srt)
     if not end_times:
         raise LicensedClipError("SRT အဆုံးအချိန်ကို မဖတ်နိုင်ပါ။")
     last = end_times[-1]
