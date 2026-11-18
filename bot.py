@@ -39,6 +39,7 @@ from anilist_synopsis import fetch_anilist_synopsis
 from tvmaze_synopsis import fetch_tvmaze_synopsis
 from tvmaze_synopsis import fetch_tvmaze_episode_summaries
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
+from channel_growth_pack import generate_growth_pack
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -81,6 +82,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/autoclip <အမည်> - လိုင်စင်ရှိ Video မှ MP4 Preview ထုတ်ရန်\n"
             "/autonarrateclip <အမည်> - Licensed footage + မြန်မာ narration/SRT Preview ထုတ်ရန်\n"
             "/autofactsclip <အမည်> - Wikidata အချက်အလက်မှ မြန်မာအသံ + Licensed footage Preview အလိုအလျောက်ထုတ်ရန်\n"
+            "/growthpack <category>|<title>|<summary optional> - Channel ထုတ်ဝေမှု Pack ထုတ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -1583,6 +1585,44 @@ async def srtmy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def growthpack_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Create a source-aware publishing pack without inventing plot or popularity data."""
+    if not update.message or not update.message.text:
+        return
+    raw = update.message.text.split(maxsplit=1)
+    if len(raw) < 2:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /growthpack Anime|Frieren: Beyond Journey's End|ဇာတ်လမ်းအကျဉ်း (optional)\n"
+            "Category: Anime | 3D Animation | Cartoon | Donghua | International Movies\n"
+            "Summary မထည့်ပါက ဇာတ်ကွက်ကို မခန့်မှန်းဘဲ ဖြည့်ရန်နေရာ ထားပေးမည်။"
+        )
+        return
+    fields = raw[1].split("|", 2)
+    if len(fields) < 2:
+        await update.message.reply_text(
+            "Category နဲ့ ခေါင်းစဉ်ကို | ဖြင့် ခွဲပါ။\n"
+            "ဥပမာ: /growthpack Donghua|Soul Land|အတည်ပြုထားသော ဇာတ်လမ်းအကျဉ်း"
+        )
+        return
+    category, title = fields[0].strip(), fields[1].strip()
+    summary = fields[2].strip() if len(fields) > 2 else ""
+    platform = context.user_data.get("platform", "youtube")
+    try:
+        pack = generate_growth_pack(title, category, platform, summary)
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    if len(pack) <= 3900:
+        await update.message.reply_text(pack)
+        return
+    file_obj = BytesIO(pack.encode("utf-8"))
+    file_obj.name = "nexora_channel_growth_pack.txt"
+    await update.message.reply_document(
+        document=InputFile(file_obj, filename=file_obj.name),
+        caption="NEXORA Channel Growth Pack — ထုတ်ဝေမှုမတိုင်မီ အချက်အလက်နှင့် မီဒီယာလိုင်စင်ကို ပြန်စစ်ပါ။"
+    )
+
+
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(
@@ -1608,6 +1648,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/seriesresearch <title> သည် TVmaze မှ Animation genre ပါသော Cartoon/Donghua series overview ကို ပြသည်။ Episode recap မဟုတ်ပါ။\\n"
             "/animationepisodes <title> သည် TVmaze မှ Animation Series Episode summary အတိုများကို ရင်းမြစ်နှင့်ပြသည်။\\n"
             "/movieplotresearch <title> သည် exact Wikidata-English Wikipedia ချိတ်ဆက်ထားသော နိုင်ငံခြားရုပ်ရှင် Plot section ကို research အဖြစ်ပြသည်။\\n"
+            "/growthpack <category>|<title>|<summary optional> သည် title၊ description၊ thumbnail၊ Hook နှင့် retention checklist ပြင်ဆင်ပေးသည်။ Live views/trends ကို မခန့်မှန်းပါ။\\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
@@ -1665,6 +1706,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("seriesresearch", seriesresearch_cmd))
     telegram_app.add_handler(CommandHandler("animationepisodes", animationepisodes_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
+    telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
     telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))

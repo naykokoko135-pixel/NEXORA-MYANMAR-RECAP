@@ -62,6 +62,15 @@ Use `/animationepisodes <title>` to retrieve up to five short episode-summary ex
 
 Use `/movieplotresearch <title>` to require an exact Wikidata title match, exclude Indian-origin entries and entries with animation-related genres, then retrieve an explicitly labelled Plot/Synopsis section from the linked English Wikipedia article. The result is a research excerpt only. English Wikipedia is community-edited, a missing Plot section is rejected, and the command does not translate the text or create a recap MP4. Confirm the title is a live-action international movie and verify plot facts against reliable sources before use.
 
+## Channel growth and publishing pack
+
+Use `/growthpack <category>|<title>|<verified summary optional>` after selecting a platform with `/platform youtube|facebook|tiktok`. Supported categories are Anime, 3D Animation, Cartoon, Donghua, and International Movies (live-action). The command prepares platform-specific title options, an opening hook, description, hashtags, thumbnail/cover guidance, pacing suggestions, a comment prompt, and a pre-publish quality checklist. If a verified plot summary is supplied, it is included in the description; if not, the pack leaves a placeholder instead of inventing plot details.
+
+This is a publishing and quality-planning helper, not a live trend detector, automatic popularity ranking, thumbnail image generator, or guarantee of views/likes. Use only accurate titles/thumbnails and media you own or are licensed to use. After publishing, review impressions, CTR, audience retention, average view duration, and returning viewers to decide what to improve.
+
+Example:
+`/growthpack Anime|Frieren: Beyond Journey's End|[verified short summary]`
+
 ## Research notes to recap draft
 Use `/draft Avatar` and put your checked notes on the following lines in the same Telegram message. The bot preserves those notes and organizes prompts into chapters for the selected platform and duration. It does not write a finished factual narrative, independently verify notes, browse the web, or invent missing plot details. Keep source references with your notes and review the result before publishing.
 
