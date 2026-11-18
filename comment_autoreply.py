@@ -28,7 +28,7 @@ def classify_comment(comment: str) -> str:
         return "review"
     if any(word in text for word in MYANMAR_POSITIVE) or any(word in text for word in ENGLISH_POSITIVE):
         return "auto_safe"
-    if all(ch in "❤️💖💕👍🙏👏🔥✨😊🙂😀😁🥰😍! .," for ch in text):
+    if all(ch in "❤️💖💕👍🙏👏🔥✨😊🙂😀😁🥰😍! .," or ch == "\\ufe0f" for ch in text):
         return "auto_safe"
     return "review"
 
@@ -43,12 +43,16 @@ def build_reply(comment: str) -> str | None:
     return "Thanks for watching! More recaps are on the way."
 
 
-def _request_json(url: str, token: str, payload: dict | None = None) -> dict:
+def _request_json(url: str, token: str, payload: dict | None = None, *, json_body: bool = False) -> dict:
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
     data = None
     if payload is not None:
-        data = urlencode(payload).encode("utf-8")
-        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        if json_body:
+            data = json.dumps(payload).encode("utf-8")
+            headers["Content-Type"] = "application/json"
+        else:
+            data = urlencode(payload).encode("utf-8")
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
     request = Request(url, data=data, headers=headers, method="POST" if data is not None else "GET")
     try:
         with urlopen(request, timeout=20) as response:
@@ -92,7 +96,8 @@ def _youtube_cycle(env: dict) -> tuple[int, int]:
             _request_json(
                 f"{YOUTUBE_API}/comments?part=snippet",
                 token,
-                {"snippet.parentId": comment_id, "snippet.textOriginal": reply},
+                {"snippet": {"parentId": comment_id, "textOriginal": reply}},
+                json_body=True,
             )
             sent += 1
     return sent, reviewed
