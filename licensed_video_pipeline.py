@@ -16,16 +16,22 @@ class LicensedClipError(ValueError):
     """Raised when a reusable video cannot safely be processed."""
 
 
-def choose_matching_source(query: str, sources: list[dict]) -> dict | None:
-    """Choose only a strongly title-matching Commons file; never guess from weak matches."""
-    terms = {x for x in re.findall(r"[a-z0-9]+", query.lower()) if len(x) > 2}
-    if not terms:
+def choose_matching_source(query: str, sources: list[dict], alternate_titles: list[str] | None = None) -> dict | None:
+    """Choose only a strong match to the requested title or a verified title alias."""
+    title_queries = [query, *(alternate_titles or [])]
+    query_terms = []
+    for value in title_queries:
+        terms = {x for x in re.findall(r"[a-z0-9]+", str(value).lower()) if len(x) > 2}
+        # Ignore short/ambiguous aliases rather than letting them admit unrelated files.
+        if len(terms) >= 2 and terms not in query_terms:
+            query_terms.append(terms)
+    if not query_terms:
         return None
     ranked = []
     for source in sources:
         title = str(source.get("title", "")).lower().replace("_", " ")
         title_terms = set(re.findall(r"[a-z0-9]+", title))
-        score = len(terms & title_terms) / len(terms)
+        score = max(len(terms & title_terms) / len(terms) for terms in query_terms)
         if score >= 0.75:
             ranked.append((score, source))
     return max(ranked, key=lambda item: item[0])[1] if ranked else None
