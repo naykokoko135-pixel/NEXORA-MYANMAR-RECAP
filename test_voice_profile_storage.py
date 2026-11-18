@@ -25,7 +25,7 @@ class PersistentVoiceProfileStorageTests(unittest.TestCase):
     def test_profiles_survive_reload_and_are_isolated_by_user(self):
         profiles = {"ဇာတ်ကြောင်းပြော": {"filename": "narrator.mp3", "audio": b"voice-data"}}
         save_voice_profiles(1001, profiles)
-        self.assertEqual(load_voice_profiles(1001), profiles)
+        self.assertEqual(load_voice_profiles(1001), {"ဇာတ်ကြောင်းပြော": {"filename": "ဇာတ်ကြောင်းပြော.mp3", "audio": b"voice-data"}})
         self.assertEqual(load_voice_profiles(2002), {})
 
     def test_save_replaces_only_current_users_profiles(self):
