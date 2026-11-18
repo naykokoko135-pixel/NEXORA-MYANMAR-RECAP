@@ -27,7 +27,7 @@ from auto_research import search_movie_sources, ResearchLookupError
 from seriesguide_command import series_guide_cmd
 from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
-from video_renderer import render_slideshow, VideoRenderError
+from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -389,7 +389,16 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     if action == "finish":
         session = context.user_data.get("video_render")
-        if not session or not session.get("images") or not (session.get("audio") or session.get("audio_tracks")):
+        if not session:
+            await update.message.reply_text("/render ဖြင့် Video session စတင်ပါ။")
+            return
+        is_timeline = session.get("mode") == "timeline"
+        scenes = session.get("scenes", [])
+        if is_timeline:
+            if not scenes or any(not scene.get("image") or not scene.get("audio") for scene in scenes):
+                await update.message.reply_text("Scene တစ်ခုစီမှာ ပုံနဲ့ အသံ နှစ်မျိုးလုံး ထည့်ပြီးမှ /render finish ပို့ပါ။")
+                return
+        elif not session.get("images") or not (session.get("audio") or session.get("audio_tracks")):
             await update.message.reply_text("ပုံအနည်းဆုံး ၁ ပုံနဲ့ အသံဖိုင်/Voice Profile အနည်းဆုံး ၁ ခု လိုပါတယ်။ /render ဖြင့် ပြန်စပါ။")
             return
         await update.message.reply_text("MP4 ထုတ်လုပ်နေပါတယ်။ ခဏစောင့်ပါ...")
@@ -397,8 +406,11 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             with tempfile.TemporaryDirectory(prefix="nexora_video_") as temp:
                 output = os.path.join(temp, "nexora_video.mp4")
-                audio_input = session["audio_tracks"] if session.get("audio_tracks") else session["audio"]
-                await asyncio.to_thread(render_slideshow, session["images"], audio_input, output, session.get("platform", "youtube"), session.get("subtitle"))
+                if is_timeline:
+                    await asyncio.to_thread(render_scene_timeline, scenes, output, session.get("platform", "youtube"), session.get("subtitle"))
+                else:
+                    audio_input = session["audio_tracks"] if session.get("audio_tracks") else session["audio"]
+                    await asyncio.to_thread(render_slideshow, session["images"], audio_input, output, session.get("platform", "youtube"), session.get("subtitle"))
                 with open(output, "rb") as video_file:
                     await update.message.reply_video(
                         video=InputFile(video_file, filename="nexora_video.mp4"),
@@ -414,6 +426,32 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("MP4 ပို့မရပါ။ ပိုသေးသောဖိုင်များဖြင့် ထပ်စမ်းပါ။")
         finally:
             context.user_data.pop("video_render", None)
+        return
+    if action == "timeline":
+        platform = context.user_data.get("platform", "youtube")
+        context.user_data["video_render"] = {"mode": "timeline", "scenes": [], "active_scene": None, "platform": platform}
+        await update.message.reply_text(
+            f"Scene Timeline စတင်ပါပြီ။ Platform: {PLATFORM_NAMES.get(platform, platform)}\n"
+            "Scene အသစ်တစ်ခုစီအတွက် /render scene <အမည်> ပို့ပါ။ ပြီးလျှင် အဲဒီ Scene ရဲ့ ပုံတစ်ပုံနဲ့ Narration အသံဖိုင်တစ်ခုစီ ပို့ပါ။\n"
+            "Scene များကို အစဉ်လိုက် ပေါင်းမည်။ Scene တစ်ခု၏ ပုံသည် ၎င်း Scene အသံကြာချိန်အတိုင်း ပြမည်။ အများဆုံး ၁၂ Scene။\n"
+            "စာတန်းထိုးလိုပါက .srt ဖိုင်ပို့ပါ။ အားလုံးပြီးလျှင် /render finish ပို့ပါ။ /render cancel ဖြင့် ပယ်ဖျက်နိုင်သည်။"
+        )
+        return
+    if action == "scene":
+        session = context.user_data.get("video_render")
+        title = " ".join(context.args[1:]).strip()
+        if not session or session.get("mode") != "timeline":
+            await update.message.reply_text("အရင်ဆုံး /render timeline ပို့ပါ။")
+            return
+        if not title:
+            await update.message.reply_text("အသုံးပြုပုံ: /render scene <အခန်းအမည်>")
+            return
+        if len(session["scenes"]) >= 12:
+            await update.message.reply_text("Scene ၁၂ ခု ပြည့်ပါပြီ။")
+            return
+        session["scenes"].append({"title": title[:80], "image": None, "audio": None})
+        session["active_scene"] = len(session["scenes"]) - 1
+        await update.message.reply_text(f"Scene {len(session['scenes'])}: {title[:80]} ဖန်တီးပြီးပါပြီ။ ဒီ Scene အတွက် ပုံတစ်ပုံနဲ့ အသံတစ်ခု ပို့ပါ။")
         return
     if action == "voice":
         session = context.user_data.get("video_render")
@@ -437,6 +475,14 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         profile = profiles.get(profile_name)
         if not profile:
             await update.message.reply_text("အဲဒီ Voice Profile မတွေ့ပါ။ /voiceprofile list ဖြင့် စစ်ပါ။")
+            return
+        if session.get("mode") == "timeline":
+            active = session.get("active_scene")
+            if active is None or session["scenes"][active].get("audio"):
+                await update.message.reply_text("Voice Profile မထည့်မီ /render scene <အမည်> ဖြင့် Scene အသစ်ဖွင့်ပါ။")
+                return
+            session["scenes"][active]["audio"] = (profile["filename"], profile["audio"])
+            await update.message.reply_text(f"Scene {active + 1} အတွက် Voice Profile အသံ ထည့်ပြီးပါပြီ။")
             return
         tracks = session.setdefault("audio_tracks", [])
         if len(tracks) >= 12:
@@ -627,6 +673,17 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         session["subtitle"] = (filename, data)
         await message.reply_text("မြန်မာစာတန်းထိုး SRT လက်ခံပြီးပါပြီ။ /render finish ဖြင့် MP4 ထုတ်နိုင်ပါပြီ။")
     elif kind == "image":
+        if session.get("mode") == "timeline":
+            active = session.get("active_scene")
+            if active is None:
+                await message.reply_text("အရင်ဆုံး /render scene <အမည်> ဖြင့် Scene ဖွင့်ပါ။")
+                return
+            if session["scenes"][active].get("image"):
+                await message.reply_text("ဒီ Scene မှာ ပုံရှိပြီးပါပြီ။ နောက် Scene အတွက် /render scene <အမည်> ပို့ပါ။")
+                return
+            session["scenes"][active]["image"] = (filename, data)
+            await message.reply_text(f"Scene {active + 1} ပုံ လက်ခံပြီးပါပြီ။")
+            return
         if len(session["images"]) >= 12:
             await message.reply_text("ပုံ ၁၂ ပုံ ပြည့်ပါပြီ။ /render finish ပို့ပါ။")
             return
@@ -635,6 +692,17 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         if len(data) > 20 * 1024 * 1024:
             await message.reply_text("အသံဖိုင်သည် ၂၀ MB အောက် ဖြစ်ရပါမယ်။")
+            return
+        if session.get("mode") == "timeline":
+            active = session.get("active_scene")
+            if active is None:
+                await message.reply_text("အရင်ဆုံး /render scene <အမည်> ဖြင့် Scene ဖွင့်ပါ။")
+                return
+            if session["scenes"][active].get("audio"):
+                await message.reply_text("ဒီ Scene မှာ အသံရှိပြီးပါပြီ။ နောက် Scene အတွက် /render scene <အမည်> ပို့ပါ။")
+                return
+            session["scenes"][active]["audio"] = (filename, data)
+            await message.reply_text(f"Scene {active + 1} အသံ လက်ခံပြီးပါပြီ။ နောက် Scene အတွက် /render scene <အမည်> ပို့နိုင်ပါပြီ။")
             return
         session["audio"] = (filename, data)
         await message.reply_text("Narration အသံဖိုင် လက်ခံပြီးပါပြီ။ /render finish ပို့နိုင်ပါပြီ။")
@@ -1087,7 +1155,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Wikipedia /auto ရလဒ်တိုများကို တိုက်ရိုက်သုံးရန် မလုံလောက်ပါ။ Source link များကို ပြန်စစ်ပြီး ကိုယ်တိုင် Notes ရေးပါ။\n"
             "/auto Avatar ပြီးနောက် /draft3 Avatar ပို့လျှင် ရှာထားသော Notes ကို အလိုအလျောက် ထည့်ပေးသည်။\n"
             "/seriesguide <title> ဖြင့် TVmaze ကို အရင်စစ်ပါမည်။ Anime စာရင်းထဲမှ ခေါင်းစဉ်များကို AniList ဖြင့် ထပ်စစ်ပြီး နောက်ဆုံးတွင် Wikidata ကို စစ်ပါမည်။ ရင်းမြစ်မတွေ့ပါက အရေအတွက်ကို မခန့်မှန်းပါ။\n"
-            "/platform youtube|facebook|tiktok ကို အရင်ရွေးပြီး /render ဖြင့် Platform အချိုးအစားကိုက် MP4 ထုတ်နိုင်သည်။ .srt ဖိုင်ပို့လျှင် မြန်မာစာတန်းကို MP4 ထဲတွင် ရွေးဖွင့်နိုင်သော Track အဖြစ် ထည့်မည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
+            "/platform youtube|facebook|tiktok ကို အရင်ရွေးပါ။ /render ဖြင့် Slideshow၊ /render timeline ဖြင့် Scene တစ်ခုစီ ပုံ/အသံ အချိန်ကိုက် MP4 ထုတ်နိုင်သည်။ /render scene <အမည်> ဖြင့် Scene ဖွင့်ပါ။ .srt ပို့လျှင် ရွေးဖွင့်နိုင်သော Track ထည့်မည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
