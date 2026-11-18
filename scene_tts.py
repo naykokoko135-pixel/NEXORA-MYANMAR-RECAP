@@ -6,6 +6,7 @@ onto the existing Nilar/Thiha voice presets; they are not new speaker identities
 import re
 
 from tts_builder import VOICE_PRESETS, MAX_TEXT_CHARS
+from voxcpm_voice_design import VOICE_DESIGNS
 
 MAX_SCENES = 8
 HEADER_RE = re.compile(r"^\[([^\[\]\r\n]+)\]\s*$")
@@ -82,4 +83,57 @@ def parse_scene_script(script: str) -> list[dict]:
     for index, scene in enumerate(scenes, start=1):
         if len(scene["text"]) > MAX_TEXT_CHARS:
             raise ValueError(f"အခန်း {index} စာသားသည် စာလုံး ၆,၀၀၀ ထက် ကျော်နေပါတယ်။")
+    return scenes
+
+
+
+def parse_voice_design_scene_script(script: str) -> list[dict]:
+    """Parse [ai:voice_name] headers for fictional VoxCPM2 scene voices."""
+    scenes = []
+    current_voice = None
+    current_lines = []
+    total_chars = 0
+    max_scenes = 4
+    max_scene_chars = 1500
+    max_total_chars = 6000
+
+    def flush():
+        nonlocal current_lines, total_chars
+        text = "\\n".join(current_lines).strip()
+        if text:
+            scenes.append({
+                "voice": current_voice,
+                "text": text,
+            })
+            total_chars += len(text)
+        current_lines = []
+
+    for raw_line in (script or "").splitlines():
+        line = raw_line.strip()
+        match = HEADER_RE.fullmatch(line)
+        if match:
+            flush()
+            header = match.group(1).strip().lower()
+            if not header.startswith("ai:"):
+                raise ValueError("AI အသံအတွက် [ai:story_female] ပုံစံ ခေါင်းစဉ်သုံးပါ။")
+            current_voice = header[3:].strip()
+            if current_voice not in VOICE_DESIGNS:
+                raise ValueError(f"AI Voice မသိပါ: {current_voice}။ /voices မှ ရွေးပါ။")
+            if len(scenes) >= max_scenes:
+                raise ValueError(f"AI ဇာတ်ဝင်ခန်း အများဆုံး {max_scenes} ခန်းသာ ခွင့်ပြုပါတယ်။")
+        elif line:
+            if current_voice is None:
+                raise ValueError("စာသားမရေးမီ [ai:story_female] ကဲ့သို့ AI အသံခေါင်းစဉ်တပ်ပါ။")
+            current_lines.append(line)
+
+    flush()
+    if not scenes:
+        raise ValueError("AI ဇာတ်ဝင်ခန်းစာသား မတွေ့ပါ။")
+    if len(scenes) > max_scenes:
+        raise ValueError(f"AI ဇာတ်ဝင်ခန်း အများဆုံး {max_scenes} ခန်းသာ ခွင့်ပြုပါတယ်။")
+    if total_chars > max_total_chars:
+        raise ValueError("AI ဇာတ်ဝင်ခန်းအားလုံးပေါင်း စာလုံး ၆,၀၀၀ ထက် မကျော်ရပါ။")
+    for index, scene in enumerate(scenes, start=1):
+        if len(scene["text"]) > max_scene_chars:
+            raise ValueError(f"AI အခန်း {index} စာသားသည် စာလုံး ၁,၅၀၀ ထက် မကျော်ရပါ။")
     return scenes
