@@ -31,7 +31,7 @@ def render_licensed_narrated_preview(
     platform: str = "youtube",
     max_duration_seconds: int = 90,
 ) -> Path:
-    """Render up to 90 seconds of licensed footage with Burmese narration and SRT."""
+    """Render licensed footage with Burmese narration and SRT up to the validated duration cap."""
     from urllib.request import Request, HTTPRedirectHandler, build_opener
     import imageio_ffmpeg
 
@@ -53,7 +53,6 @@ def render_licensed_narrated_preview(
     if not isinstance(max_duration_seconds, int) or isinstance(max_duration_seconds, bool) or not 1 <= max_duration_seconds <= 300:
         raise LicensedClipError("Preview ကြာချိန်သည် 1 မှ 300 စက္ကန့်အတွင်း ဖြစ်ရပါမယ်။")
     subtitle_duration = _subtitle_duration_seconds(subtitles_srt)
-    subtitle_duration = int(last[0]) * 3600 + int(last[1]) * 60 + int(last[2]) + int(last[3]) / 1000
     if subtitle_duration > max_duration_seconds:
         raise LicensedClipError(f"အသံ/SRT ကြာချိန် {max_duration_seconds} စက္ကန့်ထက် ကျော်နေပါတယ်။ Script ကို အပိုင်းခွဲပါ။")
     srt_data = subtitles_srt.encode("utf-8")
