@@ -1,8 +1,9 @@
 """Optional on-device Burmese TTS adapter.
 
-This backend runs inference inside the NEXORA process. Model weights are fetched
-by the upstream package on first use; narration text is not sent to a hosted TTS
-inference API. Enable explicitly with NEXORA_LOCAL_TTS_ENABLED=1.
+This backend runs inference inside the NEXORA process. Model weights and the
+public reference sample are fetched from Hugging Face on first use; narration
+text is not sent to a hosted TTS inference API. Enable explicitly with
+NEXORA_LOCAL_TTS_ENABLED=1.
 """
 import asyncio
 import os
@@ -14,6 +15,7 @@ from io import BytesIO
 MAX_LOCAL_TEXT_CHARS = 1200
 SAMPLE_RATE = 44100
 _model = None
+_reference_audio = None
 _model_lock = threading.Lock()
 
 
@@ -39,19 +41,42 @@ def _flatten_samples(audio):
     return list(walk(audio))
 
 
-def _get_model():
-    global _model
-    if _model is None:
+def _get_model_and_reference():
+    """Load the low-level API with the model's required reference WAV.
+
+    myanmartts==1.0.2's high-level convenience wrapper can pass None as
+    ref_audio, although the underlying StableTTS API requires a reference WAV.
+    Use the documented low-level API and bundled public sample explicitly.
+    """
+    global _model, _reference_audio
+    if _model is None or _reference_audio is None:
         try:
-            from myanmar_tts import MyanmarTTS
+            from huggingface_hub import hf_hub_download
+            from myanmar_tts.api import StableTTSAPI
         except ImportError as exc:
             raise RuntimeError(
-                "Local MyanmarTTS မတင်ရသေးပါ။ optional local TTS requirements ကို install လုပ်ပါ။"
+                "Local MyanmarTTS dependencies မပြည့်စုံပါ။ "
+                "requirements-local-tts.txt ကို install လုပ်ပါ။"
             ) from exc
-        # CPU is the safe default; deployments without suitable memory/CPU may
-        # need a separate worker or a more capable host.
-        _model = MyanmarTTS(device=os.getenv("NEXORA_LOCAL_TTS_DEVICE", "cpu"))
-    return _model
+
+        repo_id = "freococo/MyanmarTTS"
+        try:
+            model_path = hf_hub_download(repo_id=repo_id, filename="model_fp16.pt")
+            vocoder_path = hf_hub_download(repo_id=repo_id, filename="vocos.pt")
+            reference_path = hf_hub_download(
+                repo_id=repo_id, filename="samples/sample_0.wav"
+            )
+            model = StableTTSAPI(model_path, vocoder_path, "vocos")
+            model.to(os.getenv("NEXORA_LOCAL_TTS_DEVICE", "cpu"))
+            model.eval()
+        except Exception as exc:
+            raise RuntimeError(
+                "MyanmarTTS model/reference audio ကို ပြင်ဆင်မရပါ။ "
+                "Hugging Face download နှင့် PyTorch/TorchCodec dependencies ကို စစ်ပါ။"
+            ) from exc
+        _model = model
+        _reference_audio = reference_path
+    return _model, _reference_audio
 
 
 def _wav_bytes(samples) -> bytes:
@@ -72,12 +97,20 @@ def _wav_bytes(samples) -> bytes:
 
 def _synthesize_sync(text: str) -> bytes:
     with _model_lock:
-        model = _get_model()
+        model, reference_audio = _get_model_and_reference()
         try:
-            audio = model.tts(text, solver="euler", step=8, cfg=3.0)
+            audio, _mel = model.inference(
+                text,
+                reference_audio,
+                "burmese",
+                step=8,
+                solver="euler",
+                cfg=3.0,
+            )
         except Exception as exc:
             raise RuntimeError(
-                "Local MyanmarTTS အသံဖန်တီးမှု မအောင်မြင်ပါ။ စာသားတိုတိုဖြင့် ပြန်စမ်းပါ။"
+                "Local MyanmarTTS အသံဖန်တီးမှု မအောင်မြင်ပါ။ "
+                "အောက်ပါ error အကြောင်းရင်းကို စစ်ဆေးပါ။"
             ) from exc
         return _wav_bytes(_flatten_samples(audio))
 
