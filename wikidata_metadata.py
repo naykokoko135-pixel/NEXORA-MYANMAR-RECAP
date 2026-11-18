@@ -133,6 +133,7 @@ def fetch_wikidata_metadata(title):
                     linked_ids.append(linked_id)
 
         labels = {}
+        labels_payload = {"entities": {}}
         if linked_ids:
             labels_payload = _request_json({
                 "action": "wbgetentities",
