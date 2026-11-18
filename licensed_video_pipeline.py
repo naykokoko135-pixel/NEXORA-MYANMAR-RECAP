@@ -37,7 +37,7 @@ def render_licensed_preview(source: dict, output_path: str | Path, platform: str
     import imageio_ffmpeg
 
     license_name = str(source.get("license", "")).strip()
-    if not re.match(r"^(?:CC0(?:\\s|$)|CC BY(?:-SA)?(?:\\s|$)|Public domain$)", license_name, re.IGNORECASE):
+    if not re.match(r"^(?:CC0(?:\s|$)|CC BY(?:-SA)?(?:\s|$)|Public domain$)", license_name, re.IGNORECASE):
         raise LicensedClipError("လိုင်စင်အမျိုးအစားကို အတည်မပြုနိုင်ပါ။")
     url = str(source.get("url", ""))
     parsed = urlparse(url)
