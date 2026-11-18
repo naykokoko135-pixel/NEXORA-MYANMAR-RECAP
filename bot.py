@@ -88,7 +88,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/growthpack <category>|<title>|<summary optional> - Channel ထုတ်ဝေမှု Pack ထုတ်ရန်\n"
             "/topratedepisodes <အမည်> - TVmaze rating အမြင့်ဆုံး Animation Episode များ ရှာရန်\\n"
             "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\\n"
-            "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\\n"
+            "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -838,7 +838,7 @@ async def episodeoutline_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /episodeoutline <Anime/Cartoon/Donghua Series အမည်>\\n"
+            "အသုံးပြုပုံ: /episodeoutline <Anime/Cartoon/Donghua Series အမည်>\n"
             "TVmaze မှ အမည်တိတိကျကျကိုက်ညီသော non-Indian Animation Series ၏ rating အမြင့်ဆုံး Episode တစ်ခုကို "
             "ရွေးပြီး မြန်မာ Recap Worksheet ထုတ်ပေးပါမယ်။"
         )
