@@ -8,7 +8,8 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 from auto_research import search_movie_sources
-from wikidata_metadata import (fetch_wikidata_metadata, format_wikidata_metadata,\n                               format_wikidata_episode_guide)
+from wikidata_metadata import (fetch_wikidata_metadata, format_wikidata_metadata,
+                               format_wikidata_episode_guide)
 from script_writer import generate_episode_selection_guide
 from trend_sources import fetch_anime_trends, format_anime_trends
 from pageview_trends import fetch_category_pageviews, format_category_pageviews
