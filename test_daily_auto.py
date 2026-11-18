@@ -37,6 +37,11 @@ class DailyAutoTests(unittest.TestCase):
         self.assertNotIn("Train to Busan", TITLE_CATEGORIES["3D Animation"])
         self.assertEqual(category_for_title("Train to Busan"), "International Movies")
 
+    def test_daily_message_includes_optional_wikidata_metadata(self):
+        result = build_daily_message("Train to Busan", "Wikipedia research", "Wikidata metadata cross-check")
+        self.assertIn("Wikidata metadata cross-check", result)
+        self.assertIn("International Movies", result)
+
     def test_message_contains_three_youtube_parts(self):
         result = build_daily_message("Avatar", "Research leads")
         self.assertIn("Part 1", result)
