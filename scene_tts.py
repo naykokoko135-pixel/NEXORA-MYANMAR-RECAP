@@ -9,7 +9,7 @@ import re
 from tts_builder import VOICE_PRESETS, MAX_TEXT_CHARS
 
 MAX_SCENES = 8
-HEADER_RE = re.compile(r"^\\[([a-zA-Z_-]+)\\]\\s*$")
+HEADER_RE = re.compile(r"^\[([a-zA-Z_-]+)\]\s*$")
 
 
 def parse_scene_script(script: str) -> list[dict]:
@@ -20,7 +20,7 @@ def parse_scene_script(script: str) -> list[dict]:
 
     def flush():
         nonlocal current_lines
-        text = "\\n".join(current_lines).strip()
+        text = "\n".join(current_lines).strip()
         if text:
             scenes.append({"preset": current_preset, "text": text})
         current_lines = []
