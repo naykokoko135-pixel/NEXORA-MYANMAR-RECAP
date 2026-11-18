@@ -31,7 +31,7 @@ TITLE_CATEGORIES = {
         "The Incredibles", "Ratatouille", "WALL-E", "Up", "Toy Story",
         "How to Train Your Dragon", "Kung Fu Panda", "The Mitchells vs. the Machines",
         "Miraculous: Tales of Ladybug & Cat Noir", "Pororo the Little Penguin",
-        "Shaun the Sheep", "Klaus", "Motu Patlu", "Chhota Bheem",
+        "Shaun the Sheep", "Klaus",
         "The Little Prince", "The Summit of the Gods", "The Breadwinner",
         "The Secret of Kells", "The Song of the Sea", "The Wild Robot",
         "The Boy and the Beast", "Ne Zha", "White Snake",
@@ -54,6 +54,15 @@ TITLE_CATEGORIES = {
         "Fog Hill of Five Elements", "Link Click", "Heaven Official's Blessing",
         "The Legend of Hei", "Scissor Seven", "White Cat Legend",
         "The Ravages of Time", "The Outcast", "Dragon Raja",
+    ],
+    "International Movies": [
+        "Train to Busan", "Parasite", "The Wandering Earth", "The Raid",
+        "Crouching Tiger, Hidden Dragon", "Ip Man", "The Platform",
+        "Society of the Snow", "The Intouchables", "The Lives of Others",
+        "Inception", "Interstellar", "Dune", "Knives Out",
+        "The Dark Knight", "Extraction", "All Quiet on the Western Front",
+        "The Grand Budapest Hotel", "The Pursuit of Happyness",
+        "The Secret in Their Eyes",
     ],
 }
 
@@ -84,7 +93,6 @@ TITLE_REGIONS = {
     "Miraculous: Tales of Ladybug & Cat Noir": "France",
     "Pororo the Little Penguin": "South Korea",
     "Shaun the Sheep": "United Kingdom", "Klaus": "Spain",
-    "Motu Patlu": "India", "Chhota Bheem": "India",
     "The Little Prince": "France",
     "The Summit of the Gods": "France / Luxembourg",
     "The Breadwinner": "Ireland / Canada / Luxembourg",
@@ -110,6 +118,18 @@ TITLE_REGIONS = {
     "Scissor Seven": "China", "White Cat Legend": "China",
     "The Ravages of Time": "China", "The Outcast": "China",
     "Dragon Raja": "China",
+    "Train to Busan": "South Korea", "Parasite": "South Korea",
+    "The Wandering Earth": "China", "The Raid": "Indonesia",
+    "Crouching Tiger, Hidden Dragon": "Taiwan / Hong Kong / United States / China",
+    "Ip Man": "Hong Kong", "The Platform": "Spain",
+    "Society of the Snow": "Spain / Uruguay", "The Intouchables": "France",
+    "The Lives of Others": "Germany", "Inception": "United States / United Kingdom",
+    "Interstellar": "United States / United Kingdom", "Dune": "United States / Canada",
+    "Knives Out": "United States", "The Dark Knight": "United States / United Kingdom",
+    "Extraction": "United States", "All Quiet on the Western Front": "Germany",
+    "The Grand Budapest Hotel": "United States / Germany",
+    "The Pursuit of Happyness": "United States",
+    "The Secret in Their Eyes": "Argentina / Spain",
 }
 
 
@@ -137,7 +157,7 @@ def build_daily_message(movie_title: str, research_text: str) -> str:
     """Append clear part lengths for all three publishing platforms."""
     category = category_for_title(movie_title)
     plan = (
-        "\n\n🎬 NEXORA — ANIMATION RECAP PLAN\n"
+        "\n\n🎬 NEXORA — RECAP PLAN\n"
         f"အမျိုးအစား: {category}\n"
         f"နိုင်ငံ/ဒေသ: {region_for_title(movie_title)}\n"
         f"ခေါင်းစဉ်: {movie_title}\n\n"
@@ -150,7 +170,7 @@ def build_daily_message(movie_title: str, research_text: str) -> str:
         "TIKTOK — ၃ ပိုင်း၊ တစ်ပိုင်း ၁–၃ မိနစ် (စုစုပေါင်း ၃–၉ မိနစ်)\n"
         "Part 1: Hook + စတင်ဖြစ်ရပ်။ Part 2: အဓိကပြဿနာ။ Part 3: အကျိုးဆက် + အမြင်။\n\n"
         "မှတ်ချက်: ဤစာသည် research lead နှင့် planning worksheet သာဖြစ်ပြီး ဇာတ်ညွှန်းအပြည့် သို့မဟုတ် ဗီဒီယိုမဟုတ်ပါ။ "
-        "နေ့စဉ်စာရင်းသည် Anime၊ 3D Animation၊ Cartoon နှင့် Donghua အမျိုးအစား ၄ မျိုးပါ curated international title rotation ဖြစ်ပြီး live trending/view-count ranking မဟုတ်ပါ။ "
+        "နေ့စဉ်စာရင်းသည် Anime၊ 3D Animation၊ Cartoon၊ Donghua နှင့် International Movies အမျိုးအစား ၅ မျိုးပါ curated international title rotation ဖြစ်ပြီး live trending/view-count ranking မဟုတ်ပါ။ Live-action ဇာတ်ကားများကို 3D Animation နှင့် မရောပါ။ အိန္ဒိယခေါင်းစဉ်များကို မထည့်ထားပါ။ "
         "နိုင်ငံ/ဒေသအမည်သည် မူရင်းထုတ်လုပ်မှု သို့မဟုတ် ပူးတွဲထုတ်လုပ်မှုကို ဆိုလိုနိုင်သည်။ "
         "လက်ရှိလူကြည့်များမှုကို သီးခြား trend source ဖြင့် စစ်ဆေးရမည်။ "
         "အချက်အလက်ကို မူရင်းနှင့်ပြန်စစ်ပြီး ကိုယ်ပိုင် commentary ထည့်ပါ။ "
