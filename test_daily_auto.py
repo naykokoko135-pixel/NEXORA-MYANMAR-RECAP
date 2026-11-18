@@ -21,7 +21,7 @@ class DailyAutoTests(unittest.TestCase):
     def test_selection_uses_catalog(self):
         self.assertIn(select_daily_movie(date(2026, 11, 17)), MOVIE_ROTATION)
 
-    def test_all_four_animation_categories_have_titles(self):
+    def test_all_four_animation_categories_and_movie_category_have_titles(self):
         self.assertEqual(set(TITLE_CATEGORIES), {"Anime", "3D Animation", "Cartoon", "Donghua", "International Movies"})
         self.assertTrue(all(TITLE_CATEGORIES.values()))
 
