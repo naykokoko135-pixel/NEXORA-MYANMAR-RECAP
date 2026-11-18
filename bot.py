@@ -29,6 +29,7 @@ from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
 from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError
 from clip_source_finder import search_licensed_video, ClipSourceError
+from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
 from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note
 from wikidata_metadata import fetch_wikidata_metadata
@@ -407,31 +408,54 @@ async def voiceover_notes_message(update: Update, context: ContextTypes.DEFAULT_
 
 
 async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Find video files with reusable licenses; never scrape streaming platforms."""
+    """Discover reusable video records from Commons and Europeana; never scrape streaming sites."""
     if not update.message:
         return
     query = " ".join(context.args).strip()
     if not query:
-        await update.message.reply_text("အသုံးပြုပုံ: /clipsource <Anime/ရုပ်ရှင်/Scene အမည်>\nWikimedia Commons မှ CC/Public Domain Video များကိုသာ ရှာပေးမည်။")
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /clipsource <Anime/ရုပ်ရှင်/Scene အမည်>\\n"
+            "Wikimedia Commons နှင့် Europeana မှ CC0/CC BY/CC BY-SA/Public Domain Video မှတ်တမ်းများကို ရှာပေးမည်။"
+        )
         return
-    await update.message.reply_text("အသုံးပြုခွင့်အထောက်အထားပါသော Video ရင်းမြစ်များကို ရှာနေပါတယ်...")
+    await update.message.reply_text("Commons နှင့် Europeana မှ လိုင်စင် metadata ပါသော Video မှတ်တမ်းများကို ရှာနေပါတယ်...")
+    results = []
+    errors = []
     try:
-        results = await asyncio.to_thread(search_licensed_video, query, 6)
+        commons = await asyncio.to_thread(search_licensed_video, query, 6)
+        results.extend(commons)
     except ClipSourceError as exc:
-        await update.message.reply_text(str(exc))
-        return
+        errors.append("Commons: " + str(exc))
+    try:
+        europeana = await asyncio.to_thread(search_europeana_licensed_video, query, 6)
+        results.extend(europeana)
+    except EuropeanaSearchError as exc:
+        errors.append("Europeana: " + str(exc))
     if not results:
+        detail = ("\\n" + "\\n".join(errors)) if errors else ""
         await update.message.reply_text(
-            "ဒီအမည်နဲ့ ကိုက်ညီပြီး ပြန်လည်အသုံးပြုခွင့်ကို အတည်ပြုနိုင်တဲ့ Video မတွေ့ပါ။ "
-            "မူပိုင်ခွင့်ရှိတဲ့ Anime/ရုပ်ရှင်ကို အခြားဆိုက်မှ ခွင့်ပြုချက်မရှိဘဲ မဒေါင်းလုဒ်လုပ်ပါ။"
+            "ဒီခေါင်းစဉ်နဲ့ ကိုက်ညီပြီး ခွင့်ပြုနိုင်သော လိုင်စင် metadata ရှိသည့် Video မှတ်တမ်း မတွေ့ပါ။ "
+            "မသက်ဆိုင်သော footage ကို အစားထိုးမရွေးပါ။" + detail
         )
         return
-    for item in results:
-        title = item["title"].replace("File:", "")
-        await update.message.reply_text(
-            f"🎞 {title}\nလိုင်စင်: {item['license']}\nဖန်တီးသူ: {item['artist'][:250]}\n"
-            f"အသုံးပြုမှု: {item['usage_terms'][:250]}\nရင်းမြစ်/Attribution: {item['source_page']}"
+    for item in results[:10]:
+        title = str(item.get("title", "Untitled")).replace("File:", "")
+        source_name = item.get("source", "Wikimedia Commons")
+        download_note = (
+            "Europeana မှတ်တမ်းသာဖြစ်သည်။ မီဒီယာကို အလိုအလျောက် ဒေါင်းလုဒ်မလုပ်ပါ။ Provider စာမျက်နှာရှိ ခွင့်ပြုချက်ကို ပြန်စစ်ပါ။"
+            if item.get("download_enabled") is False else
+            "ထုတ်ဝေမီ လိုင်စင်နှင့် Attribution စည်းကမ်းကို ပြန်စစ်ပါ။"
         )
+        await update.message.reply_text(
+            f"🎞 [{source_name}] {title}\\nလိုင်စင်: {item.get('license', 'မသိရှိ')}\\n"
+            f"ဖန်တီးသူ: {str(item.get('artist', 'Unknown'))[:250]}\\n"
+            f"အသုံးပြုမှု: {str(item.get('usage_terms', ''))[:250]}\\n"
+            f"ရင်းမြစ်: {item.get('source_page', '')}\\n"
+            f"Media URL: {item.get('url', '')}\\n{download_note}",
+            disable_web_page_preview=True,
+        )
+    if errors:
+        await update.message.reply_text("တချို့ရင်းမြစ်များကို မရရှိပါ:\\n" + "\\n".join(errors)[:900])
 
 
 async def autoclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
