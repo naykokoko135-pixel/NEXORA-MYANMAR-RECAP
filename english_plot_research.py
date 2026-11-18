@@ -30,13 +30,13 @@ class _TextExtractor(HTMLParser):
         if tag in {"script", "style", "table", "sup"}:
             self.skip_depth += 1
         elif not self.skip_depth and tag in {"p", "br", "li"}:
-            self.parts.append("\\n")
+            self.parts.append("\n")
 
     def handle_endtag(self, tag):
         if tag in {"script", "style", "table", "sup"} and self.skip_depth:
             self.skip_depth -= 1
         elif not self.skip_depth and tag in {"p", "li"}:
-            self.parts.append("\\n")
+            self.parts.append("\n")
 
     def handle_data(self, data):
         if not self.skip_depth:
@@ -56,8 +56,8 @@ def _clean_html(value):
     parser = _TextExtractor()
     parser.feed(value or "")
     text = "".join(parser.parts)
-    text = re.sub(r"[ \\t\\xa0]+", " ", text)
-    text = re.sub(r"\\n\\s*\\n+", "\\n", text)
+    text = re.sub(r"[ \t\xa0]+", " ", text)
+    text = re.sub(r"\n\s*\n+", "\n", text)
     return text.strip()
 
 
@@ -74,7 +74,7 @@ def fetch_english_plot_section(page_title):
         sections = parsed.get("sections", [])
         candidates = [
             section for section in sections
-            if re.sub(r"\\s+", " ", str(section.get("line", "")).casefold()).strip()
+            if re.sub(r"\s+", " ", str(section.get("line", "")).casefold()).strip()
             in PLOT_HEADINGS
         ]
         if not candidates:
