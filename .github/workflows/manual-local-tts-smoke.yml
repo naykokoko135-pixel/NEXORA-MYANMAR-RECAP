@@ -1,0 +1,44 @@
+name: Manual Local MyanmarTTS Smoke Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      sample_text:
+        description: "Short Burmese sample text (avoid private or personal information)"
+        required: false
+        default: "မင်္ဂလာပါ။ NEXORA အသံစမ်းသပ်မှု ဖြစ်ပါတယ်။"
+
+permissions:
+  contents: read
+
+jobs:
+  local-tts-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install optional local MyanmarTTS dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-local-tts.txt
+
+      - name: Generate a short WAV locally
+        env:
+          NEXORA_LOCAL_TTS_ENABLED: "1"
+          NEXORA_LOCAL_TTS_SMOKE_TEXT: ${{ inputs.sample_text }}
+        run: python smoke_local_myanmar_tts.py
+
+      - name: Upload generated WAV sample
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexora-local-myanmar-tts-smoke
+          path: local_myanmar_tts_smoke.wav
+          if-no-files-found: error
+          retention-days: 3
