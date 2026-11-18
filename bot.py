@@ -39,6 +39,7 @@ from anilist_synopsis import fetch_anilist_synopsis
 from tvmaze_synopsis import fetch_tvmaze_synopsis
 from tvmaze_synopsis import fetch_tvmaze_episode_summaries, fetch_tvmaze_top_rated_episodes
 from animated_episode_pack import format_animated_episode_pack
+from episode_recap_outline import format_episode_recap_outline
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
@@ -87,6 +88,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/growthpack <category>|<title>|<summary optional> - Channel ထုတ်ဝေမှု Pack ထုတ်ရန်\n"
             "/topratedepisodes <အမည်> - TVmaze rating အမြင့်ဆုံး Animation Episode များ ရှာရန်\\n"
             "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\\n"
+            "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -827,6 +829,43 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
         "အပြည့်အစုံ Recap script၊ ဇာတ်ဝင်ခန်း transcript သို့မဟုတ် အတည်ပြုပြီးဖြစ်ရပ်မှန် မဟုတ်ပါ။"
     )
     await update.message.reply_text("\\n".join(lines), disable_web_page_preview=True)
+
+
+async def episodeoutline_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Create a creator-facing outline for the highest-rated verified episode."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /episodeoutline <Anime/Cartoon/Donghua Series အမည်>\n"
+            "TVmaze မှ အမည်တိတိကျကျကိုက်ညီသော non-Indian Animation Series ၏ rating အမြင့်ဆုံး Episode တစ်ခုကို "
+            "ရွေးပြီး မြန်မာ Recap Worksheet ထုတ်ပေးပါမယ်။"
+        )
+        return
+    await update.message.reply_text("Episode အချက်အလက်နှင့် Source ကို စစ်ပြီး Recap Worksheet ပြင်ဆင်နေပါတယ်...")
+    try:
+        research = await asyncio.to_thread(fetch_tvmaze_top_rated_episodes, query, 1)
+        if not research.get("found"):
+            await update.message.reply_text(research.get("status", "Episode research မရရှိပါ။"))
+            return
+        platform = context.user_data.get("platform", "youtube")
+        duration = context.user_data.get("duration")
+        worksheet = format_episode_recap_outline(research, platform, duration)
+        if len(worksheet) <= 3900:
+            await update.message.reply_text(worksheet, disable_web_page_preview=True)
+        else:
+            file_obj = BytesIO(worksheet.encode("utf-8-sig"))
+            file_obj.name = "nexora_episode_recap_outline.txt"
+            await update.message.reply_document(
+                document=InputFile(file_obj, filename=file_obj.name),
+                caption="Episode Recap Worksheet — Script ကို ကိုယ်တိုင်ရေးပြီး /recapqa ဖြင့် စစ်ဆေးနိုင်ပါတယ်။",
+            )
+    except ValueError as exc:
+        await update.message.reply_text(str(exc)[:500])
+    except Exception:
+        log.exception("Episode recap outline failed")
+        await update.message.reply_text("Episode Recap Worksheet မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
 
 
 async def episodepack_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1768,6 +1807,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/movieplotresearch <title> သည် exact Wikidata-English Wikipedia ချိတ်ဆက်ထားသော နိုင်ငံခြားရုပ်ရှင် Plot section ကို research အဖြစ်ပြသည်။\\n"
             "/growthpack <category>|<title>|<summary optional> သည် title၊ description၊ thumbnail၊ Hook နှင့် retention checklist ပြင်ဆင်ပေးသည်။ Live views/trends ကို မခန့်မှန်းပါ။\\n"
             "/topratedepisodes <title> သည် TVmaze community rating အမြင့်ဆုံး Animation Episode များကိုပြသည်။ View count မဟုတ်ပါ။\\n"
+            "/episodeoutline <title> သည် အမြင့်ဆုံး rating ရှိ Episode တစ်ခုအတွက် Recap Script Worksheet ပြင်ဆင်ပေးသည်။\\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
@@ -1826,6 +1866,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("animationepisodes", animationepisodes_cmd))
     telegram_app.add_handler(CommandHandler("topratedepisodes", topratedepisodes_cmd))
     telegram_app.add_handler(CommandHandler("episodepack", episodepack_cmd))
+    telegram_app.add_handler(CommandHandler("episodeoutline", episodeoutline_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
     telegram_app.add_handler(CommandHandler("recapqa", recapqa_cmd))
