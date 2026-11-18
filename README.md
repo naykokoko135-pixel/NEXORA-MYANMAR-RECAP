@@ -16,6 +16,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/settings` — show the current user's selections
 - `/mode free|ai` — choose a mode label; AI provider is not connected
 - `/srt` — convert timestamped subtitle lines into an SRT file\n- `/srtmy` — split a supplied Burmese narration script into estimated-time Burmese SRT captions\n- `/tts female|male` — create a Burmese MP3 voice-over from supplied Burmese text
+- `/ttssrt female|male` — create an MP3 and word-boundary-timed Burmese SRT together
 
 ## Three-part YouTube worksheets
 Use `/draft3 <movie title>` and put your checked research notes on the following lines in the same Telegram message. NEXORA creates three distinct planning worksheets:
@@ -159,3 +160,8 @@ Render environment configuration (enter values privately in Render; never paste 
 - TikTok has no auto-posting adapter in this release.
 
 The module is disabled by default. Configure and test one platform at a time. API permissions, valid tokens, and platform approval are required; a configured variable alone does not prove that replies are working. The current reply text is deterministic and does not use a paid AI API.
+
+
+## Burmese MP3 with word-aligned subtitles
+
+Send `/ttssrt female` or `/ttssrt male`, then put the Burmese narration script on the next line. NEXORA streams the speech audio and word-boundary timing metadata from the online TTS service, then returns an MP3 and an SRT built from those timing events. This is more closely aligned than the estimated timestamps from `/srtmy`, but still review the SRT against the finished audio before publishing. The service may change its metadata behavior, and punctuation or unusual pronunciations can require manual correction. The same online-service privacy and availability cautions as `/tts` apply.
