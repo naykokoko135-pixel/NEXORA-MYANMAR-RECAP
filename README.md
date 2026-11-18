@@ -44,6 +44,12 @@ Use `/research <movie title>` to record release details, plot checkpoints, uncer
 ## Automatic source discovery
 Use `/auto Avatar` to search English Wikipedia for up to three article summaries and source links. The lookup prioritizes a page whose title matches the requested movie name, then labels other matches as related results. The lookup uses the public MediaWiki API and requires no API key or paid AI service. Wikipedia is community-edited, results may be incomplete or unrelated, and this feature does not verify facts against the movie or official sources. Treat results as research leads and cross-check them before writing.
 
+## Anime synopsis research with AniList
+
+Use `/animesynopsis <Anime title>` to look up an exact-title Anime entry through the public AniList GraphQL API. NEXORA returns the title, format, year, episode count (when available), source link, and a short synopsis. No API key or paid AI provider is required.
+
+AniList search results are not treated as exact matches unless the requested title matches an official title or listed synonym. Ambiguous and fuzzy matches are rejected. Indian-origin entries are excluded. AniList synopsis text is a series-level overview, not an episode-by-episode plot summary; it is shown only as a research lead and is not passed to the automatic MP4 recap renderer. It is not automatically translated into Burmese, so verify the facts and language before using it.
+
 ## Research notes to recap draft
 Use `/draft Avatar` and put your checked notes on the following lines in the same Telegram message. The bot preserves those notes and organizes prompts into chapters for the selected platform and duration. It does not write a finished factual narrative, independently verify notes, browse the web, or invent missing plot details. Keep source references with your notes and review the result before publishing.
 
