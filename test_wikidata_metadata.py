@@ -199,5 +199,57 @@ class WikidataMetadataTests(unittest.TestCase):
         self.assertIn("en.wikipedia.org/wiki/Example_Film", result["enwiki_source"])
 
 
+
+
+    @patch("wikidata_metadata.urlopen")
+    def test_exact_alias_match_is_accepted(self, mock_urlopen):
+        search = {"search": [{
+            "id": "Q900", "label": "Sousou no Frieren",
+            "description": "Japanese animated television series",
+            "match": {"type": "alias", "language": "en", "text": "Frieren: Beyond Journey's End"},
+        }]}
+        entity = {"entities": {"Q900": {"claims": {"P495": [claim("Q884")]}}}}
+        labels = {"entities": {"Q884": {"labels": {"en": {"value": "Japan"}}}}}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search).encode()),
+            Response(json.dumps(entity).encode()),
+            Response(json.dumps(labels).encode()),
+        ]
+        result = fetch_wikidata_metadata("Frieren: Beyond Journey's End")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["entity_id"], "Q900")
+        self.assertEqual(result["countries"], ["Japan"])
+
+    @patch("wikidata_metadata.urlopen")
+    def test_ambiguous_exact_alias_matches_are_rejected(self, mock_urlopen):
+        search = {"search": [
+            {"id": "Q901", "label": "Sousou no Frieren",
+             "match": {"type": "alias", "text": "Frieren: Beyond Journey's End"}},
+            {"id": "Q902", "label": "Frieren (TV series)",
+             "match": {"type": "alias", "text": "Frieren: Beyond Journey's End"}},
+        ]}
+        mock_urlopen.return_value = Response(json.dumps(search).encode())
+        result = fetch_wikidata_metadata("Frieren: Beyond Journey's End")
+        self.assertFalse(result["found"])
+        self.assertIn("အများအပြား", result["status"])
+        self.assertEqual(mock_urlopen.call_count, 1)
+
+    @patch("wikidata_metadata.urlopen")
+    def test_punctuation_normalization_accepts_exact_equivalent(self, mock_urlopen):
+        search = {"search": [{
+            "id": "Q903", "label": "Frieren Beyond Journey's End",
+            "match": {"type": "label", "text": "Frieren Beyond Journey's End"},
+        }]}
+        entity = {"entities": {"Q903": {"claims": {"P495": [claim("Q884")]}}}}
+        labels = {"entities": {"Q884": {"labels": {"en": {"value": "Japan"}}}}}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search).encode()),
+            Response(json.dumps(entity).encode()),
+            Response(json.dumps(labels).encode()),
+        ]
+        result = fetch_wikidata_metadata("Frieren: Beyond Journey's End")
+        self.assertTrue(result["found"])
+
+
 if __name__ == "__main__":
     unittest.main()
