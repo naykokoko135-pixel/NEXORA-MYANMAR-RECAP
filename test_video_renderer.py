@@ -30,8 +30,9 @@ class VideoRendererValidationTests(unittest.TestCase):
 
             self.assertEqual(result.read_bytes(), b"mp4")
             command = run.call_args.args[0]
-            self.assertIn("concat=n=2:v=0:a=1[aout]", command)
-            self.assertIn("[1:a]aresample=44100", command[command.index("-filter_complex") + 1])
+            filter_graph = command[command.index("-filter_complex") + 1]
+            self.assertIn("concat=n=2:v=0:a=1[aout]", filter_graph)
+            self.assertIn("[1:a]aresample=44100", filter_graph)
             self.assertIn("[2:a]aresample=44100", command[command.index("-filter_complex") + 1])
             self.assertEqual(command[command.index("-t") + 1], "5.000")
 
