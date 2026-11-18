@@ -25,7 +25,7 @@ Footage အတွက် လိုင်စင်နှင့် ခွင့်�
 class RecapQualityGateTests(unittest.TestCase):
     def test_complete_script_reports_review_not_verified(self):
         report = analyze_recap_script("Anime", "Sample Anime", GOOD_SCRIPT)
-        self.assertEqual(report["status"], "CHECK REQUIRED")
+        self.assertEqual(report["status"], "READY FOR HUMAN REVIEW")
         self.assertEqual(report["issues"], [])
         self.assertIn("ဇာတ်လမ်းမှန်ကန်မှု", report["disclaimer"])
 
@@ -43,7 +43,7 @@ class RecapQualityGateTests(unittest.TestCase):
         self.assertTrue(any("အပိုင်းများ" in item for item in report["issues"]))
 
     def test_duplicate_paragraphs_are_flagged(self):
-        repeated = GOOD_SCRIPT + "\\n\\n" + GOOD_SCRIPT.split("\\n\\n")[0]
+        repeated = GOOD_SCRIPT + "\n\n" + GOOD_SCRIPT.split("\n\n")[0]
         report = analyze_recap_script("Anime", "Sample", repeated)
         self.assertTrue(any("ထပ်နေသည်" in item for item in report["issues"]))
 
