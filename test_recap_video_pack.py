@@ -17,8 +17,11 @@ class RecapVideoPackTests(unittest.TestCase):
     def test_script_limit_and_preset(self):
         with self.assertRaises(ValueError):
             parse_recap_video_request("/recapvideo Example\n" + ("က" * (MAX_RECAP_SCRIPT_CHARS + 1)), PRESETS)
-        with self.assertRaises(ValueError):
-            parse_recap_video_request("/recapvideo Example\nunknown\nဇာတ်လမ်း", PRESETS)
+        # An unrecognized first line is treated as narration, not silently as a voice preset.
+        self.assertEqual(
+            parse_recap_video_request("/recapvideo Example\nunknown\nဇာတ်လမ်း", PRESETS),
+            ("Example", "narrator", "unknown\\nဇာတ်လမ်း"),
+        )
     def test_subtitle_duration_is_read_without_truncation(self):
         self.assertAlmostEqual(
             _subtitle_duration_seconds("1\n00:00:00,000 --> 00:00:05,250\nမြန်မာစာ\n"),
