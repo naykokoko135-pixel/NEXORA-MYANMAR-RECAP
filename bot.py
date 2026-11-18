@@ -30,7 +30,7 @@ from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_
 from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError
 from clip_source_finder import search_licensed_video, ClipSourceError
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
-from licensed_narrated_clip import render_licensed_narrated_preview
+from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note
 from wikidata_metadata import fetch_wikidata_metadata
 from autofacts_narration import generate_burmese_facts_narration
 from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
@@ -519,6 +519,21 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     ),
                     read_timeout=180,
                     write_timeout=180,
+                )
+            try:
+                attribution = build_licensed_attribution_note(
+                    source, metadata.get("title", query), metadata.get("source", "")
+                )
+                credit_file = BytesIO(attribution.encode("utf-8-sig"))
+                credit_file.name = "nexora_footage_attribution.txt"
+                await update.message.reply_document(
+                    document=InputFile(credit_file, filename=credit_file.name),
+                    caption="MP4 ထဲက Footage အတွက် Attribution/လိုင်စင်စစ်ဆေးရန် မှတ်တမ်းပါ။ ထုတ်ဝေမီ Commons မှ ပြန်စစ်ပါ။",
+                )
+            except Exception:
+                log.exception("Recap video attribution note delivery failed")
+                await update.message.reply_text(
+                    "MP4 Preview ထုတ်ပြီးပါပြီ။ Attribution TXT ပို့မရသဖြင့် Commons Source Page မှ Creator/License စည်းကမ်းကို ကိုယ်တိုင်မှတ်တမ်းတင်ပါ။"
                 )
     except (ClipSourceError, LicensedClipError, ValueError, RuntimeError) as exc:
         await update.message.reply_text(f"Recap Video မထုတ်နိုင်ပါ: {str(exc)[:500]}")
