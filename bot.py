@@ -734,14 +734,26 @@ async def movieplotresearch_cmd(update: Update, context: ContextTypes.DEFAULT_TY
             await update.message.reply_text(metadata.get("status", "Wikidata မှတ်တမ်း မရရှိပါ။"))
             return
         countries = [str(x).casefold() for x in metadata.get("countries", [])]
+        if not countries:
+            await update.message.reply_text("မူရင်းနိုင်ငံအချက်အလက် မရှိသေးပါ။ အိန္ဒိယခေါင်းစဉ် မဟုတ်ကြောင်း မအတည်ပြုနိုင်သဖြင့် ရပ်ထားပါတယ်။")
+            return
         if any("india" in x or "အိန္ဒိယ" in x for x in countries):
             await update.message.reply_text("ဒီ Project မှာ အိန္ဒိယဇာတ်ကားများ မထည့်ထားပါ။")
             return
         genres = [str(x).casefold() for x in metadata.get("genres", [])]
-        if not genres or any("animation" in x or "animated" in x or "cartoon" in x for x in genres):
+        description = str(metadata.get("description", "")).casefold()
+        movie_markers = ("film", "movie", "motion picture")
+        animation_markers = ("animation", "animated", "cartoon")
+        if (
+            not genres
+            or not (any(marker in description for marker in movie_markers)
+                    or any("film" in genre or "movie" in genre for genre in genres))
+            or any(marker in description for marker in animation_markers)
+            or any(any(marker in genre for marker in animation_markers) for genre in genres)
+        ):
             await update.message.reply_text(
-                "ဒီခေါင်းစဉ်ကို Live-action ရုပ်ရှင်အဖြစ် မသတ်မှတ်နိုင်ပါ။ "
-                "Animation ဖြစ်နိုင်ခြေ သို့မဟုတ် Genre အချက်အလက်မပြည့်စုံမှုကြောင့် ရပ်ထားပါတယ်။"
+                "ဒီခေါင်းစဉ်ကို Live-action နိုင်ငံခြားရုပ်ရှင်အဖြစ် မအတည်ပြုနိုင်ပါ။ "
+                "Film/Genre အချက်အလက် မပြည့်စုံခြင်း သို့မဟုတ် Animation ဖြစ်နိုင်ခြေကြောင့် ရပ်ထားပါတယ်။"
             )
             return
         enwiki_title = metadata.get("enwiki_title")
