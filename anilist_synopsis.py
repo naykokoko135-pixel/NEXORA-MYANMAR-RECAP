@@ -25,11 +25,11 @@ class _DescriptionText(HTMLParser):
 def _plain_text(value):
     parser = _DescriptionText()
     parser.feed(str(value or ""))
-    return re.sub(r"\\s+", " ", unescape("".join(parser.parts))).strip()
+    return re.sub(r"\s+", " ", unescape("".join(parser.parts))).strip()
 
 
 def _norm(value):
-    value = re.sub(r"\\([^)]*\\)", " ", str(value or "").casefold())
+    value = re.sub(r"\([^)]*\)", " ", str(value or "").casefold())
     return " ".join(re.findall(r"[a-z0-9]+", value))
 
 
