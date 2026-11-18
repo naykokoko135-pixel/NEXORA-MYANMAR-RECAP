@@ -1230,7 +1230,7 @@ async def telegram_webhook(
 # Render Environment; never commit either secret or put them in chat.
 CHATGPT_BRIDGE_API_KEY = os.getenv("CHATGPT_BRIDGE_API_KEY")
 CHATGPT_BRIDGE_CHAT_ID = os.getenv("CHATGPT_BRIDGE_CHAT_ID")
-BRIDGE_ALLOWED_COMMANDS = {"status", "help", "auto", "create", "research", "draft3", "allplatforms", "voiceover3", "render"}
+BRIDGE_ALLOWED_COMMANDS = {"status", "help", "auto", "seriesguide", "create", "research", "draft3", "allplatforms", "voiceover3", "render"}
 
 
 def _bridge_authorized(request: Request) -> bool:
