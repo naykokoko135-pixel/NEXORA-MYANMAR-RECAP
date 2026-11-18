@@ -44,6 +44,7 @@ def render_slideshow(
     audio: tuple[str, bytes] | list[tuple[str, bytes]],
     output_path: str | Path,
     platform: str = "youtube",
+    subtitle: tuple[str, bytes] | None = None,
 ) -> Path:
     """Render up to 12 still images and narration into a platform-sized MP4."""
     dimensions = {"youtube": (1280, 720), "facebook": (864, 1080), "tiktok": (720, 1280)}
