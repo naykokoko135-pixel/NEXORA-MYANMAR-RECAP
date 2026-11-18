@@ -2,17 +2,17 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-import bot
+import seriesguide_command
 
 
 class SeriesGuideCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_tvmaze_exact_match_is_primary_source(self):
         update = SimpleNamespace(message=SimpleNamespace(reply_text=AsyncMock()))
         context = SimpleNamespace(args=["Example", "Series"])
-        with patch("bot.fetch_series_episode_guide", return_value={"found": True}) as tvmaze, \
-             patch("bot.format_series_episode_guide", return_value="TVmaze guide") as format_tvmaze, \
-             patch("bot.fetch_wikidata_metadata") as wikidata:
-            await bot.series_guide_cmd(update, context)
+        with patch("seriesguide_command.fetch_series_episode_guide", return_value={"found": True}) as tvmaze, \
+             patch("seriesguide_command.format_series_episode_guide", return_value="TVmaze guide") as format_tvmaze, \
+             patch("seriesguide_command.fetch_wikidata_metadata") as wikidata:
+            await seriesguide_command.series_guide_cmd(update, context)
 
         tvmaze.assert_called_once_with("Example Series")
         format_tvmaze.assert_called_once()
@@ -22,11 +22,11 @@ class SeriesGuideCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_wikidata_is_used_only_when_tvmaze_has_no_exact_match(self):
         update = SimpleNamespace(message=SimpleNamespace(reply_text=AsyncMock()))
         context = SimpleNamespace(args=["Example", "Series"])
-        with patch("bot.fetch_series_episode_guide", return_value={
+        with patch("seriesguide_command.fetch_series_episode_guide", return_value={
             "found": False, "status": "TVmaze exact title not found"
-        }), patch("bot.fetch_wikidata_metadata", return_value={"found": True}) as wikidata, \
-             patch("bot.format_wikidata_episode_guide", return_value="Wikidata totals"):
-            await bot.series_guide_cmd(update, context)
+        }), patch("seriesguide_command.fetch_wikidata_metadata", return_value={"found": True}) as wikidata, \
+             patch("seriesguide_command.format_wikidata_episode_guide", return_value="Wikidata totals"):
+            await seriesguide_command.series_guide_cmd(update, context)
 
         wikidata.assert_called_once_with("Example Series")
         replies = [call.args[0] for call in update.message.reply_text.await_args_list]
@@ -36,8 +36,8 @@ class SeriesGuideCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_missing_title_shows_usage_without_network_calls(self):
         update = SimpleNamespace(message=SimpleNamespace(reply_text=AsyncMock()))
         context = SimpleNamespace(args=[])
-        with patch("bot.fetch_series_episode_guide") as tvmaze:
-            await bot.series_guide_cmd(update, context)
+        with patch("seriesguide_command.fetch_series_episode_guide") as tvmaze:
+            await seriesguide_command.series_guide_cmd(update, context)
 
         tvmaze.assert_not_called()
         update.message.reply_text.assert_awaited_once()
