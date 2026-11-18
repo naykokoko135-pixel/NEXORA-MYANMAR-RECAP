@@ -446,6 +446,31 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def send_voice_profile_backup(update: Update, profiles: dict, reason: str):
+    """Send a fresh ZIP to the user's Telegram chat as a free off-container backup."""
+    if not update.message:
+        return
+    try:
+        backup = export_voice_profile_backup(profiles)
+        file_obj = BytesIO(backup)
+        file_obj.name = "nexora_voice_profiles_latest.zip"
+        await update.message.reply_document(
+            document=InputFile(file_obj, filename=file_obj.name),
+            caption=(
+                "NEXORA Voice Profile အလိုအလျောက် Backup (" + reason + ")။\n"
+                "Render Free မှာ ဒီ ZIP ကို Telegram ထဲ လုံခြုံစွာထားပါ။ "
+                "Service restart/redeploy ပြီး Profile များမရှိတော့လျှင် "
+                "/voiceprofile import ပို့ပြီး ဒီ ZIP ကို ပြန်ပို့ပါ။ "
+                "အသံဖိုင်ပါဝင်သောကြောင့် အခြားသူများထံ မမျှဝေပါနှင့်။"
+            ),
+        )
+    except (VoiceProfileBackupError, OSError) as exc:
+        await update.message.reply_text(
+            "Profile သိမ်းပြီးပါပြီ၊ သို့သော် Telegram Backup မပို့နိုင်ပါ။ "
+            f"/voiceprofile export ဖြင့် ကိုယ်တိုင် Backup လုပ်ပါ။ ({exc})"
+        )
+
+
 async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
@@ -489,6 +514,7 @@ async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(str(exc))
             return
         await update.message.reply_text("အသံ Profile ကို ဖျက်ပြီးပါပြီ။")
+        await send_voice_profile_backup(update, profiles, "ဖျက်ပြီးနောက်")
         return
     try:
         name = normalize_profile_name(" ".join(args))
@@ -531,6 +557,7 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         context.user_data["custom_voice_profiles"] = restored
         context.user_data.pop("pending_voice_profile_import", None)
         await message.reply_text(f"Voice Profile Backup ပြန်သွင်းပြီးပါပြီ။ လက်ရှိ Profile {len(restored)} ခု ရှိပါတယ်။")
+        await send_voice_profile_backup(update, restored, "ပြန်သွင်းပြီးနောက်")
         return
     pending = context.user_data.get("pending_voice_profile")
     if pending and (message.audio or message.voice or message.document):
@@ -553,6 +580,7 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             return
         context.user_data.pop("pending_voice_profile", None)
         await message.reply_text(f"{pending} အသံဖိုင် သိမ်းပြီးပါပြီ။ /voiceprofile list ဖြင့် ကြည့်နိုင်ပါတယ်။ ဒီဖိုင်သည် အသံသွင်းထားသော narration ကို တိုက်ရိုက်ပြန်သုံးရန်ဖြစ်ပြီး စာသားအသစ်ကို TTS ပြောင်းပေးခြင်း မဟုတ်ပါ။")
+        await send_voice_profile_backup(update, profiles, "Profile အသစ်သိမ်းပြီးနောက်")
         return
     session = context.user_data.get("video_render")
     if session is None:
