@@ -15,7 +15,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/duration <minutes>` — choose a duration valid for the selected platform
 - `/settings` — show the current user's selections
 - `/mode free|ai` — choose a mode label; AI provider is not connected
-- `/srt` — convert timestamped English subtitle lines into an SRT file
+- `/srt` — convert timestamped subtitle lines into an SRT file\n- `/srtmy` — split a supplied Burmese narration script into estimated-time Burmese SRT captions
 
 ## Three-part YouTube worksheets
 Use `/draft3 <movie title>` and put your checked research notes on the following lines in the same Telegram message. NEXORA creates three distinct planning worksheets:
@@ -80,6 +80,12 @@ To enable delivery:
 GitHub's scheduled workflow can start a little later than the exact minute. The bot's Render Free web service does not need to stay awake for the GitHub Actions job.
 
 
+
+
+## Burmese subtitle draft export
+
+Send `/srtmy` and put the Burmese narration script on the following lines. NEXORA splits it into readable caption chunks and creates a UTF-8 SRT download with estimated sequential timestamps. The estimate uses character count and a default reading-speed assumption; it is **not speech recognition or audio alignment**. Play the final narration and adjust caption timing before publishing. The command does not translate English into Burmese.
+
 ## Basic MP4 rendering from Telegram
 
 The first rendering step is a simple slideshow: send `/render`, upload 1–12 JPG/PNG/WEBP images and one narration audio file (MP3/M4A/WAV/OGG, up to 20 MB and 10 minutes), then send `/render finish`. NEXORA returns a 720p MP4 with the images timed across the narration. Use `/render cancel` to clear the current session. The media is held in the running bot session and is not a permanent project archive.
@@ -89,7 +95,7 @@ This is not automatic text-to-speech, movie-footage generation, AI scene selecti
 ## Important limitations
 - `/auto` automates initial public-source discovery only; it does not create a complete verified plot summary or finished recap script.
 - This is not a connection to the ChatGPT conversation or an AI writing provider.
-- English subtitles must be translated and checked by the user; SRT export does not translate.
+- SRT export does not translate. `/srtmy` can draft Burmese captions from Burmese text, but its estimated timestamps must be synchronized manually to the final narration.
 - No automatic text-to-speech, AI scene selection, scheduled video queue, or automatic social publishing.
 - The AI mode does not call an AI service and does not trigger paid fallback.
 - Free hosting may sleep or restart; per-user session selections are not permanent storage.
