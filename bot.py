@@ -963,44 +963,50 @@ async def scenedesign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate separate fictional VoxCPM2 WAV files for tagged scenes."""
     if not update.message or not update.message.text:
         return
-    script = update.message.text.partition("\n")[2].strip()
+
+    log.info("Received /scenedesign update")
+    # Acknowledge immediately so users can distinguish handler delivery from
+    # a later parsing/model/runtime failure.
+    await update.message.reply_text(" /scenedesign လက်ခံရရှိပါပြီ။ စာသားနဲ့ AI အသံခေါင်းစဉ်များကို စစ်ဆေးနေပါတယ်။")
+
     try:
+        script = update.message.text.partition("\n")[2].strip()
         scenes = parse_voice_design_scene_script(script)
-    except ValueError as exc:
         await update.message.reply_text(
-            f"{exc}\n\nအသုံးပြုပုံ: /scenedesign ပြီးနောက် [ai:story_female]၊ "
-            "[ai:villain] ကဲ့သို့ ခေါင်းစဉ်များနှင့် စာသားကို အခန်းလိုက်ထည့်ပါ။\n"
-            "အသံစာရင်းအတွက် /voices ကို သုံးပါ။"
+            f"AI ဇာတ်ဝင်ခန်း {len(scenes)} ခန်းကို သီးခြား WAV ထုတ်နေပါတယ်။ "
+            "GPU host ပေါ်တွင် အခန်းတစ်ခန်းချင်းစီ အချိန်ယူနိုင်ပါတယ်..."
         )
-        return
+        for index, scene in enumerate(scenes, start=1):
+            voice = scene["voice"]
+            try:
+                audio = await synthesize_designed_burmese_voice(scene["text"], voice)
+            except Exception as exc:
+                log.exception("Scene design synthesis failed (scene=%s, voice=%s)", index, voice)
+                await update.message.reply_text(
+                    f"AI အခန်း {index} ({voice}) မအောင်မြင်ပါ: {type(exc).__name__}: {exc}"
+                )
+                return
 
-    await update.message.reply_text(
-        f"AI ဇာတ်ဝင်ခန်း {len(scenes)} ခန်းကို သီးခြား WAV ထုတ်နေပါတယ်။ "
-        "GPU host ပေါ်တွင် အခန်းတစ်ခန်းချင်းစီ အချိန်ယူနိုင်ပါတယ်..."
-    )
-    for index, scene in enumerate(scenes, start=1):
-        voice = scene["voice"]
-        try:
-            audio = await synthesize_designed_burmese_voice(scene["text"], voice)
-        except (ValueError, RuntimeError) as exc:
-            await update.message.reply_text(
-                f"AI အခန်း {index} ({voice}) မအောင်မြင်ပါ: {exc}\n"
-                "အရင်အခန်း WAV များကို ရရှိပြီးပါက ဆက်လက်အသုံးပြုနိုင်ပါတယ်။"
+            audio_name = f"nexora_ai_scene_{index}_{voice}.wav"
+            audio_file = BytesIO(audio)
+            audio_file.name = audio_name
+            await update.message.reply_document(
+                document=InputFile(audio_file, filename=audio_name),
+                caption=(
+                    f"AI အခန်း {index}/{len(scenes)} — {VOICE_DESIGNS[voice]['label']}\n"
+                    "စိတ်ကူးယဉ် synthetic voice ဖြစ်ပြီး တကယ့်လူတစ်ဦး၏အသံကို မကူးယူပါ။"
+                ),
+                read_timeout=120,
+                write_timeout=120,
             )
-            return
-
-        audio_name = f"nexora_ai_scene_{index}_{voice}.wav"
-        audio_file = BytesIO(audio)
-        audio_file.name = audio_name
-        await update.message.reply_document(
-            document=InputFile(audio_file, filename=audio_name),
-            caption=(
-                f"AI အခန်း {index}/{len(scenes)} — {VOICE_DESIGNS[voice]['label']}\n"
-                "စိတ်ကူးယဉ် synthetic voice ဖြစ်ပြီး တကယ့်လူတစ်ဦး၏အသံကို မကူးယူပါ။"
-            ),
-            read_timeout=120,
-            write_timeout=120,
-        )
+    except Exception as exc:
+        log.exception("/scenedesign handler failed")
+        try:
+            await update.message.reply_text(
+                f"/scenedesign လုပ်ဆောင်ရာတွင် အမှားရှိပါတယ်: {type(exc).__name__}: {exc}"
+            )
+        except Exception:
+            log.exception("Could not send /scenedesign error reply")
 
 
 async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
