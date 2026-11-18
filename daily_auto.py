@@ -12,6 +12,7 @@ from wikidata_metadata import fetch_wikidata_metadata, format_wikidata_metadata
 from script_writer import generate_episode_selection_guide
 from trend_sources import fetch_anime_trends, format_anime_trends
 from pageview_trends import fetch_category_pageviews, format_category_pageviews
+from tvmaze_series import fetch_series_episode_guide, format_series_episode_guide
 
 # Four animation categories with titles from multiple countries/regions.
 # This curated rotation is not a live popularity or view-count ranking.
@@ -202,7 +203,7 @@ def select_daily_movie(local_date: date) -> str:
     return MOVIE_ROTATION[local_date.toordinal() % len(MOVIE_ROTATION)]
 
 
-def build_daily_message(movie_title: str, research_text: str, metadata_text: str = "") -> str:
+def build_daily_message(movie_title: str, research_text: str, metadata_text: str = "", series_text: str = "") -> str:
     """Append clear part lengths for all three publishing platforms."""
     category = category_for_title(movie_title)
     plan = (
@@ -227,7 +228,8 @@ def build_daily_message(movie_title: str, research_text: str, metadata_text: str
         "အသုံးပြုခွင့်ရှိသော visual/audio ကိုသာ သုံးပါ။"
     )
     metadata_section = (metadata_text + "\n\n") if metadata_text else ""
-    return research_text + "\n\n" + metadata_section + plan + "\n\n" + generate_episode_selection_guide()
+    series_section = (series_text + "\n\n") if series_text else ""
+    return research_text + "\n\n" + metadata_section + series_section + plan + "\n\n" + generate_episode_selection_guide()
 
 
 def split_telegram_text(text: str, limit: int = 3900) -> list[str]:
@@ -267,9 +269,12 @@ def main() -> None:
     movie = select_daily_movie(local_today)
     research = search_movie_sources(movie)
     metadata_report = format_wikidata_metadata(fetch_wikidata_metadata(movie))
+    series_report = ""
+    if format_for_title(movie) == "Animated Series":
+        series_report = format_series_episode_guide(fetch_series_episode_guide(movie))
     trend_report = format_anime_trends(fetch_anime_trends())
     pageview_report = format_category_pageviews(fetch_category_pageviews(TITLE_CATEGORIES))
-    message = build_daily_message(movie, research, metadata_report) + "\n\n" + trend_report + "\n\n" + pageview_report
+    message = build_daily_message(movie, research, metadata_report, series_report) + "\n\n" + trend_report + "\n\n" + pageview_report
     send_telegram_message(token, chat_id, message)
 
 

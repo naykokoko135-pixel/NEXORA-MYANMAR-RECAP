@@ -54,6 +54,13 @@ class DailyAutoTests(unittest.TestCase):
         result = build_daily_message("Train to Busan", "Research leads")
         self.assertIn("မီဒီယာပုံစံ: Live-action Film", result)
 
+    def test_daily_message_includes_optional_series_episode_guide(self):
+        result = build_daily_message(
+            "Frieren: Beyond Journey's End", "Research leads",
+            series_text="Season 1: 28 Episodes",
+        )
+        self.assertIn("Season 1: 28 Episodes", result)
+
     def test_daily_message_includes_optional_wikidata_metadata(self):
         result = build_daily_message("Train to Busan", "Wikipedia research", "Wikidata metadata cross-check")
         self.assertIn("Wikidata metadata cross-check", result)
