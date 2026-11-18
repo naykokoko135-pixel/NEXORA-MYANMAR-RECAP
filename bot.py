@@ -1359,6 +1359,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/platform youtube|facebook|tiktok ကို အရင်ရွေးပါ။ /render ဖြင့် Slideshow၊ /render timeline ဖြင့် Scene တစ်ခုစီ ပုံ/အသံ အချိန်ကိုက် MP4 ထုတ်နိုင်သည်။ /render scene <အမည်> ဖြင့် Scene ဖွင့်ပါ။ .srt ပို့လျှင် ရွေးဖွင့်နိုင်သော Track ထည့်မည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
             "/clipsource နှင့် /autoclip ဖြင့် လိုင်စင်ရှိ Video ရင်းမြစ်ရှာပြီး Preview MP4 ထုတ်နိုင်သည်။\n"
             "/autonarrateclip <title>\n<preset>\n<script> ဖြင့် narration နှင့် selectable SRT track ထည့်နိုင်သည်။ ဇာတ်လမ်းအချက်အလက်ကို စစ်ပြီးမှ ထည့်ပါ။\n"
+            "/autofactsclip <title> သည် Wikidata အချက်အလက်နှင့် ခွင့်ပြုထားသော footage ကိုသုံးပြီး မိတ်ဆက် Video အလိုအလျောက်ထုတ်သည်။ ဇာတ်ကွက် recap မဟုတ်ပါ။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
