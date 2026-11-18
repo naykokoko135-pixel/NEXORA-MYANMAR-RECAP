@@ -38,9 +38,11 @@ class VoiceProfileTests(unittest.TestCase):
 
     def test_total_storage_budget(self):
         profiles = {}
-        store_voice_profile(profiles, "one", "one.mp3", b"x" * (MAX_TOTAL_PROFILE_BYTES - 2))
+        per_file = MAX_AUDIO_BYTES - 1
+        store_voice_profile(profiles, "one", "one.mp3", b"x" * per_file)
+        store_voice_profile(profiles, "two", "two.mp3", b"x" * per_file)
         with self.assertRaises(ValueError):
-            store_voice_profile(profiles, "two", "two.mp3", b"xxx")
+            store_voice_profile(profiles, "three", "three.mp3", b"x" * (MAX_TOTAL_PROFILE_BYTES - 2 * per_file + 1))
 
 
 if __name__ == "__main__":
