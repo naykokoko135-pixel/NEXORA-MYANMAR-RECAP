@@ -33,7 +33,7 @@ def choose_matching_source(query: str, sources: list[dict]) -> dict | None:
 
 def render_licensed_preview(source: dict, output_path: str | Path, platform: str = "youtube") -> Path:
     """Fetch only Commons upload-host media and render a short, attributed preview."""
-    from urllib.request import Request, urlopen
+    from urllib.request import Request, HTTPRedirectHandler, build_opener
     import imageio_ffmpeg
 
     license_name = str(source.get("license", "")).lower()
@@ -43,12 +43,17 @@ def render_licensed_preview(source: dict, output_path: str | Path, platform: str
     parsed = urlparse(url)
     if parsed.scheme != "https" or parsed.hostname != ALLOWED_HOST or parsed.username or parsed.password:
         raise LicensedClipError("ခွင့်ပြုထားသော Wikimedia upload ရင်းမြစ်မဟုတ်ပါ။")
+    class CommonsRedirectHandler(HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            redirected = urlparse(newurl)
+            if redirected.scheme != "https" or redirected.hostname != ALLOWED_HOST:
+                raise LicensedClipError("ခွင့်မပြုထားသော Redirect ကို ပိတ်လိုက်ပါတယ်။")
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
     try:
         request = Request(url, headers={"User-Agent": "NEXORA-Myanmar-Recap/1.0"})
-        with urlopen(request, timeout=25) as response:
-            final = urlparse(response.geturl())
-            if final.scheme != "https" or final.hostname != ALLOWED_HOST:
-                raise LicensedClipError("ဒေါင်းလုဒ်ရင်းမြစ် ပြောင်းလဲသွားသောကြောင့် ရပ်လိုက်ပါတယ်။")
+        opener = build_opener(CommonsRedirectHandler)
+        with opener.open(request, timeout=25) as response:
             data = response.read(MAX_SOURCE_BYTES + 1)
     except LicensedClipError:
         raise
