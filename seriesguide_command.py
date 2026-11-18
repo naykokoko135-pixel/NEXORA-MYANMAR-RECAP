@@ -2,6 +2,7 @@
 import asyncio
 
 from tvmaze_series import fetch_series_episode_guide, format_series_episode_guide
+from anilist_series import (ANIME_SERIES_TITLES, fetch_anilist_episode_guide,\n                            format_anilist_episode_guide)
 from wikidata_metadata import fetch_wikidata_metadata, format_wikidata_episode_guide
 
 
