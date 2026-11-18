@@ -27,7 +27,7 @@ def render_licensed_narrated_preview(
 
     license_name = str(source.get("license", "")).strip()
     if not re.match(
-        r"^(?:CC0(?:\\s|$)|CC BY(?:-SA)?(?:\\s|$)|Public domain$)",
+        r"^(?:CC0(?:\s|$)|CC BY(?:-SA)?(?:\s|$)|Public domain$)",
         license_name,
         re.IGNORECASE,
     ):
