@@ -28,6 +28,7 @@ from seriesguide_command import series_guide_cmd
 from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
 from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError
+from clip_source_finder import search_licensed_video, ClipSourceError
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -66,6 +67,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/allplatforms <အမည်> - YouTube/Facebook/TikTok အပိုင်းနှင့် ကြာချိန်ခွဲပြရန်\n"
             "/voiceover <ဇာတ်ကားအမည်> - Notes မှ Voice-over မူကြမ်းဖိုင်ထုတ်ရန်\n"
             "/voiceover3 <ဇာတ်ကားအမည်> - Notes မှ Voice-over ဖိုင် ၃ ဖိုင်ထုတ်ရန်\n"
+            "/clipsource <အမည်> - CC/Public Domain Video ရင်းမြစ်ရှာရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -377,6 +379,34 @@ async def voiceover_notes_message(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_document(document=InputFile(file_obj, filename=file_obj.name), caption=f"🎙️ {title} — Part {index}/3")
     context.user_data.pop("pending_voiceover", None)
 
+
+
+async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Find video files with reusable licenses; never scrape streaming platforms."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text("အသုံးပြုပုံ: /clipsource <Anime/ရုပ်ရှင်/Scene အမည်>\nWikimedia Commons မှ CC/Public Domain Video များကိုသာ ရှာပေးမည်။")
+        return
+    await update.message.reply_text("အသုံးပြုခွင့်အထောက်အထားပါသော Video ရင်းမြစ်များကို ရှာနေပါတယ်...")
+    try:
+        results = await asyncio.to_thread(search_licensed_video, query, 6)
+    except ClipSourceError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    if not results:
+        await update.message.reply_text(
+            "ဒီအမည်နဲ့ ကိုက်ညီပြီး ပြန်လည်အသုံးပြုခွင့်ကို အတည်ပြုနိုင်တဲ့ Video မတွေ့ပါ။ "
+            "မူပိုင်ခွင့်ရှိတဲ့ Anime/ရုပ်ရှင်ကို အခြားဆိုက်မှ ခွင့်ပြုချက်မရှိဘဲ မဒေါင်းလုဒ်လုပ်ပါ။"
+        )
+        return
+    for item in results:
+        title = item["title"].replace("File:", "")
+        await update.message.reply_text(
+            f"🎞 {title}\nလိုင်စင်: {item['license']}\nဖန်တီးသူ: {item['artist'][:250]}\n"
+            f"အသုံးပြုမှု: {item['usage_terms'][:250]}\nရင်းမြစ်/Attribution: {item['source_page']}"
+        )
 
 
 async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1204,6 +1234,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("allplatforms", allplatforms_cmd))
     telegram_app.add_handler(CommandHandler("voiceover", voiceover_cmd))
     telegram_app.add_handler(CommandHandler("voiceover3", voiceover3_cmd))
+    telegram_app.add_handler(CommandHandler("clipsource", clipsource_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
     telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))
