@@ -375,3 +375,10 @@ Use `/recapqa <category>|<title>` followed by the creator-written Burmese recap 
 Supported categories: Anime, 3D Animation, Cartoon, Donghua, and International Movies. Indian-origin titles are excluded by the existing metadata research safeguards; this deterministic preflight also blocks the project's explicitly excluded title list.
 
 **Important:** This is a structure-only preflight. It does not fact-check plot events, verify that URLs support claims, determine whether footage/music is legally reusable, translate text, or predict views/likes. A clean report means only that the checked editorial signals are present; human review remains required.
+
+
+## Animated episode production pack
+
+Use Telegram `/episodepack <exact animated series title>` to collect up to five highest-rated episodes from an exact TVmaze Animation-genre match, then search Wikimedia Commons for a strongly title-matched CC0, CC BY, CC BY-SA, or Public Domain video candidate. The pack includes episode rating, short synopsis lead, air date, TVmaze source, and any candidate file's license/creator/Commons page.
+
+TVmaze ratings are community ratings, not views or popularity. This is an editorial research brief, not an automatically written recap or finished MP4. Commons title matching does not establish that a file depicts the actual episode scene; inspect it before use. Follow the specific license attribution/share-alike terms. TVmaze Animation genre does not distinguish 2D from 3D, so do not classify an item as 3D Animation from this command alone. Unknown country or India-origin titles are rejected by the existing TVmaze research guard.
