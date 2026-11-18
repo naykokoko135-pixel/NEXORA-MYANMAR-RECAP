@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from auto_research import search_movie_sources
 from script_writer import generate_episode_selection_guide
+from trend_sources import fetch_anime_trends, format_anime_trends
 
 # Broad, evergreen candidate rotation across the four requested animation categories.
 # This is a curated catalogue, not a live popularity/trending ranking.
@@ -148,7 +149,9 @@ def main() -> None:
     local_today = datetime.now(ZoneInfo("Asia/Bangkok")).date()
     movie = select_daily_movie(local_today)
     research = search_movie_sources(movie)
-    send_telegram_message(token, chat_id, build_daily_message(movie, research))
+    trend_report = format_anime_trends(fetch_anime_trends())
+    message = build_daily_message(movie, research) + "\n\n" + trend_report
+    send_telegram_message(token, chat_id, message)
 
 
 if __name__ == "__main__":
