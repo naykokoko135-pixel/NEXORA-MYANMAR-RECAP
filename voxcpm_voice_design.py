@@ -7,6 +7,7 @@ lightweight requirements.
 import asyncio
 import os
 import threading
+import wave
 from io import BytesIO
 
 MAX_TEXT_CHARS = 3000
@@ -91,6 +92,22 @@ def _get_model():
         return _model
 
 
+def _validate_wav_bytes(data: bytes) -> None:
+    """Reject truncated, malformed, or empty WAV output before sending it."""
+    try:
+        with wave.open(BytesIO(data), "rb") as wav_file:
+            if (
+                wav_file.getnchannels() < 1
+                or wav_file.getsampwidth() != 2
+                or wav_file.getframerate() <= 0
+                or wav_file.getnframes() <= 0
+                or wav_file.getcomptype() != "NONE"
+            ):
+                raise ValueError("Unsupported or empty WAV stream")
+    except (wave.Error, EOFError, OSError, ValueError) as exc:
+        raise RuntimeError("ထုတ်ပေးသော WAV ဖိုင်သည် မမှန်ကန်ပါ သို့မဟုတ် အသံမပါဝင်ပါ။") from exc
+
+
 def _synthesize_sync(text: str, voice: str) -> bytes:
     profile = VOICE_DESIGNS[voice]
     model = _get_model()
@@ -111,6 +128,7 @@ def _synthesize_sync(text: str, voice: str) -> bytes:
         ) from exc
     if not result or len(result) > MAX_AUDIO_BYTES:
         raise RuntimeError("WAV ဖိုင်ဗလာဖြစ်နေသည် သို့မဟုတ် ၂၀ MB ထက် ကျော်နေသည်။")
+    _validate_wav_bytes(result)
     return result
 
 

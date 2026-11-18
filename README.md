@@ -19,6 +19,8 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/voices` — list Burmese voice identities and delivery-style presets
 - `/tts-local` followed by Burmese text on the next line — experimental local MyanmarTTS WAV (requires optional dependencies and explicit host enablement)
 - `/ttssrt <preset>` — create an MP3 and word-boundary-timed Burmese SRT together
+- `/voicedemo <preset>` — audition an existing Burmese Edge TTS delivery style
+- `/tts-design <voice_name>` followed by Burmese text — create a fictional synthetic voice WAV (optional compatible host only)
 
 ## Three-part YouTube worksheets
 Use `/draft3 <movie title>` and put your checked research notes on the following lines in the same Telegram message. NEXORA creates three distinct planning worksheets:
