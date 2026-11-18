@@ -8,7 +8,7 @@ import re
 from tts_builder import VOICE_PRESETS, MAX_TEXT_CHARS
 
 MAX_SCENES = 8
-HEADER_RE = re.compile(r"^\[([\w-]+)\]\s*$")
+HEADER_RE = re.compile(r"^\[([^\[\]\r\n]+)\]\s*$")
 
 ROLE_PRESETS = {
     "narrator": "narrator",
