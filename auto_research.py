@@ -127,7 +127,7 @@ def search_movie_sources(topic: str) -> str:
     )
     if not pages:
         return (
-            f"🔎 NEXORA Auto Research — {title}\\n\\n"
+            f"🔎 NEXORA Auto Research — {title}\n\n"
             "ခေါင်းစဉ်နှင့် ကိုက်ညီမှုရှိသော Wikipedia ဆောင်းပါး မတွေ့ပါ။ "
             "မသက်ဆိုင်သော ရလဒ်များကို ဖယ်ထားသည်။ Official source ဖြင့် ထပ်မံရှာဖွေပါ။"
         )
