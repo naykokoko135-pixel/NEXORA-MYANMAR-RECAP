@@ -134,6 +134,54 @@ TITLE_REGIONS = {
 }
 
 
+
+# Media format is deliberately separate from the five editorial categories.
+# International Movies are live-action only; unknown formats remain unverified.
+SERIES_TITLES = {
+    "Demon Slayer: Kimetsu no Yaiba", "Attack on Titan", "Jujutsu Kaisen",
+    "One Piece", "Naruto", "Fullmetal Alchemist: Brotherhood", "Hunter x Hunter",
+    "Death Note", "My Hero Academia", "Frieren: Beyond Journey's End",
+    "Solo Leveling", "Chainsaw Man", "Haikyu!!", "Violet Evergarden",
+    "Dragon Ball Z", "Bleach", "Mob Psycho 100", "Spy × Family", "Vinland Saga",
+    "Miraculous: Tales of Ladybug & Cat Noir", "Pororo the Little Penguin",
+    "Shaun the Sheep", "Avatar: The Last Airbender", "The Amazing World of Gumball",
+    "Adventure Time", "Gravity Falls", "Regular Show", "Steven Universe",
+    "The Owl House", "Rick and Morty", "SpongeBob SquarePants",
+    "The Powerpuff Girls", "Ben 10", "Teen Titans", "Larva", "Pucca",
+    "The Haunted House: The Secret of the Ghost Ball", "Masha and the Bear",
+    "The Fixies", "Grizzy and the Lemmings", "Oggy and the Cockroaches",
+    "The Deep", "The King's Avatar", "Soul Land",
+    "The Daily Life of the Immortal King", "Battle Through the Heavens",
+    "Perfect World", "A Record of a Mortal's Journey to Immortality",
+    "Fog Hill of Five Elements", "Link Click", "Heaven Official's Blessing",
+    "Scissor Seven", "White Cat Legend", "The Ravages of Time", "The Outcast",
+    "Dragon Raja",
+}
+ANIMATED_FILM_TITLES = {
+    "Spirited Away", "Your Name", "Suzume", "A Silent Voice",
+    "Howl's Moving Castle", "Princess Mononoke", "Weathering with You",
+    "The Boy and the Heron", "Spider-Man: Into the Spider-Verse",
+    "Spider-Man: Across the Spider-Verse", "Puss in Boots: The Last Wish",
+    "The Super Mario Bros. Movie", "The Incredibles", "Ratatouille", "WALL-E",
+    "Up", "Toy Story", "How to Train Your Dragon", "Kung Fu Panda",
+    "The Mitchells vs. the Machines", "Klaus", "The Little Prince",
+    "The Summit of the Gods", "The Breadwinner", "The Secret of Kells",
+    "The Song of the Sea", "The Wild Robot", "The Boy and the Beast", "Ne Zha",
+    "White Snake", "The Legend of Sealed Book", "The King of Kings",
+    "Leafie, A Hen into the Wild", "The Legend of Hei",
+}
+
+def format_for_title(title: str) -> str:
+    """Return a conservative media-format label without guessing unknown titles."""
+    if title in TITLE_CATEGORIES["International Movies"]:
+        return "Live-action Film"
+    if title in SERIES_TITLES:
+        return "Animated Series"
+    if title in ANIMATED_FILM_TITLES:
+        return "Animated Film"
+    return "မီဒီယာပုံစံကို Official Source ဖြင့် စစ်ဆေးရန်"
+
+
 def region_for_title(title: str) -> str:
     return TITLE_REGIONS.get(title, "မူရင်းနိုင်ငံ/ဒေသကို ရင်းမြစ်ဖြင့် စစ်ဆေးရန်")
 
@@ -161,6 +209,7 @@ def build_daily_message(movie_title: str, research_text: str, metadata_text: str
         "\n\n🎬 NEXORA — RECAP PLAN\n"
         f"အမျိုးအစား: {category}\n"
         f"နိုင်ငံ/ဒေသ: {region_for_title(movie_title)}\n"
+        f"မီဒီယာပုံစံ: {format_for_title(movie_title)}\n"
         f"ခေါင်းစဉ်: {movie_title}\n\n"
         "YOUTUBE — ၃ ပိုင်း၊ တစ်ပိုင်း ၈–၁၀ မိနစ် (စုစုပေါင်း ၂၄–၃၀ မိနစ်)\n"
         "Part 1: မိတ်ဆက်၊ နောက်ခံ၊ ဇာတ်ကောင်များနှင့် အစပြုဖြစ်ရပ်။\n"
