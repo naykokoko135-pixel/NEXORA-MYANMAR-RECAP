@@ -17,6 +17,7 @@ from subtitle_builder import build_burmese_srt
 from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
 from scene_tts import parse_scene_script
 from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
+from voice_profile_backup import export_voice_profile_backup, import_voice_profile_backup, VoiceProfileBackupError, MAX_BACKUP_BYTES
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
@@ -68,6 +69,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/ttssrt <preset> - MP3 နှင့် အချိန်ကိုက် SRT တွဲထုတ်ရန်\n"
             "/voices - အသံပုံစံအားလုံးကြည့်ရန်\n"
             "/voiceprofile <name> - ကိုယ်ပိုင်အသံဖိုင် သိမ်းရန်\n"
+            "/voiceprofile export|import - အသံ Profile Backup ထုတ်/ပြန်သွင်းရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60 မိနစ်\n"
@@ -338,7 +340,8 @@ async def cancel_voiceover_cmd(update: Update, context: ContextTypes.DEFAULT_TYP
         return
     pending = context.user_data.pop("pending_voiceover", None)
     pending_profile = context.user_data.pop("pending_voice_profile", None)
-    if pending or pending_profile:
+    pending_backup = context.user_data.pop("pending_voice_profile_import", None)
+    if pending or pending_profile or pending_backup:
         await update.message.reply_text("စောင့်ဆိုင်းနေသော Voice-over/အသံဖိုင်တင်ခြင်းကို ပယ်ဖျက်ပြီးပါပြီ။")
     else:
         await update.message.reply_text("ပယ်ဖျက်ရန် စောင့်နေသော အလုပ်မရှိပါ။")
@@ -442,7 +445,24 @@ async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
     profiles = context.user_data.setdefault("custom_voice_profiles", {})
     if not args:
-        await update.message.reply_text("အသုံးပြုပုံ: /voiceprofile <အမည်> ပြီးနောက် ကိုယ်ပိုင် MP3/M4A/WAV/OGG အသံဖိုင် ပို့ပါ။\n/voiceprofile list\n/voiceprofile delete <အမည်>")
+        await update.message.reply_text("အသုံးပြုပုံ: /voiceprofile <အမည်> ပြီးနောက် ကိုယ်ပိုင် MP3/M4A/WAV/OGG အသံဖိုင် ပို့ပါ။\n/voiceprofile list\n/voiceprofile delete <အမည်>\n/voiceprofile export\n/voiceprofile import")
+        return
+    if args[0].lower() == "export":
+        try:
+            backup = export_voice_profile_backup(profiles)
+        except VoiceProfileBackupError as exc:
+            await update.message.reply_text(str(exc))
+            return
+        file_obj = BytesIO(backup)
+        file_obj.name = "nexora_voice_profiles.zip"
+        await update.message.reply_document(
+            document=InputFile(file_obj, filename=file_obj.name),
+            caption="NEXORA Voice Profile Backup။ ကိုယ်ပိုင်အသံဖိုင်များပါဝင်သောကြောင့် လုံခြုံစွာ သိမ်းဆည်းပါ။"
+        )
+        return
+    if args[0].lower() == "import":
+        context.user_data["pending_voice_profile_import"] = True
+        await update.message.reply_text("NEXORA မှ Export လုပ်ထားသော voice profile ZIP ဖိုင်ကို ပို့ပါ။ လက်ရှိ Profile များနှင့် ပေါင်းထည့်မည်။ မလုပ်တော့ပါက /cancel ပို့ပါ။")
         return
     if args[0].lower() == "list":
         names = list(profiles)
@@ -470,6 +490,30 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not update.message:
         return
     message = update.message
+    pending_backup = context.user_data.get("pending_voice_profile_import")
+    if pending_backup and message.document:
+        filename = message.document.file_name or ""
+        if not filename.lower().endswith(".zip"):
+            await message.reply_text("ZIP Backup ဖိုင်သာ လက်ခံပါတယ်။")
+            return
+        if (message.document.file_size or 0) > MAX_BACKUP_BYTES:
+            await message.reply_text("Backup ZIP သည် ၄၁ MB အောက် ဖြစ်ရပါမယ်။")
+            return
+        media_file = await message.document.get_file()
+        buffer = BytesIO()
+        await media_file.download_to_memory(out=buffer)
+        try:
+            restored = import_voice_profile_backup(
+                buffer.getvalue(),
+                context.user_data.setdefault("custom_voice_profiles", {}),
+            )
+        except VoiceProfileBackupError as exc:
+            await message.reply_text(str(exc))
+            return
+        context.user_data["custom_voice_profiles"] = restored
+        context.user_data.pop("pending_voice_profile_import", None)
+        await message.reply_text(f"Voice Profile Backup ပြန်သွင်းပြီးပါပြီ။ လက်ရှိ Profile {len(restored)} ခု ရှိပါတယ်။")
+        return
     pending = context.user_data.get("pending_voice_profile")
     if pending and (message.audio or message.voice or message.document):
         media = message.audio or message.voice or message.document
