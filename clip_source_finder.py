@@ -68,7 +68,7 @@ def search_licensed_video(query: str, limit: int = 8) -> list[dict]:
             "license": license_name,
             "usage_terms": usage_terms,
             "artist": str((meta.get("Artist") or {}).get("value", "Unknown")).strip(),
-            "attribution": str((meta.get("Attribution" or {}).get("value", "")).strip(),
+            "attribution": str((meta.get("Attribution") or {}).get("value", "")).strip(),
             "mime": info.get("mime", ""),
             "size": int(info.get("size", 0) or 0),
         })
