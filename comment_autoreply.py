@@ -15,7 +15,8 @@ FACEBOOK_GRAPH_VERSION = os.getenv("FACEBOOK_GRAPH_VERSION", "v27.0")
 MAX_REPLIES_PER_PLATFORM_PER_CYCLE = 3
 
 MYANMAR_POSITIVE = ("ကျေးဇူး", "ကောင်းတယ်", "အရမ်းကောင်း", "ကြိုက်တယ်", "မိုက်တယ်")
-ENGLISH_POSITIVE = ("thank", "thanks", "nice", "good", "great", "love", "amazing", "awesome")
+ENGLISH_POSITIVE = re.compile(r"\\b(?:thank|thanks|thankyou|nice|good|great|love|amazing|awesome)\\b", re.I)
+ENGLISH_NEGATIVE = re.compile(r"\\b(?:not|bad|hate|dislike|terrible|worst|wrong|issue|problem|scam|fake|stop|refund)\\b", re.I)
 URL_OR_CONTACT = re.compile(r"(https?://|www\.|\b\S+@\S+\.[A-Za-z]{2,}\b|\+?\d[\d\s().-]{7,}\d)", re.I)
 
 
@@ -24,9 +25,9 @@ def classify_comment(comment: str) -> str:
     text = " ".join((comment or "").strip().lower().split())
     if not text or len(text) > 160 or URL_OR_CONTACT.search(text):
         return "review"
-    if any(mark in text for mark in ("?", "？", "ဘာလို့", "ဘယ်လို", "မကောင်း", "မကြိုက်", "တိုင်ကြား", "refund")):
+    if ENGLISH_NEGATIVE.search(text) or any(mark in text for mark in ("?", "？", "ဘာလို့", "ဘယ်လို", "မကောင်း", "မကြိုက်", "တိုင်ကြား")):
         return "review"
-    if any(word in text for word in MYANMAR_POSITIVE) or any(word in text for word in ENGLISH_POSITIVE):
+    if any(word in text for word in MYANMAR_POSITIVE) or bool(ENGLISH_POSITIVE.search(text)):
         return "auto_safe"
     if all(ch in "❤️💖💕👍🙏👏🔥✨😊🙂😀😁🥰😍! .," or ch == "\ufe0f" for ch in text):
         return "auto_safe"
