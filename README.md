@@ -253,3 +253,20 @@ The clips are concatenated, not automatically synchronized to character dialogue
 - `[အက်ရှင်]` — Energetic delivery
 
 မြန်မာ Role များသည် ရှိပြီးသား preset များသို့ ချိတ်ဆက်ထားခြင်းသာဖြစ်သည်။ သီးခြားအသံသရုပ်ဆောင်အသစ် သို့မဟုတ် Voice Cloning မဟုတ်ပါ။
+
+
+## Optional local Burmese TTS experiment
+
+NEXORA keeps the existing Edge TTS commands unchanged. An additional experimental `/tts-local` command can run MyanmarTTS inference inside the NEXORA process; the narration text is not sent to a hosted TTS inference API. The upstream package downloads its model assets from Hugging Face on first initialization, so the host needs outbound access for model files. This is not the third-party public Hugging Face Space.
+
+This backend is **off by default** and is intentionally excluded from the default Render Free dependencies. To try it on a separate machine or a host with sufficient memory and CPU:
+
+1. Install the optional dependencies with `pip install -r requirements-local-tts.txt`.
+2. Set `NEXORA_LOCAL_TTS_ENABLED=1` in that host's environment.
+3. Start NEXORA and send `/tts-local` followed by Burmese text on the next line.
+
+The first request may take longer while the model assets are downloaded and loaded. CPU inference can be slow; the default test limits scripts to 1,200 characters and exports WAV. The default Render Free service is not enabled for this feature because PyTorch/model memory and CPU requirements have not been validated there.
+
+MyanmarTTS currently uses a single default reference voice in its simple package interface; it is **not** a library of multiple named character actors. Do not use another person's reference recording unless you have their clear permission. This optional experiment does not alter or replace Nilar/Thiha, does not change existing `/tts`, `/ttssrt`, or `/scenetts` behavior, and does not provide word-aligned SRT.
+
+Model information and upstream license notes: [MyanmarTTS on PyPI](https://pypi.org/project/MyanmarTTS/) and [model card](https://huggingface.co/freococo/MyanmarTTS). The model weights and generated samples are CC0; supporting code and vocoder retain their stated MIT licenses. Review the upstream NOTICE before redistribution.
