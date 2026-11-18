@@ -81,6 +81,8 @@ def import_voice_profile_backup(data: bytes, existing: dict | None = None) -> di
             if any(info.file_size > MAX_AUDIO_BYTES for info in infos if info.filename != MANIFEST_NAME):
                 raise VoiceProfileBackupError("အသံဖိုင်တစ်ခုသည် ၂၀ MB ထက် ကျော်နေပါတယ်။")
 
+            if archive.getinfo(MANIFEST_NAME).file_size > 64 * 1024:
+                raise VoiceProfileBackupError("Backup manifest အရွယ်အစား မမှန်ပါ။")
             manifest = json.loads(archive.read(MANIFEST_NAME).decode("utf-8"))
             if manifest.get("format") != "nexora-voice-profiles" or manifest.get("version") != 1:
                 raise VoiceProfileBackupError("NEXORA Voice Profile Backup version မကိုက်ညီပါ။")
