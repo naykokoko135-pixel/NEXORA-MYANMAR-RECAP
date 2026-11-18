@@ -14,6 +14,7 @@ from script_writer import generate_episode_selection_guide
 from trend_sources import fetch_anime_trends, format_anime_trends
 from pageview_trends import fetch_category_pageviews, format_category_pageviews
 from tvmaze_series import fetch_series_episode_guide, format_series_episode_guide
+from anilist_series import fetch_anilist_episode_guide, format_anilist_episode_guide
 
 # Four animation categories with titles from multiple countries/regions.
 # This curated rotation is not a live popularity or view-count ranking.
@@ -276,6 +277,12 @@ def main() -> None:
         tvmaze_result = fetch_series_episode_guide(movie)
         if tvmaze_result.get("found"):
             series_report = format_series_episode_guide(tvmaze_result)
+        elif category_for_title(movie) == "Anime":
+            anilist_result = fetch_anilist_episode_guide(movie)
+            if anilist_result.get("found"):
+                series_report = format_anilist_episode_guide(anilist_result)
+            else:
+                series_report = format_wikidata_episode_guide(metadata)
         else:
             series_report = format_wikidata_episode_guide(metadata)
     trend_report = format_anime_trends(fetch_anime_trends())
