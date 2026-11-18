@@ -1,6 +1,6 @@
 import unittest
 
-from tts_builder import VOICE_MAP, validate_tts_request, build_word_aligned_srt
+from tts_builder import VOICE_MAP, VOICE_PRESETS, get_tts_preset, validate_tts_request, build_word_aligned_srt
 
 
 class BurmeseTtsValidationTests(unittest.TestCase):
@@ -31,6 +31,19 @@ class BurmeseTtsValidationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_word_aligned_srt([])
 
+    def test_story_voice_presets_use_supported_burmese_voices(self):
+        self.assertGreaterEqual(len(VOICE_PRESETS), 10)
+        for name, preset in VOICE_PRESETS.items():
+            self.assertIn(preset["voice"], VOICE_MAP)
+            self.assertIn("rate", preset)
+            self.assertIn("pitch", preset)
+            self.assertEqual(validate_tts_request("စမ်းသပ်စာသား", name), VOICE_MAP[preset["voice"]])
+
+    def test_villain_preset_is_lower_and_slower(self):
+        preset = get_tts_preset("villain")
+        self.assertEqual(preset["voice"], "male")
+        self.assertEqual(preset["rate"], "-12%")
+        self.assertEqual(preset["pitch"], "-5Hz")
     def test_text_limit_enforced(self):
         with self.assertRaises(ValueError):
             validate_tts_request("က" * 6001, "female")
