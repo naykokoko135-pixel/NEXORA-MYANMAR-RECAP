@@ -1,0 +1,4 @@
+# Optional VoxCPM2 Burmese voice design backend.
+# Install only on a compatible GPU host; do not add to Render Free requirements.
+voxcpm
+soundfile
