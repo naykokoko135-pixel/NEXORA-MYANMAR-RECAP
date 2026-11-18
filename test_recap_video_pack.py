@@ -7,7 +7,7 @@ class RecapVideoPackTests(unittest.TestCase):
     def test_builds_separate_mp3_and_utf8_srt_sidecars(self):
         audio, subtitles = build_recap_video_sidecars(
             b"fake-mp3",
-            "1\\n00:00:00,000 --> 00:00:01,000\\nမြန်မာစာ\\n",
+            "1\n00:00:00,000 --> 00:00:01,000\nမြန်မာစာ\n",
         )
         self.assertEqual(audio, b"fake-mp3")
         self.assertTrue(subtitles.startswith(b"\xef\xbb\xbf"))
