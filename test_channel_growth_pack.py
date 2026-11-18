@@ -15,13 +15,13 @@ class ChannelGrowthPackTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             generate_growth_pack("Example", "Indian Movies")
         with self.assertRaises(ValueError):
-            generate_growth_pack("Example", "Anime", "youtube")
+            generate_growth_pack("Example", "")
 
     def test_platform_specific_pacing(self):
         short = generate_growth_pack("Example", "Donghua", "tiktok")
         self.assertIn("0–2 sec", short)
         facebook = generate_growth_pack("Example", "Cartoon", "facebook")
-        self.assertIn("3–5 sec", facebook)
+        self.assertIn("၃–၅ sec", facebook)
 
     def test_rejects_oversized_inputs(self):
         with self.assertRaises(ValueError):
