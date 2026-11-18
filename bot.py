@@ -44,6 +44,7 @@ from english_plot_research import fetch_english_plot_section, EnglishPlotError
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
 from recap_voice_pack import parse_recap_voice_request
+from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -91,6 +92,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\\n"
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/recapvoice [preset] - ကိုယ်ရေးထားသော Recap Script မှ MP3 + အသံနှင့်ကိုက်ညီသော SRT ထုတ်ရန်\n"
+            "/recapvideo <title> - ခွင့်ပြုထားသော footage + မြန်မာ narration + SRT ပါသော ၅ မိနစ် Preview ထုတ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -475,6 +477,54 @@ async def autoclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         log.exception("Automatic licensed clip preview failed")
         await update.message.reply_text("Licensed Preview မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
+
+
+async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Render a longer creator-narrated preview using a licensed Commons source."""
+    if not update.message or not update.message.text:
+        return
+    try:
+        query, voice, script = parse_recap_video_request(update.message.text, VOICE_PRESETS)
+        validate_tts_request(script, voice)
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    await update.message.reply_text("ခေါင်းစဉ်နှင့် မူရင်းနိုင်ငံကို Wikidata မှ စစ်ပြီး ခွင့်ပြုထားသော Commons footage ကို ရှာနေပါတယ်...")
+    try:
+        metadata = await asyncio.to_thread(fetch_wikidata_metadata, query)
+        countries = validate_non_indian_wikidata_metadata(metadata)
+        sources = await asyncio.to_thread(search_licensed_video, query, 10)
+        source = choose_matching_source(query, sources)
+        if not source:
+            await update.message.reply_text("ခေါင်းစဉ်နှင့် metadata ကိုက်ညီမှုခိုင်မာသော CC/Public Domain footage မတွေ့ပါ။ မသက်ဆိုင်သော video ကို အစားထိုးမရွေးထားပါ။")
+            return
+        await update.message.reply_text("လိုင်စင်အမျိုးအစားနှင့် ခေါင်းစဉ်ကို စစ်ပြီး narration + အချိန်ကိုက် SRT + MP4 ပြင်ဆင်နေပါတယ်...")
+        audio, srt_text = await synthesize_burmese_speech_with_srt(script, voice)
+        import tempfile
+        platform = context.user_data.get("platform", "youtube")
+        with tempfile.TemporaryDirectory(prefix="nexora_recap_video_") as temp:
+            output = os.path.join(temp, "nexora_recap_preview.mp4")
+            await asyncio.to_thread(render_licensed_narrated_preview, source, audio, srt_text, output, platform, 300)
+            with open(output, "rb") as video_file:
+                await update.message.reply_video(
+                    video=InputFile(video_file, filename="nexora_recap_preview.mp4"),
+                    supports_streaming=True,
+                    caption=(
+                        f"NEXORA {platform.upper()} — Recap Preview (အများဆုံး ၅ မိနစ်)\n"
+                        f"ခေါင်းစဉ်: {metadata.get('title', query)} | နိုင်ငံ: {', '.join(countries)}\n"
+                        f"Footage: {source.get('source_page', '')}\n"
+                        f"လိုင်စင်: {source.get('license', '')} | ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\n"
+                        "မူရင်း footage ခေါင်းစဉ် metadata ကိုသာ ကိုက်ညီစစ်ထားပြီး ဇာတ်ဝင်ခန်းအကြောင်းအရာကို အတည်မပြုထားပါ။ "
+                        "ထုတ်ဝေမီ video ကို ကိုယ်တိုင်ကြည့်စစ်ပြီး Attribution/Share-Alike စည်းကမ်းလိုက်နာပါ။"
+                    ),
+                    read_timeout=180,
+                    write_timeout=180,
+                )
+    except (ClipSourceError, LicensedClipError, ValueError, RuntimeError) as exc:
+        await update.message.reply_text(f"Recap Video မထုတ်နိုင်ပါ: {str(exc)[:500]}")
+    except Exception:
+        log.exception("Automatic licensed recap video failed")
+        await update.message.reply_text("Recap Video မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
 
 
 async def autonarrateclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1914,6 +1964,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("episodepack", episodepack_cmd))
     telegram_app.add_handler(CommandHandler("episodeoutline", episodeoutline_cmd))
     telegram_app.add_handler(CommandHandler("recapvoice", recapvoice_cmd))
+    telegram_app.add_handler(CommandHandler("recapvideo", recapvideo_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
     telegram_app.add_handler(CommandHandler("recapqa", recapqa_cmd))
