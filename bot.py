@@ -16,6 +16,7 @@ from srt_builder import build_srt
 from subtitle_builder import build_burmese_srt
 from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
 from local_myanmar_tts import synthesize_local_burmese_speech
+from voxcpm_voice_design import VOICE_DESIGNS, synthesize_designed_burmese_voice
 from scene_tts import parse_scene_script
 from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
 from voice_profile_storage import load_voice_profiles, save_voice_profiles
@@ -811,6 +812,42 @@ async def voicedemo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+
+async def ttsdesign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generate a fictional Burmese character voice with optional VoxCPM2."""
+    if not update.message or not update.message.text:
+        return
+    first_line, separator, script = update.message.text.partition("\\n")
+    parts = first_line.split(maxsplit=1)
+    voice = parts[1].strip().lower() if len(parts) > 1 else ""
+    if not separator or not script.strip() or voice not in VOICE_DESIGNS:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /tts-design <voice_name> ပြီးနောက် စာကြောင်းအသစ်မှ ဇာတ်ညွှန်းထည့်ပါ။\\n"
+            "Voice အသစ်ဒီဇိုင်းများ: " + ", ".join(VOICE_DESIGNS) + "\\n"
+            "ဤအသံများသည် AI ဖန်တီးထားသော စိတ်ကူးယဉ်အသံများဖြစ်ပြီး တကယ့်လူတစ်ဦး၏အသံကို မကူးယူပါ။"
+        )
+        return
+    await update.message.reply_text(
+        f"{VOICE_DESIGNS[voice]['label']} AI အသံကို ဖန်တီးနေပါတယ်။ ပထမဆုံးအကြိမ်တွင် model download လုပ်ရနိုင်ပါတယ်..."
+    )
+    try:
+        audio = await synthesize_designed_burmese_voice(script, voice)
+    except (ValueError, RuntimeError) as exc:
+        await update.message.reply_text(str(exc))
+        return
+    file_obj = BytesIO(audio)
+    file_obj.name = f"nexora_designed_voice_{voice}.wav"
+    await update.message.reply_document(
+        document=InputFile(file_obj, filename=file_obj.name),
+        caption=(
+            f"AI Voice Design: {VOICE_DESIGNS[voice]['label']}\\n"
+            "စိတ်ကူးယဉ် synthetic voice ဖြစ်ပြီး တကယ့်အသံရှင်တစ်ဦးကို ကိုယ်စားမပြုပါ။"
+        ),
+        read_timeout=120,
+        write_timeout=120,
+    )
+
+
 async def ttslocal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate a WAV using the optional local MyanmarTTS model."""
     if not update.message or not update.message.text:
@@ -932,6 +969,7 @@ async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for key, preset in VOICE_PRESETS.items():
         lines.append(f"/tts {key} — {preset['label']}")
     lines.append("MP3 + SRT တွဲလိုပါက /ttssrt <preset> ကို သုံးပါ။ အသံကို အရင်နားထောင်လိုပါက /voicedemo <preset> ကို သုံးပါ။")
+    lines.append("AI Voice Design အသစ်များ: " + ", ".join(VOICE_DESIGNS) + " — /tts-design <voice_name> ဖြင့် WAV ထုတ်နိုင်သည် (VoxCPM2 GPU host လိုအပ်သည်)။")
     lines.append("မြန်မာ Role များ: [ဇာတ်ကြောင်း], [မင်းသား], [မင်းသမီး], [ဗီလိန်], [လူကြီး], [ကလေး], [ဟာသ], [လျှို့ဝှက်], [အက်ရှင်]")
     lines.append("English Role များ: [narrator], [protagonist], [heroine], [antagonist], [supporting], [elder], [child], [comic], [suspense], [action]")
     lines.append("Role များသည် ရှိပြီးသား preset များသို့ ချိတ်ဆက်ထားခြင်းသာဖြစ်ပြီး Nilar/Thiha အသံအခြေခံကို မပြောင်းပါ။")
@@ -1036,6 +1074,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("srtmy", srtmy_cmd))
     telegram_app.add_handler(CommandHandler("tts", tts_cmd))
     telegram_app.add_handler(CommandHandler("voicedemo", voicedemo_cmd))
+    telegram_app.add_handler(CommandHandler("tts-design", ttsdesign_cmd))
     telegram_app.add_handler(CommandHandler("tts-local", ttslocal_cmd))
     telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
     telegram_app.add_handler(CommandHandler("scenetts", scenetts_cmd))
