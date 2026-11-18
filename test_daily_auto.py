@@ -1,7 +1,7 @@
 import unittest
 from datetime import date
 
-from daily_auto import MOVIE_ROTATION, build_daily_message, select_daily_movie, split_telegram_text
+from daily_auto import MOVIE_ROTATION, build_daily_message, category_for_title, select_daily_movie, split_telegram_text
 
 
 class DailyAutoTests(unittest.TestCase):
@@ -12,6 +12,9 @@ class DailyAutoTests(unittest.TestCase):
     def test_selection_rotates_on_next_day(self):
         self.assertNotEqual(select_daily_movie(date(2026, 11, 17)), select_daily_movie(date(2026, 11, 18)))
 
+    def test_pororo_is_classified_as_3d_animation(self):
+        self.assertEqual(category_for_title("Pororo the Little Penguin"), "3D Animation")
+
     def test_selection_uses_catalog(self):
         self.assertIn(select_daily_movie(date(2026, 11, 17)), MOVIE_ROTATION)
 
@@ -21,6 +24,9 @@ class DailyAutoTests(unittest.TestCase):
         self.assertIn("Part 2", result)
         self.assertIn("Part 3", result)
         self.assertIn("ဇာတ်ညွှန်းအပြည့်", result)
+        self.assertIn("လူကြိုက်များမှု (Popularity)", result)
+        self.assertIn("ဇာတ်လမ်းအရ အကောင်းဆုံးဖြစ်မှု", result)
+        self.assertIn("အချက်အလက်မရရှိ", result)
 
     def test_long_message_is_split(self):
         chunks = split_telegram_text("x" * 8000)
