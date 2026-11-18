@@ -31,6 +31,8 @@ from video_renderer import render_slideshow, render_scene_timeline, VideoRenderE
 from clip_source_finder import search_licensed_video, ClipSourceError
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
 from licensed_narrated_clip import render_licensed_narrated_preview
+from wikidata_metadata import fetch_wikidata_metadata
+from autofacts_narration import generate_burmese_facts_narration
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -72,6 +74,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/clipsource <အမည်> - CC/Public Domain Video ရင်းမြစ်ရှာရန်\n"
             "/autoclip <အမည်> - လိုင်စင်ရှိ Video မှ MP4 Preview ထုတ်ရန်\n"
             "/autonarrateclip <အမည်> - Licensed footage + မြန်မာ narration/SRT Preview ထုတ်ရန်\n"
+            "/autofactsclip <အမည်> - Wikidata အချက်အလက်မှ မြန်မာအသံ + Licensed footage Preview အလိုအလျောက်ထုတ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -517,6 +520,64 @@ async def autonarrateclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception:
         log.exception("Automatic narrated licensed preview failed")
         await update.message.reply_text("Narrated Preview မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
+
+
+async def autofactsclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Automatically create a short factual intro from exact metadata and reusable footage."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /autofactsclip <Anime/ရုပ်ရှင်အမည်>\n"
+            "ခေါင်းစဉ်တိတိကျကျကို Wikidata မှ စစ်ပြီး CC/Public Domain footage ရှာကာ "
+            "အခြေခံအချက်အလက် မြန်မာအသံ + SRT Preview ထုတ်ပေးပါမယ်။"
+        )
+        return
+    await update.message.reply_text(
+        "Wikidata အချက်အလက်စစ်ပြီး ခွင့်ပြုထားသော video ရင်းမြစ်ကို အလိုအလျောက် ရှာနေပါတယ်..."
+    )
+    try:
+        metadata = await asyncio.to_thread(fetch_wikidata_metadata, query)
+        script = generate_burmese_facts_narration(metadata)
+        sources = await asyncio.to_thread(search_licensed_video, query, 10)
+        source = choose_matching_source(query, sources)
+        if not source:
+            await update.message.reply_text(
+                "ခေါင်းစဉ်နဲ့ ကိုက်ညီပြီး ပြန်လည်အသုံးပြုခွင့်ရှိတဲ့ Commons video မတွေ့ပါ။ "
+                "မသက်ဆိုင်တဲ့ footage ကို အစားထိုးမရွေးထားပါ။"
+            )
+            return
+        audio, srt_text = await synthesize_burmese_speech_with_srt(script, "narrator")
+        import tempfile
+        platform = context.user_data.get("platform", "youtube")
+        with tempfile.TemporaryDirectory(prefix="nexora_autofacts_") as temp:
+            output = os.path.join(temp, "nexora_facts_preview.mp4")
+            await asyncio.to_thread(
+                render_licensed_narrated_preview, source, audio, srt_text, output, platform
+            )
+            with open(output, "rb") as video_file:
+                await update.message.reply_video(
+                    video=InputFile(video_file, filename="nexora_facts_preview.mp4"),
+                    supports_streaming=True,
+                    caption=(
+                        f"NEXORA {platform.upper()} — အလိုအလျောက် အချက်အလက်မိတ်ဆက် Preview\n"
+                        f"Wikidata: {metadata.get('source', '')}\n"
+                        f"Commons: {source.get('source_page', '')}\n"
+                        f"လိုင်စင်: {source.get('license', '')}\n"
+                        f"ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\n"
+                        "မှတ်ချက်: ဇာတ်ကွက် recap မဟုတ်ပါ။ Wikidata metadata မှ ရရှိသော "
+                        "အခြေခံအချက်အလက်များသာ အသံဖတ်ထားသည်။ မူရင်းဗီဒီယိုအသံကို ဖယ်ထားပြီး "
+                        "အသုံးပြုမီ လိုင်စင် Attribution စည်းကမ်းကို စစ်ပါ။"
+                    ),
+                    read_timeout=120,
+                    write_timeout=120,
+                )
+    except (ValueError, ClipSourceError, LicensedClipError, RuntimeError) as exc:
+        await update.message.reply_text(f"အလိုအလျောက် Preview မထုတ်နိုင်ပါ: {str(exc)[:450]}")
+    except Exception:
+        log.exception("Automatic facts preview failed")
+        await update.message.reply_text("အချက်အလက်မိတ်ဆက် Preview မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
 
 
 async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1298,6 +1359,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/platform youtube|facebook|tiktok ကို အရင်ရွေးပါ။ /render ဖြင့် Slideshow၊ /render timeline ဖြင့် Scene တစ်ခုစီ ပုံ/အသံ အချိန်ကိုက် MP4 ထုတ်နိုင်သည်။ /render scene <အမည်> ဖြင့် Scene ဖွင့်ပါ။ .srt ပို့လျှင် ရွေးဖွင့်နိုင်သော Track ထည့်မည်။ /render finish ဖြင့် ပြီးစီးစေပါ။\n"
             "/clipsource နှင့် /autoclip ဖြင့် လိုင်စင်ရှိ Video ရင်းမြစ်ရှာပြီး Preview MP4 ထုတ်နိုင်သည်။\n"
             "/autonarrateclip <title>\n<preset>\n<script> ဖြင့် narration နှင့် selectable SRT track ထည့်နိုင်သည်။ ဇာတ်လမ်းအချက်အလက်ကို စစ်ပြီးမှ ထည့်ပါ။\n"
+            "/autofactsclip <title> သည် Wikidata အချက်အလက်နှင့် ခွင့်ပြုထားသော footage ကိုသုံးပြီး မိတ်ဆက် Video အလိုအလျောက်ထုတ်သည်။ ဇာတ်ကွက် recap မဟုတ်ပါ။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
@@ -1349,6 +1411,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("clipsource", clipsource_cmd))
     telegram_app.add_handler(CommandHandler("autoclip", autoclip_cmd))
     telegram_app.add_handler(CommandHandler("autonarrateclip", autonarrateclip_cmd))
+    telegram_app.add_handler(CommandHandler("autofactsclip", autofactsclip_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
     telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))

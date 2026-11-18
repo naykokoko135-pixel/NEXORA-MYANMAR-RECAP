@@ -140,5 +140,45 @@ class WikidataMetadataTests(unittest.TestCase):
         self.assertIn("မခန့်မှန်းထားပါ", formatted)
 
 
+    @patch("wikidata_metadata.urlopen")
+    def test_extracts_burmese_labels_for_auto_narration(self, mock_urlopen):
+        search = {"search": [{
+            "id": "Q777", "label": "Example Animation",
+            "description": "animated film",
+        }]}
+        entity = {"entities": {"Q777": {
+            "labels": {
+                "en": {"value": "Example Animation"},
+                "my": {"value": "ဥပမာ အန်နီမေးရှင်း"},
+            },
+            "descriptions": {"my": {"value": "ကာတွန်းရုပ်ရှင်"}},
+            "claims": {
+                "P136": [claim("Q888")],
+                "P495": [claim("Q999")],
+            },
+        }}}
+        labels = {"entities": {
+            "Q888": {"labels": {
+                "en": {"value": "animation"},
+                "my": {"value": "အန်နီမေးရှင်း"},
+            }},
+            "Q999": {"labels": {
+                "en": {"value": "Japan"},
+                "my": {"value": "ဂျပန်"},
+            }},
+        }}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search).encode()),
+            Response(json.dumps(entity).encode()),
+            Response(json.dumps(labels).encode()),
+        ]
+        result = fetch_wikidata_metadata("Example Animation")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["title_my"], "ဥပမာ အန်နီမေးရှင်း")
+        self.assertEqual(result["description_my"], "ကာတွန်းရုပ်ရှင်")
+        self.assertEqual(result["genres_my"], ["အန်နီမေးရှင်း"])
+        self.assertEqual(result["countries_my"], ["ဂျပန်"])
+
+
 if __name__ == "__main__":
     unittest.main()
