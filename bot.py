@@ -838,7 +838,7 @@ async def scenetts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         audio_file.name = audio_name
         await update.message.reply_document(
             document=InputFile(audio_file, filename=audio_name),
-            caption=f"🎙️ အခန်း {index}/{len(scenes)} — {scene['preset']} ({VOICE_PRESETS[scene['preset']]['label']})"
+            caption=f"🎙️ အခန်း {index}/{len(scenes)} — Role: {scene['role']} | Preset: {scene['preset']} ({VOICE_PRESETS[scene['preset']]['label']})"
         )
         srt_name = f"nexora_scene_{index}_{scene['preset']}.srt"
         subtitle_file = BytesIO(srt_text.encode("utf-8-sig"))
@@ -860,7 +860,9 @@ async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for key, preset in VOICE_PRESETS.items():
         lines.append(f"/tts {key} — {preset['label']}")
     lines.append("MP3 + SRT တွဲလိုပါက /ttssrt <preset> ကို သုံးပါ။")
-    lines.append("ဇာတ်ဝင်ခန်းတစ်ခုစီအတွက် မတူသော preset သုံးရန် /scenetts ကို သုံးပါ။")
+    lines.append("ဇာတ်ဝင်ခန်း/ဇာတ်ကောင် Role alias များ: [narrator], [protagonist], [male_lead], [heroine], [female_lead], [antagonist], [supporting], [elder], [child], [comic], [suspense], [action]")
+    lines.append("Role များသည် ရှိပြီးသား preset များသို့ ချိတ်ဆက်ထားခြင်းသာဖြစ်ပြီး Nilar/Thiha အသံအခြေခံကို မပြောင်းပါ။")
+    lines.append("ဇာတ်ဝင်ခန်းတစ်ခုစီအတွက် မတူသော role/preset သုံးရန် /scenetts ကို သုံးပါ။")
     lines.append("မှတ်ချက်: Nilar/Thiha အသံပိုင်ရှင် ၂ မျိုးကိုသာ အသုံးပြုပြီး preset များက သရုပ်ဆောင်အသံအသစ် မဟုတ်ပါ။")
     await update.message.reply_text("\n".join(lines))
 
