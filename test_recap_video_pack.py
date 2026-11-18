@@ -20,7 +20,7 @@ class RecapVideoPackTests(unittest.TestCase):
         # An unrecognized first line is treated as narration, not silently as a voice preset.
         self.assertEqual(
             parse_recap_video_request("/recapvideo Example\nunknown\nဇာတ်လမ်း", PRESETS),
-            ("Example", "narrator", "unknown\\nဇာတ်လမ်း"),
+            ("Example", "narrator", "unknown\nဇာတ်လမ်း"),
         )
     def test_subtitle_duration_is_read_without_truncation(self):
         self.assertAlmostEqual(
