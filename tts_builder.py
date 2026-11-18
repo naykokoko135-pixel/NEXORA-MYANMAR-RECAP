@@ -11,6 +11,28 @@ VOICE_MAP = {
     "female": "my-MM-NilarNeural",
     "male": "my-MM-ThihaNeural",
 }
+
+# Delivery styles reuse the two currently available Burmese neural speakers.
+VOICE_PRESETS = {
+    "female": {"voice": "female", "rate": "+0%", "pitch": "+0Hz", "label": "အမျိုးသမီး ပုံမှန်"},
+    "male": {"voice": "male", "rate": "+0%", "pitch": "+0Hz", "label": "အမျိုးသား ပုံမှန်"},
+    "narrator": {"voice": "female", "rate": "-5%", "pitch": "-1Hz", "label": "ဇာတ်ကြောင်းပြော"},
+    "hero": {"voice": "male", "rate": "+5%", "pitch": "+2Hz", "label": "သူရဲကောင်း"},
+    "villain": {"voice": "male", "rate": "-12%", "pitch": "-5Hz", "label": "ဗီလိန်"},
+    "elder": {"voice": "male", "rate": "-18%", "pitch": "-3Hz", "label": "အသက်ကြီးဇာတ်ကောင်ပုံစံ"},
+    "youth": {"voice": "female", "rate": "+8%", "pitch": "+3Hz", "label": "တက်ကြွလူငယ်"},
+    "emotional": {"voice": "female", "rate": "-8%", "pitch": "-1Hz", "label": "ခံစားချက်ပြင်းပြ"},
+    "energetic": {"voice": "male", "rate": "+12%", "pitch": "+2Hz", "label": "Action / တက်ကြွ"},
+    "mystery": {"voice": "female", "rate": "-12%", "pitch": "-4Hz", "label": "လျှို့ဝှက်ဆန်းကြယ်"},
+    "comedy": {"voice": "female", "rate": "+10%", "pitch": "+3Hz", "label": "ဟာသ / ပေါ့ပါး"},
+    "calm": {"voice": "male", "rate": "-10%", "pitch": "-2Hz", "label": "အေးဆေးတည်ငြိမ်"},
+}
+
+def get_tts_preset(preset: str) -> dict:
+    selected = (preset or "").strip().lower()
+    if selected not in VOICE_PRESETS:
+        raise ValueError("အသံ Preset မမှန်ပါ။ /voices ကိုကြည့်ပြီး ရွေးပါ။")
+    return dict(VOICE_PRESETS[selected])
 MAX_TEXT_CHARS = 6000
 MAX_AUDIO_BYTES = 20 * 1024 * 1024
 SYNTHESIS_TIMEOUT_SECONDS = 120
@@ -23,14 +45,15 @@ def validate_tts_request(text: str, voice: str) -> str:
     if len(cleaned) > MAX_TEXT_CHARS:
         raise ValueError("Voice-over စာသားသည် စာလုံး ၆,၀၀၀ ထက် မကျော်ရပါ။")
     selected = (voice or "").strip().lower()
-    if selected not in VOICE_MAP:
-        raise ValueError("အသံရွေးချယ်မှု female သို့မဟုတ် male ဖြစ်ရပါမည်။")
-    return VOICE_MAP[selected]
+    if selected not in VOICE_PRESETS:
+        raise ValueError("အသံ Preset မမှန်ပါ။ /voices ကိုကြည့်ပြီး ရွေးပါ။")
+    return VOICE_MAP[VOICE_PRESETS[selected]["voice"]]
 
 
 async def synthesize_burmese_speech(text: str, voice: str = "female") -> bytes:
     """Return MP3 bytes; requires network access to the online speech service."""
     voice_id = validate_tts_request(text, voice)
+    preset = get_tts_preset(voice)
     try:
         import edge_tts
     except ImportError as exc:
@@ -39,7 +62,7 @@ async def synthesize_burmese_speech(text: str, voice: str = "female") -> bytes:
     with tempfile.TemporaryDirectory(prefix="nexora_tts_") as temp_dir:
         output = Path(temp_dir) / "nexora_voiceover.mp3"
         try:
-            communicate = edge_tts.Communicate(text.strip(), voice_id)
+            communicate = edge_tts.Communicate(text.strip(), voice_id, rate=preset["rate"], pitch=preset["pitch"])
             await asyncio.wait_for(
                 communicate.save(str(output)),
                 timeout=SYNTHESIS_TIMEOUT_SECONDS,
@@ -126,7 +149,7 @@ async def synthesize_burmese_speech_with_srt(text: str, voice: str = "female") -
     boundaries = []
 
     async def collect():
-        communicate = edge_tts.Communicate(text.strip(), voice_id, boundary="WordBoundary")
+        communicate = edge_tts.Communicate(text.strip(), voice_id, rate=preset["rate"], pitch=preset["pitch"], boundary="WordBoundary")
         async for message in communicate.stream():
             if message.get("type") == "audio":
                 audio_chunks.append(message.get("data", b""))

@@ -14,7 +14,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 from srt_builder import build_srt
 from subtitle_builder import build_burmese_srt
-from tts_builder import synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
+from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
 from auto_research import search_movie_sources, ResearchLookupError
@@ -62,8 +62,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
             "/srtmy - မြန်မာစာသားမှ SRT ထုတ်ရန်\n"
-            "/tts female|male - မြန်မာ MP3 အသံထုတ်ရန်\n"
-            "/ttssrt female|male - MP3 နှင့် အချိန်ကိုက် SRT တွဲထုတ်ရန်\n"
+            "/tts <preset> - မြန်မာ MP3 အသံထုတ်ရန်\n"
+            "/ttssrt <preset> - MP3 နှင့် အချိန်ကိုက် SRT တွဲထုတ်ရန်\n"
+            "/voices - အသံပုံစံအားလုံးကြည့်ရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60 မိနစ်\n"
@@ -565,10 +566,10 @@ async def tts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     first_line, separator, script = update.message.text.partition("\n")
     parts = first_line.split(maxsplit=1)
     voice = parts[1].strip().lower() if len(parts) > 1 else ""
-    if not separator or not script.strip() or voice not in {"female", "male"}:
+    if not separator or not script.strip() or voice not in VOICE_PRESETS:
         await update.message.reply_text(
-            "အသုံးပြုပုံ:\n/tts female\nပြီးနောက် မြန်မာ Voice-over စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
-            "အမျိုးသားအသံအတွက် /tts male ကို သုံးပါ။"
+            "အသုံးပြုပုံ: /tts narrator သို့ /tts hero\n"
+            "အသံပုံစံစာရင်းအတွက် /voices ကို သုံးပါ။"
         )
         return
     try:
@@ -601,10 +602,10 @@ async def ttssrt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     first_line, separator, script = update.message.text.partition("\n")
     parts = first_line.split(maxsplit=1)
     voice = parts[1].strip().lower() if len(parts) > 1 else ""
-    if not separator or not script.strip() or voice not in {"female", "male"}:
+    if not separator or not script.strip() or voice not in VOICE_PRESETS:
         await update.message.reply_text(
-            "အသုံးပြုပုံ:\n/ttssrt female\nပြီးနောက် မြန်မာ Voice-over စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
-            "အမျိုးသားအသံအတွက် /ttssrt male ကို သုံးပါ။"
+            "အသုံးပြုပုံ: /ttssrt narrator သို့ /ttssrt hero\n"
+            "အသံပုံစံစာရင်းအတွက် /voices ကို သုံးပါ။"
         )
         return
     try:
@@ -629,6 +630,20 @@ async def ttssrt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         document=InputFile(subtitle_file, filename=subtitle_file.name),
         caption="အသံထုတ်လုပ်စဉ်ရရှိသော WordBoundary အချိန်မှတ်တမ်းဖြင့် ချိန်ညှိထားသည့် SRT ဖိုင်ပါ။ ထုတ်ဝေမီ ပြန်စစ်ပါ။"
     )
+
+
+async def voices_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """List Burmese voice identities and delivery-style presets."""
+    if not update.message:
+        return
+    lines = [
+        "NEXORA မြန်မာအသံပုံစံများ",
+        "မြန်မာ Neural Voice အစစ်မှာ Nilar (အမျိုးသမီး) နှင့် Thiha (အမျိုးသား) နှစ်မျိုးသာရှိပါတယ်။ ကျန်ရွေးချယ်မှုတွေက အသံအသစ်မဟုတ်ဘဲ ပြောနှုန်း/အသံအနိမ့်အမြင့် Preset များဖြစ်ပါတယ်။",
+    ]
+    for key, preset in VOICE_PRESETS.items():
+        lines.append(f"/tts {key} — {preset['label']}")
+    lines.append("MP3 + SRT တွဲလိုပါက /ttssrt <preset> ကို သုံးပါ။")
+    await update.message.reply_text("\n".join(lines))
 
 
 async def srtmy_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -727,6 +742,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("srtmy", srtmy_cmd))
     telegram_app.add_handler(CommandHandler("tts", tts_cmd))
     telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
+    telegram_app.add_handler(CommandHandler("voices", voices_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
     telegram_app.add_handler(CommandHandler("settings", settings_cmd))
