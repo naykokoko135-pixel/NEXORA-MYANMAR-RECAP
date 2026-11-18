@@ -32,9 +32,29 @@ def _request_json(params):
 
 
 def _normalize_title(value):
-    value = str(value or "").casefold().strip()
+    """Normalize punctuation and Unicode consistently for exact label/alias checks."""
+    import unicodedata
+
+    value = unicodedata.normalize("NFKC", str(value or "")).casefold().strip()
     value = re.sub(r"\s+\([^)]*\)$", "", value)
-    return " ".join(re.findall(r"[a-z0-9]+", value))
+    return " ".join(re.findall(r"[^\W_]+", value, flags=re.UNICODE))
+
+
+def _candidate_matches_exact_title(item, normalized_title):
+    """Accept an exact label or exact alias match; never accept substring similarity."""
+    if _normalize_title(item.get("label", "")) == normalized_title:
+        return True
+    aliases = item.get("aliases", [])
+    for alias in aliases if isinstance(aliases, list) else []:
+        alias_text = alias.get("value", "") if isinstance(alias, dict) else alias
+        if _normalize_title(alias_text) == normalized_title:
+            return True
+    match = item.get("match", {})
+    return (
+        isinstance(match, dict)
+        and match.get("type") == "alias"
+        and _normalize_title(match.get("text", "")) == normalized_title
+    )
 
 
 def _claim_entity_ids(claims, property_id):
@@ -88,31 +108,36 @@ def fetch_wikidata_metadata(title):
         return {"found": False, "status": "ခေါင်းစဉ်မမှန်ကန်ပါ။"}
 
     try:
+        normalized_title = _normalize_title(clean_title)
         search_payload = _request_json({
             "action": "wbsearchentities",
             "search": clean_title,
             "language": "en",
             "uselang": "en",
             "type": "item",
-            "limit": 8,
+            "limit": 50,
             "format": "json",
         })
         candidates = search_payload.get("search", [])
-        exact = [
-            item for item in candidates
-            if _normalize_title(item.get("label", "")) == _normalize_title(clean_title)
-        ]
-        if not exact:
+        exact_by_id = {}
+        for item in candidates:
+            candidate_id = item.get("id", "")
+            if re.fullmatch(r"Q\d+", candidate_id) and _candidate_matches_exact_title(item, normalized_title):
+                exact_by_id[candidate_id] = item
+
+        if not exact_by_id:
             return {
                 "found": False,
-                "status": "Wikidata တွင် အမည်တိတိကျကျ ကိုက်ညီသော မှတ်တမ်း မတွေ့ပါ။",
+                "status": "Wikidata တွင် အမည်တိတိကျကျ သို့မဟုတ် Alternate title ကိုက်ညီသော မှတ်တမ်း မတွေ့ပါ။",
+            }
+        if len(exact_by_id) > 1:
+            return {
+                "found": False,
+                "status": "ခေါင်းစဉ်နှင့် ကိုက်ညီသော Wikidata မှတ်တမ်းများ အများအပြားရှိနေသည်။ မမှန်ကန်သောဇာတ်ကားကို မရွေးရန် အတည်ပြုမှုလိုအပ်ပါသည်။",
             }
 
-        selected = exact[0]
+        selected = next(iter(exact_by_id.values()))
         entity_id = selected.get("id", "")
-        if not re.fullmatch(r"Q\d+", entity_id):
-            return {"found": False, "status": "Wikidata entity ID မမှန်ကန်ပါ။"}
-
         entity_payload = _request_json({
             "action": "wbgetentities",
             "ids": entity_id,
