@@ -1,5 +1,6 @@
 import unittest
 from recap_video_pack import MAX_RECAP_SCRIPT_CHARS, parse_recap_video_request, validate_non_indian_wikidata_metadata
+from licensed_narrated_clip import _subtitle_duration_seconds, LicensedClipError
 PRESETS = {"narrator", "hero", "female"}
 
 class RecapVideoPackTests(unittest.TestCase):
@@ -18,6 +19,14 @@ class RecapVideoPackTests(unittest.TestCase):
             parse_recap_video_request("/recapvideo Example\n" + ("က" * (MAX_RECAP_SCRIPT_CHARS + 1)), PRESETS)
         with self.assertRaises(ValueError):
             parse_recap_video_request("/recapvideo Example\nunknown\nဇာတ်လမ်း", PRESETS)
+    def test_subtitle_duration_is_read_without_truncation(self):
+        self.assertAlmostEqual(
+            _subtitle_duration_seconds("1\n00:00:00,000 --> 00:00:05,250\nမြန်မာစာ\n"),
+            5.25,
+        )
+        with self.assertRaises(LicensedClipError):
+            _subtitle_duration_seconds("not an SRT")
+
     def test_requires_known_non_indian_country(self):
         self.assertEqual(validate_non_indian_wikidata_metadata({"found": True, "countries": ["Japan"]}), ["Japan"])
         for metadata in ({"found": False, "status": "not found"}, {"found": True, "countries": []},
