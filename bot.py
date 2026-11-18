@@ -71,6 +71,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/tts <preset> - မြန်မာ MP3 အသံထုတ်ရန်\n"
             "/voicedemo <preset> - ရှိပြီးသားအသံပုံစံနမူနာ MP3 နားထောင်ရန်\n"
             "/tts-design <voice_name> - AI စိတ်ကူးယဉ်ဇာတ်ကောင်အသံ WAV ဖန်တီးရန် (GPU host လိုအပ်)\n"
+            "/scenedesign - ဇာတ်ဝင်ခန်းအလိုက် AI အသံ WAV များထုတ်ရန် (GPU host လိုအပ်)\n"
             "/ttssrt <preset> - MP3 နှင့် အချိန်ကိုက် SRT တွဲထုတ်ရန်\n"
             "/tts-local - Local MyanmarTTS WAV ထုတ်ရန် (စမ်းသပ်ဆဲ၊ host enable လိုအပ်)\n"
             "/voices - အသံပုံစံအားလုံးကြည့်ရန်\n"
