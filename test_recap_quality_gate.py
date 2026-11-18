@@ -51,7 +51,7 @@ class RecapQualityGateTests(unittest.TestCase):
         report = analyze_recap_script("Anime", "Sample", GOOD_SCRIPT)
         formatted = format_recap_qa_report(report)
         self.assertIn("NEXORA RECAP EDITORIAL QA", formatted)
-        self.assertIn("CHECK REQUIRED", formatted)
+        self.assertIn("READY FOR HUMAN REVIEW", formatted)
 
 
 if __name__ == "__main__":
