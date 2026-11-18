@@ -40,6 +40,7 @@ from tvmaze_synopsis import fetch_tvmaze_synopsis
 from tvmaze_synopsis import fetch_tvmaze_episode_summaries, fetch_tvmaze_top_rated_episodes
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
 from channel_growth_pack import generate_growth_pack
+from recap_quality_gate import analyze_recap_script, format_recap_qa_report
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
@@ -1669,6 +1670,27 @@ async def growthpack_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def recapqa_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Run deterministic editorial checks on a creator-supplied recap script."""
+    if not update.message or not update.message.text:
+        return
+    parts = update.message.text.split("\n", 1)
+    header = parts[0].split(maxsplit=1)
+    if len(header) < 2 or len(parts) < 2:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ:\n/recapqa Anime|Frieren: Beyond Journey's End\n"
+            "ပြီးနောက် Script ကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
+            "Category: Anime | 3D Animation | Cartoon | Donghua | International Movies"
+        )
+        return
+    fields = header[1].split("|", 1)
+    if len(fields) != 2:
+        await update.message.reply_text("Category|Title ပုံစံဖြင့် ထည့်ပါ။ ဥပမာ: /recapqa Donghua|Soul Land")
+        return
+    report = analyze_recap_script(fields[0], fields[1], parts[1])
+    output = format_recap_qa_report(report)
+    await update.message.reply_text(output[:3900])
+
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(
@@ -1755,6 +1777,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("topratedepisodes", topratedepisodes_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
+    telegram_app.add_handler(CommandHandler("recapqa", recapqa_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
     telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))

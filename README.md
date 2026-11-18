@@ -366,3 +366,12 @@ Use `/scenedesign` and put each scene under an `[ai:voice_name]` header. Example
 ```
 
 The bot sends one WAV per scene. It accepts up to 4 scenes, up to 1,500 characters per scene and 6,000 characters total. This feature uses the optional VoxCPM2 backend and therefore requires a compatible GPU host with `NEXORA_VOXCPM_ENABLED=1`; it is not enabled on Render Free by default. These are fictional prompt-designed synthetic voices, not recordings or copies of real actors. Audio generation is sequential and may take time. This command does not create aligned SRT files; use the existing `/scenetts` command for the Edge TTS MP3 + SRT workflow.
+
+
+## Recap editorial quality preflight
+
+Use `/recapqa <category>|<title>` followed by the creator-written Burmese recap script on the next line(s). The command checks the selected category, excluded project titles, basic script length, presence of a hook/story/turning-point/ending/original-commentary structure, source URLs, repeated paragraphs, and a media-rights note. It returns a conservative checklist and flags missing elements before publication.
+
+Supported categories: Anime, 3D Animation, Cartoon, Donghua, and International Movies. Indian-origin titles are excluded by the existing metadata research safeguards; this deterministic preflight also blocks the project's explicitly excluded title list.
+
+**Important:** This is a structure-only preflight. It does not fact-check plot events, verify that URLs support claims, determine whether footage/music is legally reusable, translate text, or predict views/likes. A clean report means only that the checked editorial signals are present; human review remains required.
