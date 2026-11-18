@@ -398,12 +398,12 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with tempfile.TemporaryDirectory(prefix="nexora_video_") as temp:
                 output = os.path.join(temp, "nexora_video.mp4")
                 audio_input = session["audio_tracks"] if session.get("audio_tracks") else session["audio"]
-                await asyncio.to_thread(render_slideshow, session["images"], audio_input, output)
+                await asyncio.to_thread(render_slideshow, session["images"], audio_input, output, session.get("platform", "youtube"), session.get("subtitle"))
                 with open(output, "rb") as video_file:
                     await update.message.reply_video(
                         video=InputFile(video_file, filename="nexora_video.mp4"),
                         supports_streaming=True,
-                        caption="NEXORA MP4 ပြီးပါပြီ။ အသုံးပြုခွင့်ရှိသော ပုံ/အသံများကိုသာ ထည့်သုံးပါ။",
+                        caption=f"NEXORA {session.get('platform', 'youtube').upper()} MP4 ပြီးပါပြီ။ " + ("မြန်မာစာတန်းထိုး ထည့်သွင်းထားပါတယ်။ " if session.get("subtitle") else "") + "အသုံးပြုခွင့်ရှိသော ပုံ/အသံများကိုသာ ထည့်သုံးပါ။",
                         read_timeout=120,
                         write_timeout=120,
                     )
@@ -445,13 +445,15 @@ async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tracks.append((profile["filename"], profile["audio"]))
         await update.message.reply_text(f"{profile_name} အသံ Track ထည့်ပြီးပါပြီ။ လက်ရှိ Track {len(tracks)}/12။ ထပ်ထည့်ရန် /render voice <အမည်> ကို သုံးပါ။")
         return
-    context.user_data["video_render"] = {"images": [], "audio": None, "audio_tracks": []}
+    platform = context.user_data.get("platform", "youtube")
+    context.user_data["video_render"] = {"images": [], "audio": None, "audio_tracks": [], "platform": platform}
     await update.message.reply_text(
-        "Video ဖန်တီးမှု စတင်ပါပြီ။\n"
+        f"Video ဖန်တီးမှု စတင်ပါပြီ။\nPlatform: {PLATFORM_NAMES.get(platform, platform)}\n"
         "၁) ပုံ JPG/PNG/WEBP အများဆုံး ၁၂ ပုံ ပို့ပါ။\n"
         "၂) Narration အသံဖိုင် ပို့ပါ၊ သို့မဟုတ် /render voice <profile အမည်> ဖြင့် သိမ်းထားသော အသံ Track များရွေးပါ။\n"
         "၃) Voice Track များကို အစဉ်လိုက် ပေါင်းစပ်မည်။ Track စုစုပေါင်း ၂၀ MB/၁၀ မိနစ်အောက် ဖြစ်ရပါမယ်။\n"
-        "၄) ပြီးရင် /render finish ပို့ပါ။ မလုပ်တော့ပါက /render cancel ပို့ပါ။\n"
+        "၄) မြန်မာစာတန်းထိုးလိုပါက .srt ဖိုင် (၁ MB အောက်) ပို့ပါ။ MP4 ထဲတွင် ရွေးဖွင့်နိုင်သော Subtitle Track အဖြစ် ထည့်ပေးမည်။\n"
+        "၅) ပြီးရင် /render finish ပို့ပါ။ မလုပ်တော့ပါက /render cancel ပို့ပါ။\n"
         "ကိုယ်ပိုင် သို့မဟုတ် အသုံးပြုခွင့်ရှိသော ပုံ/အသံကိုသာ သုံးပါ။"
     )
 
@@ -608,17 +610,23 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     elif message.voice:
         media_file = await message.voice.get_file()
         filename, kind = "narration.ogg", "audio"
+    if media_file is None and message.document and (message.document.file_name or "").lower().endswith(".srt"):
+        media_file = await message.document.get_file()
+        filename, kind = message.document.file_name or "captions.srt", "subtitle"
     if media_file is None:
         return
     size = getattr(media_file, "file_size", 0) or 0
-    limit = 20 * 1024 * 1024 if kind == "audio" else 8 * 1024 * 1024
+    limit = 20 * 1024 * 1024 if kind == "audio" else (1024 * 1024 if kind == "subtitle" else 8 * 1024 * 1024)
     if size > limit:
         await message.reply_text("ဖိုင်အရွယ်အစား ကြီးနေပါတယ်။ ပိုသေးတဲ့ဖိုင်သုံးပါ။")
         return
     buffer = BytesIO()
     await media_file.download_to_memory(out=buffer)
     data = buffer.getvalue()
-    if kind == "image":
+    if kind == "subtitle":
+        session["subtitle"] = (filename, data)
+        await message.reply_text("မြန်မာစာတန်းထိုး SRT လက်ခံပြီးပါပြီ။ /render finish ဖြင့် MP4 ထုတ်နိုင်ပါပြီ။")
+    elif kind == "image":
         if len(session["images"]) >= 12:
             await message.reply_text("ပုံ ၁၂ ပုံ ပြည့်ပါပြီ။ /render finish ပို့ပါ။")
             return
