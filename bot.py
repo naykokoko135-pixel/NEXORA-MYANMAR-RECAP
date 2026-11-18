@@ -37,7 +37,7 @@ from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
 from verified_plot_narration import generate_burmese_plot_narration
 from anilist_synopsis import fetch_anilist_synopsis
 from tvmaze_synopsis import fetch_tvmaze_synopsis
-from tvmaze_synopsis import fetch_tvmaze_episode_summaries
+from tvmaze_synopsis import fetch_tvmaze_episode_summaries, fetch_tvmaze_top_rated_episodes
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
 from channel_growth_pack import generate_growth_pack
 
@@ -83,6 +83,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/autonarrateclip <အမည်> - Licensed footage + မြန်မာ narration/SRT Preview ထုတ်ရန်\n"
             "/autofactsclip <အမည်> - Wikidata အချက်အလက်မှ မြန်မာအသံ + Licensed footage Preview အလိုအလျောက်ထုတ်ရန်\n"
             "/growthpack <category>|<title>|<summary optional> - Channel ထုတ်ဝေမှု Pack ထုတ်ရန်\n"
+            "/topratedepisodes <အမည်> - TVmaze rating အမြင့်ဆုံး Animation Episode များ ရှာရန်\\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -821,6 +822,51 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
     lines.append(
         "သတိပြုရန်: ဒီအချက်အလက်တွေဟာ TVmaze ရဲ့ community-maintained Episode summary အတိုများသာဖြစ်ပြီး "
         "အပြည့်အစုံ Recap script၊ ဇာတ်ဝင်ခန်း transcript သို့မဟုတ် အတည်ပြုပြီးဖြစ်ရပ်မှန် မဟုတ်ပါ။"
+    )
+    await update.message.reply_text("\\n".join(lines), disable_web_page_preview=True)
+
+
+async def topratedepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show highest TVMaze community-rated episodes, not view/popularity rankings."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /topratedepisodes <Anime/Cartoon/Donghua အမည်>\\n"
+            "TVmaze မှ Animation genre၊ နိုင်ငံအချက်အလက်နှင့် Episode rating ရှိသော Series ကိုသာ ရှာပါမယ်။"
+        )
+        return
+    await update.message.reply_text("Series အမည်နဲ့ Episode rating များကို စစ်ဆေးနေပါတယ်...")
+    result = await asyncio.to_thread(fetch_tvmaze_top_rated_episodes, query, 5)
+    if not result.get("found"):
+        await update.message.reply_text(result.get("status", "Episode rating ရင်းမြစ် မရရှိပါ။"))
+        return
+    lines = [
+        f"⭐ TVmaze Highest-Rated Episodes — {result.get('title', query)}",
+        f"နိုင်ငံ: {result.get('country') or 'မဖော်ပြထား'}",
+        "အောက်ပါစာရင်းသည် TVmaze community rating အလိုက် စီထားခြင်းဖြစ်သည်။",
+        "၎င်းသည် View count သို့မဟုတ် လူကြိုက်များမှုစာရင်း မဟုတ်ပါ။",
+        "",
+    ]
+    for index, episode in enumerate(result.get("episodes", []), 1):
+        season = episode.get("season") or "?"
+        number = episode.get("number") or "?"
+        lines.append(
+            f"{index}. S{season} E{number} — {episode.get('title', 'Untitled')} "
+            f"| Rating: {episode.get('rating', 'N/A')}/10"
+        )
+        if episode.get("airdate"):
+            lines.append("ထုတ်လွှင့်ရက်: " + episode["airdate"])
+        if episode.get("summary_excerpt"):
+            lines.append(episode["summary_excerpt"])
+        if episode.get("source"):
+            lines.append("Source: " + episode["source"])
+        lines.append("")
+    lines.append(
+        "သတိပြုရန်: TVmaze rating သည် community rating ဖြစ်ပြီး view count၊ audience size သို့မဟုတ် live popularity မဟုတ်ပါ။ "
+        "Rating ပေးသူအရေအတွက် မရရှိနိုင်ပါက ရမှတ်တစ်ခုတည်းဖြင့် လူကြိုက်များမှုဟု မသတ်မှတ်ပါနှင့်။ "
+        "အမျိုးအစားနှင့် နိုင်ငံကို metadata ဖြင့်သာ စစ်ထားပြီး 2D/3D ကို မခန့်မှန်းပါ။"
     )
     await update.message.reply_text("\\n".join(lines), disable_web_page_preview=True)
 
@@ -1649,6 +1695,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/animationepisodes <title> သည် TVmaze မှ Animation Series Episode summary အတိုများကို ရင်းမြစ်နှင့်ပြသည်။\\n"
             "/movieplotresearch <title> သည် exact Wikidata-English Wikipedia ချိတ်ဆက်ထားသော နိုင်ငံခြားရုပ်ရှင် Plot section ကို research အဖြစ်ပြသည်။\\n"
             "/growthpack <category>|<title>|<summary optional> သည် title၊ description၊ thumbnail၊ Hook နှင့် retention checklist ပြင်ဆင်ပေးသည်။ Live views/trends ကို မခန့်မှန်းပါ။\\n"
+            "/topratedepisodes <title> သည် TVmaze community rating အမြင့်ဆုံး Animation Episode များကိုပြသည်။ View count မဟုတ်ပါ။\\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
@@ -1705,6 +1752,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("animesynopsis", animesynopsis_cmd))
     telegram_app.add_handler(CommandHandler("seriesresearch", seriesresearch_cmd))
     telegram_app.add_handler(CommandHandler("animationepisodes", animationepisodes_cmd))
+    telegram_app.add_handler(CommandHandler("topratedepisodes", topratedepisodes_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
