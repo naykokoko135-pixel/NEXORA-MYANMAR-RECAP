@@ -51,6 +51,7 @@ class EpisodeRecapOutlineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             format_episode_recap_outline(research)
         research["episodes"] = [dict(self.research["episodes"][0], source="")]
+        research["provider_url"] = ""
         with self.assertRaises(ValueError):
             format_episode_recap_outline(research)
 
