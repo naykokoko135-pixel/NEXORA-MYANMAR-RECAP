@@ -11,7 +11,7 @@ import urllib.request
 import re
 
 API = "https://commons.wikimedia.org/w/api.php"
-LICENSE_PATTERN = re.compile(r"^(?:CC0(?:\\s|$)|CC BY(?:-SA)?(?:\\s|$)|Public domain$)", re.IGNORECASE)
+LICENSE_PATTERN = re.compile(r"^(?:CC0(?:\s|$)|CC BY(?:-SA)?(?:\s|$)|Public domain$)", re.IGNORECASE)
 
 
 class ClipSourceError(ValueError):
