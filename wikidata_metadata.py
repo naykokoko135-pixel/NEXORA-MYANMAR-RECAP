@@ -165,7 +165,7 @@ def fetch_wikidata_metadata(title):
             # If the user supplied a release year, use Wikidata's structured
             # publication-date claims to distinguish same-title works before
             # considering the descriptive screen-work preference.
-            year_match = re.search(r"\\((\\d{4})\\)$", clean_title)
+            year_match = re.search(r"\((\d{4})\)$", clean_title)
             if year_match:
                 requested_year = year_match.group(1)
                 candidate_payload = _request_json({
