@@ -95,7 +95,10 @@ class WikidataMetadataTests(unittest.TestCase):
             "Q999": {"claims": {"P577": [claim(time_value="+1950-01-01T00:00:00Z")]}},
         }}
         selected_entity = {"entities": {
-            "Q850159": {"claims": {"P495": [claim("Q30")]}}
+            "Q850159": {"claims": {
+                "P495": [claim("Q30")],
+                "P577": [claim(time_value="+1926-12-25T00:00:00Z")],
+            }}
         }}
         labels = {"entities": {
             "Q30": {"labels": {"en": {"value": "United States"}}}
