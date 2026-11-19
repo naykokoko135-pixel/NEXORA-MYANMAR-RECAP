@@ -95,6 +95,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/recapvoice [preset] - ကိုယ်ရေးထားသော Recap Script မှ MP3 + အသံနှင့်ကိုက်ညီသော SRT ထုတ်ရန်\n"
             "/recapvideo <title> - ခေါင်းစဉ်တစ်ခုတည်းမှ အလိုအလျောက် narration + လိုင်စင်ရှိ footage + SRT Preview ထုတ်ရန်\n"
+            "/multisourceresearch <Anime အမည်> - AniList + Tenrai/MAL + Wikidata ကို တစ်ပြိုင်နက်စစ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -2011,6 +2012,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60\n"
             "TikTok: 1-3, 3-5\nFacebook: 3-5, 5-7, 8-10, 10-15\n\n"
             "/auto သည် Wikipedia မှ source lead များရှာပေးသည်၊ အချက်အလက်ကို ကိုယ်တိုင်ပြန်စစ်ပါ။\n"
+            "/multisourceresearch <Anime အမည်> သည် AniList + Tenrai/MAL + Wikidata metadata ကို တစ်ပြိုင်နက်စစ်ပေးသည်။\n"
             "/draft သည် ပေးထားသော Research Notes ကို worksheet အဖြစ် စီစဉ်ပေးသည်။\n"
             "/draft3 သည် YouTube အတွက် သီးခြား worksheet သုံးခု ထုတ်ပေးသည်။\n"
             "/allplatforms သည် YouTube/Facebook/TikTok အတွက် အပိုင်းနှင့် ကြာချိန် သီးခြားခွဲပြသည်။\n"
@@ -2206,8 +2208,10 @@ BRIDGE_ALLOWED_COMMANDS = {\n    "status", "help", "auto", "seriesguide", "creat
 
 def _bridge_authorized(request: Request) -> bool:
     supplied = request.headers.get("x-nexora-bridge-key", "")
-    return bool(CHATGPT_BRIDGE_API_KEY) and hmac.compare_digest(
-        supplied, CHATGPT_BRIDGE_API_KEY
+    return (
+        isinstance(CHATGPT_BRIDGE_API_KEY, str)
+        and len(CHATGPT_BRIDGE_API_KEY) >= 32
+        and hmac.compare_digest(supplied, CHATGPT_BRIDGE_API_KEY)
     )
 
 
