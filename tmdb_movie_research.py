@@ -117,8 +117,26 @@ def fetch_tmdb_movie(title):
 
 def research_movie_sources(title):
     clean = " ".join(str(title or "").split()).strip()
-    tmdb = fetch_tmdb_movie(clean)
-    wikidata = fetch_wikidata_metadata(clean)
+
+    # Keep independent catalogue results even if one provider raises an
+    # unexpected exception (for example, a changed response schema).
+    def safe_fetch(fetcher, source_name):
+        try:
+            result = fetcher(clean)
+            if isinstance(result, dict):
+                return result
+            return {
+                "found": False,
+                "status": source_name + " မှ မမှန်ကန်သော တုံ့ပြန်မှု ရရှိပါသည်။",
+            }
+        except Exception:
+            return {
+                "found": False,
+                "status": source_name + " ရင်းမြစ်ကို ယခုချိန်တွင် မရရှိနိုင်ပါ။",
+            }
+
+    tmdb = safe_fetch(fetch_tmdb_movie, "TMDB")
+    wikidata = safe_fetch(fetch_wikidata_metadata, "Wikidata")
     tmdb_countries = tmdb.get("countries") or [] if tmdb.get("found") else []
     wd_countries = wikidata.get("countries") or [] if wikidata.get("found") else []
     combined = " ".join(str(x) for x in tmdb_countries + wd_countries).casefold()
