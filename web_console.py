@@ -66,7 +66,7 @@ button.secondary{background:#334155}button:disabled{opacity:.55}
  <div class="muted">Render Environment တွင် သတ်မှတ်မည့် NEXORA_CONSOLE_PASSWORD ကို ထည့်ပါ။ Telegram Bot Token သို့မဟုတ် Bridge API Key မဟုတ်ပါ။</div>
  <label for="password">Console Password</label>
  <input id="password" type="password" autocomplete="current-password" placeholder="Console password">
- <button id="loginBtn">ဝင်မည်</button>
+ <button id="loginBtn">ဝင်မည်</button><div id="loginResult" class="muted" role="status"></div>
 </section>
 <section class="panel hidden" id="commandPanel">
  <div class="top"><h2>Command ပို့ရန်</h2><button class="secondary" id="logoutBtn" style="width:auto;margin:0">ထွက်မည်</button></div>
@@ -82,7 +82,7 @@ button.secondary{background:#334155}button:disabled{opacity:.55}
 </section>
 </main>
 <script>
-const $=id=>document.getElementById(id);
+const $=id=>document.getElementById(id);\nfetch("/console/session",{credentials:"same-origin"}).then(r=>r.json()).then(s=>{if(s.authenticated){$("loginPanel").classList.add("hidden");$("commandPanel").classList.remove("hidden");}}).catch(()=>{});
 async function api(path,data){
  const response=await fetch(path,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(data||{})});
  const body=await response.json().catch(()=>({detail:"Invalid server response"}));
@@ -92,7 +92,7 @@ async function api(path,data){
 $("loginBtn").addEventListener("click",async()=>{
  $("loginBtn").disabled=true;
  try{await api("/console/login",{password:$("password").value});$("password").value="";$("loginPanel").classList.add("hidden");$("commandPanel").classList.remove("hidden");$("result").textContent="ဝင်ရောက်ပြီးပါပြီ။";}
- catch(e){$("result").textContent=e.message;$("loginPanel").classList.remove("hidden");}
+ catch(e){$("loginResult").textContent=e.message;$("loginPanel").classList.remove("hidden");}
  finally{$("loginBtn").disabled=false;}
 });
 $("password").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click();});
