@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 from openai_script_provider import generate_burmese_recap_script
 
-MAX_SOURCE_NOTES_CHARS = 3300
+MAX_SOURCE_NOTES_CHARS = 3000
 MIN_SOURCE_NOTES_CHARS = 80
 
 
