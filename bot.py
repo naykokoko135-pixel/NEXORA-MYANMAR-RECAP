@@ -9,6 +9,7 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from telegram import InputFile, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
@@ -53,6 +54,7 @@ from recap_video_pack import parse_recap_video_request, validate_non_indian_wiki
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from error_reporter import report_error_to_github
 from comment_autoreply import build_reply, platform_comment_capabilities, run_comment_autoreply_cycle
+from web_console import CONSOLE_HTML, create_console_session, verify_console_session
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -2202,6 +2204,101 @@ async def health():
     if telegram_app is None:
         raise HTTPException(status_code=503, detail="Telegram bot is not ready")
     return {"status": "ok", "telegram": True}
+
+
+@web_app.get("/console", response_class=HTMLResponse)
+async def web_command_console():
+    """Mobile-friendly command console; bridge secrets never reach the browser."""
+    return HTMLResponse(CONSOLE_HTML)
+
+
+def _console_origin_is_same(request: Request) -> bool:
+    origin = request.headers.get("origin", "")
+    return bool(origin) and origin.rstrip("/") == str(request.base_url).rstrip("/")
+
+
+def _console_is_authorized(request: Request) -> bool:
+    password = os.getenv("NEXORA_CONSOLE_PASSWORD", "")
+    token = request.cookies.get("nexora_console", "")
+    return verify_console_session(token, password)
+
+
+@web_app.post("/console/login")
+async def web_console_login(request: Request):
+    if not _console_origin_is_same(request):
+        raise HTTPException(status_code=403, detail="Same-origin request required")
+    password = os.getenv("NEXORA_CONSOLE_PASSWORD", "")
+    if len(password) < 16:
+        raise HTTPException(status_code=503, detail="Web console password is not configured (minimum 16 characters)")
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    supplied = payload.get("password", "") if isinstance(payload, dict) else ""
+    if not isinstance(supplied, str) or not hmac.compare_digest(supplied, password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    response = JSONResponse({"ok": True})
+    response.set_cookie(
+        "nexora_console",
+        create_console_session(password),
+        max_age=8 * 60 * 60,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        path="/console",
+    )
+    return response
+
+
+@web_app.post("/console/logout")
+async def web_console_logout(request: Request):
+    if not _console_origin_is_same(request):
+        raise HTTPException(status_code=403, detail="Same-origin request required")
+    response = JSONResponse({"ok": True})
+    response.delete_cookie("nexora_console", path="/console", secure=True, httponly=True, samesite="strict")
+    return response
+
+
+@web_app.post("/console/command")
+async def web_console_command(request: Request):
+    if not _console_origin_is_same(request):
+        raise HTTPException(status_code=403, detail="Same-origin request required")
+    if not _console_is_authorized(request):
+        raise HTTPException(status_code=401, detail="Console login required")
+    if telegram_app is None:
+        raise HTTPException(status_code=503, detail="Telegram bot is not ready")
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="JSON object required")
+    command = str(payload.get("command", "")).strip().lower().lstrip("/")
+    argument = str(payload.get("argument", "")).strip()
+    if command not in BRIDGE_ALLOWED_COMMANDS:
+        raise HTTPException(status_code=400, detail="Command is not allowed")
+    if len(argument) > 3500 or "\\n" in argument or "\\r" in argument:
+        raise HTTPException(status_code=400, detail="Argument is too long or invalid")
+    try:
+        chat_id = int(os.getenv("CHATGPT_BRIDGE_CHAT_ID", ""))
+    except ValueError:
+        raise HTTPException(status_code=503, detail="Telegram destination is not configured")
+    if chat_id <= 0:
+        raise HTTPException(status_code=503, detail="Configure a private positive Telegram chat ID")
+    text = "/" + command + ((" " + argument) if argument else "")
+    synthetic_update = Update.de_json({
+        "update_id": time.time_ns() % 2_000_000_000,
+        "message": {
+            "message_id": int(time.time()) % 2_000_000_000,
+            "date": int(time.time()),
+            "chat": {"id": chat_id, "type": "private"},
+            "from": {"id": chat_id, "is_bot": False, "first_name": "NEXORA Web Console"},
+            "text": text,
+            "entities": [{"type": "bot_command", "offset": 0, "length": len("/" + command)}],
+        },
+    }, telegram_app.bot)
+    await telegram_app.process_update(synthetic_update)
+    return {"ok": True, "command": command, "delivered_to_telegram": True}
 
 
 @web_app.get("/chatgpt/bridge-health")
