@@ -14,6 +14,8 @@ services:
         generateValue: true
       - key: CHATGPT_BRIDGE_API_KEY
         sync: false
+      - key: NEXORA_CONSOLE_PASSWORD
+        sync: false
       - key: CHATGPT_BRIDGE_CHAT_ID
         sync: false
       - key: TMDB_API_READ_ACCESS_TOKEN
