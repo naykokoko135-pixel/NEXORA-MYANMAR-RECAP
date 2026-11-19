@@ -76,7 +76,7 @@ def validate_tts_request(text: str, voice: str) -> str:
     if not cleaned:
         raise ValueError("မြန်မာ Voice-over စာသား ထည့်ပါ။")
     if len(cleaned) > MAX_TEXT_CHARS:
-        raise ValueError("Voice-over စာသားသည် စာလုံး ၆,၀၀၀ ထက် မကျော်ရပါ။")
+        raise ValueError("Voice-over စာသားသည် စာလုံး ၃၀,၀၀၀ ထက် မကျော်ရပါ။")
     selected = (voice or "").strip().lower()
     if selected not in VOICE_PRESETS:
         raise ValueError("အသံ Preset မမှန်ပါ။ /voices ကိုကြည့်ပြီး ရွေးပါ။")
@@ -110,7 +110,7 @@ async def synthesize_burmese_speech(text: str, voice: str = "female") -> bytes:
             raise RuntimeError("အသံဖိုင် မရရှိပါ။ ပြန်စမ်းပါ။")
         audio = output.read_bytes()
         if not audio or len(audio) > MAX_AUDIO_BYTES:
-            raise RuntimeError("MP3 ဖိုင်အရွယ်အစား ၂၀ MB ထက် ကျော်နေသည် သို့မဟုတ် ဖိုင်ဗလာဖြစ်နေသည်။")
+            raise RuntimeError("MP3 ဖိုင်အရွယ်အစား ၄၅ MB ထက် ကျော်နေသည် သို့မဟုတ် ဖိုင်ဗလာဖြစ်နေသည်။")
         return audio
 
 
