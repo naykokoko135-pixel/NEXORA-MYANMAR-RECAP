@@ -10,8 +10,10 @@ import os
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-DEFAULT_MODEL = "gemini-2.5-flash"
-API_ROOT = "https://generativelanguage.googleapis.com/v1beta/models"
+# Gemini 2.5 generation is restricted for some newly created projects. Use the
+# current stable Flash model and its documented Interactions REST endpoint.
+DEFAULT_MODEL = "gemini-3.8-flash"
+API_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 TIMEOUT_SECONDS = 240
 MAX_OUTPUT_TOKENS = 10000
 MIN_SCRIPT_CHARS = {"youtube": 5000, "facebook": 3300, "tiktok": 250}
@@ -27,6 +29,18 @@ def gemini_script_status() -> dict:
         "configured": bool(os.getenv("GEMINI_API_KEY", "").strip()),
         "model": os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL,
     }
+
+
+def _extract_interaction_text(result: dict) -> str:
+    """Extract only final model-output text from an Interactions response."""
+    chunks = []
+    for step in result.get("steps", []):
+        if not isinstance(step, dict) or step.get("type") != "model_output":
+            continue
+        for part in step.get("content", []):
+            if isinstance(part, dict) and part.get("type") == "text" and part.get("text"):
+                chunks.append(str(part["text"]).strip())
+    return "\\n".join(chunk for chunk in chunks if chunk).strip()
 
 
 def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtube",
@@ -52,16 +66,18 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
         "မူရင်း dialogue မကူးပါနှင့်။ သဘာဝကျသော မြန်မာစကားဖြင့် Hook, context, "
         "ဖြစ်ရပ်အစဉ်လိုက် narration, transition, ကိုယ်ပိုင်သုံးသပ်ချက်နှင့် closing ရေးပါ။ "
         "ဇာတ်လမ်းအချက်အလက် မလုံလောက်လျှင် စာသားထပ်ဖြည့်မည့်အစား အချက်အလက်လိုအပ်ကြောင်း ဖော်ပြပါ။ "
-        "ရည်မှန်းကြာချိန်နှင့် ကိုက်ညီအောင် ပြည့်စုံစွာရေးပါ။\n\n"
-        f"ခေါင်းစဉ်: {topic}\nPlatform: {platform}\nရည်မှန်းကြာချိန်: {duration} မိနစ်\n"
-        f"Verified research notes:\n{notes}"
+        "ရည်မှန်းကြာချိန်နှင့် ကိုက်ညီအောင် ပြည့်စုံစွာရေးပါ။\\n\\n"
+        f"ခေါင်းစဉ်: {topic}\\nPlatform: {platform}\\nရည်မှန်းကြာချိန်: {duration} မိနစ်\\n"
+        f"Verified research notes:\\n{notes}"
     )
     payload = json.dumps({
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.35, "maxOutputTokens": MAX_OUTPUT_TOKENS},
+        "model": model,
+        "input": prompt,
+        "store": False,
+        "generation_config": {"max_output_tokens": MAX_OUTPUT_TOKENS},
     }).encode("utf-8")
     request = Request(
-        f"{API_ROOT}/{model}:generateContent",
+        API_URL,
         data=payload,
         headers={
             "x-goog-api-key": key,
@@ -78,6 +94,8 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
             raise GeminiScriptError("Gemini API Limit/Quota ပြည့်နေပါတယ်။ ထပ်မခေါ်ဘဲ ရပ်ထားပါတယ်။") from None
         if exc.code in (401, 403):
             raise GeminiScriptError("Gemini API Key သို့မဟုတ် permission မမှန်ပါ။ Render Secret ကို စစ်ဆေးရန် လိုပါတယ်။") from None
+        if exc.code == 404:
+            raise GeminiScriptError("Gemini model သို့မဟုတ် Interactions API မရရှိပါ (HTTP 404)။ GEMINI_MODEL ကို စစ်ဆေးရန် လိုပါတယ်။") from None
         if exc.code >= 500:
             raise GeminiScriptError("Gemini ဝန်ဆောင်မှု ယာယီမရနိုင်ပါ။ ထပ်မခေါ်ထားပါ။") from None
         raise GeminiScriptError(f"Gemini API တောင်းဆိုမှု မအောင်မြင်ပါ (HTTP {exc.code})။") from None
@@ -86,13 +104,7 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     except (ValueError, TypeError, KeyError):
         raise GeminiScriptError("Gemini API မှ ဖတ်ရှုနိုင်သော တုံ့ပြန်မှု မရရှိပါ။") from None
 
-    try:
-        candidates = result.get("candidates", [])
-        parts = candidates[0].get("content", {}).get("parts", [])
-        script = "\n".join(str(part.get("text", "")).strip() for part in parts
-                            if isinstance(part, dict) and part.get("text")).strip()
-    except (IndexError, AttributeError, TypeError):
-        script = ""
+    script = _extract_interaction_text(result)
     if not script:
         raise GeminiScriptError("Gemini မှ Script စာသား မရရှိပါ။")
     if len(script) < MIN_SCRIPT_CHARS[platform]:
