@@ -427,10 +427,30 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ClipSourceError as exc:
         errors.append("Commons: " + str(exc))
     try:
-        europeana = await asyncio.to_thread(search_europeana_licensed_video, query, 6)
+        # Use only title aliases returned by an exact Wikidata match. If metadata
+        # is unavailable, keep the original query rather than guessing aliases.
+        alternate_titles = []
+        metadata = await asyncio.to_thread(fetch_wikidata_metadata, query)
+        if metadata.get("found"):
+            alternate_titles = [
+                metadata.get("title", ""),
+                metadata.get("title_my", ""),
+                metadata.get("enwiki_title", ""),
+                metadata.get("mywiki_title", ""),
+            ]
+        europeana = await asyncio.to_thread(
+            search_europeana_licensed_video, query, 6, alternate_titles
+        )
         results.extend(europeana)
     except EuropeanaSearchError as exc:
         errors.append("Europeana: " + str(exc))
+    except Exception:
+        # A metadata lookup failure must not prevent the basic title search.
+        try:
+            europeana = await asyncio.to_thread(search_europeana_licensed_video, query, 6)
+            results.extend(europeana)
+        except EuropeanaSearchError as exc:
+            errors.append("Europeana: " + str(exc))
     if not results:
         detail = ("\n" + "\n".join(errors)) if errors else ""
         await update.message.reply_text(
