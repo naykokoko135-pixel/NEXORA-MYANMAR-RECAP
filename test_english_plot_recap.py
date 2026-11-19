@@ -27,6 +27,24 @@ class EnglishPlotRecapTests(unittest.TestCase):
         self.assertEqual(kwargs["platform"], "youtube")
         self.assertEqual(kwargs["duration"], "3-5")
 
+    @patch("english_plot_recap.generate_burmese_recap_script")
+    def test_uses_platform_specific_duration(self, mock_generate):
+        mock_generate.return_value = "မြန်မာ recap narration"
+        for platform, duration in (("youtube", "3-5"), ("facebook", "3-5"), ("tiktok", "1-3")):
+            with self.subTest(platform=platform):
+                generate_burmese_recap_from_english_plot(
+                    "Sample Film", self.sample_plot(), platform
+                )
+                self.assertEqual(mock_generate.call_args.kwargs["duration"], duration)
+
+    def test_rejects_unknown_platform_before_calling_provider(self):
+        with patch("english_plot_recap.generate_burmese_recap_script") as mock_generate:
+            with self.assertRaises(ValueError):
+                generate_burmese_recap_from_english_plot(
+                    "Sample Film", self.sample_plot(), "unknown"
+                )
+            mock_generate.assert_not_called()
+
     def test_rejects_non_wikipedia_source(self):
         plot = self.sample_plot()
         plot["source"] = "https://example.org/wiki/Sample_Film"

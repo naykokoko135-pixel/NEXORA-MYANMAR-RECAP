@@ -8,6 +8,7 @@ from openai_script_provider import generate_burmese_recap_script
 
 MAX_SOURCE_NOTES_CHARS = 3000
 MIN_SOURCE_NOTES_CHARS = 80
+PLATFORM_DURATIONS = {"youtube": "3-5", "facebook": "3-5", "tiktok": "1-3"}
 
 
 def generate_burmese_recap_from_english_plot(
@@ -29,8 +30,10 @@ def generate_burmese_recap_from_english_plot(
         + source_text[:MAX_SOURCE_NOTES_CHARS]
         + "\nSource: " + source_url
     )
+    if platform not in PLATFORM_DURATIONS:
+        raise ValueError("Platform သည် youtube/facebook/tiktok ဖြစ်ရပါမယ်။")
     script = generate_burmese_recap_script(
-        topic, notes, platform=platform, duration="3-5"
+        topic, notes, platform=platform, duration=PLATFORM_DURATIONS[platform]
     )
     if not script.strip():
         raise ValueError("Burmese recap narration မရရှိပါ။")
