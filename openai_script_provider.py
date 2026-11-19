@@ -44,13 +44,13 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     if not topic or len(topic) > MAX_TOPIC_CHARS:
         raise AIScriptError("ခေါင်းစဉ်သည် ဗလာမဖြစ်ရ၊ စာလုံး 180 ထက်မကျော်ရပါ။")
     if len(notes) < 80 or len(notes) > MAX_NOTES_CHARS:
-        raise AIScriptError("အတည်ပြုပြီး Research Notes ကို စာလုံး 80 မှ 9,000 အတွင်း ထည့်ပါ။")
+        raise AIScriptError("Research Notes ကို စာလုံး 80 မှ 3,500 အတွင်း ထည့်ပါ။")
     if platform not in {"youtube", "facebook", "tiktok"}:
         raise AIScriptError("Platform မမှန်ကန်ပါ။")
     model = os.getenv("OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     prompt = (
         "သင်သည် NEXORA Myanmar Recap အတွက် မြန်မာဘာသာ Script Editor ဖြစ်သည်။ "
-        "အောက်ပါ creator ပေးထားသော verified notes များကိုသာ အခြေခံ၍ recap narration draft ရေးပါ။ "
+        "အောက်ပါ research notes များကိုသာ အခြေခံ၍ recap narration draft ရေးပါ။ ရင်းမြစ်သည် လူထုတည်းဖြတ်ရင်းမြစ်ဖြစ်ပါက studio-verified canon ဟု မဆိုပါနှင့်။ မသေချာသောအချက်များကို [အချက်အလက် ထပ်စစ်ရန်] ဟု မှတ်သားပါ။ "
         "Notes ထဲတွင် မပါသော ဇာတ်ကွက်၊ ဇာတ်ကောင်လုပ်ရပ်၊ ending၊ quote၊ episode detail မတီထွင်ပါနှင့်။ "
         "အချက်အလက်မလုံလောက်သည့်နေရာတွင် [အချက်အလက် ထပ်စစ်ရန်] ဟုမှတ်သားပါ။ "
         "မူရင်းဇာတ်ကား၏ dialogue ကို မကူးယူပါနှင့်။ မူရင်းဗီဒီယို footage ရှိသည်ဟု မဆိုပါနှင့်။ "
