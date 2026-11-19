@@ -78,6 +78,46 @@ class RecapMetadataResolverTests(unittest.TestCase):
         self.assertIn("နိုင်ငံ", result["status"])
         anime.assert_not_called()
 
+    @patch("recap_metadata_resolver.research_anime_sources")
+    @patch("recap_metadata_resolver.fetch_tmdb_movie")
+    @patch("recap_metadata_resolver.fetch_wikidata_metadata")
+    def test_anime_requested_year_mismatch_is_rejected(self, wikidata, tmdb, anime):
+        wikidata.return_value = {"found": False, "status": "ambiguous"}
+        tmdb.return_value = {"found": False, "status": "no exact movie"}
+        anime.return_value = {
+            "india_excluded": False,
+            "year_conflict": False,
+            "anilist": {
+                "found": True, "provider": "AniList", "title": "Example Anime",
+                "country": "JP", "year": 2023,
+            },
+            "tenrai": {"found": False},
+            "wikidata": {"found": False},
+        }
+        result = resolve_recap_metadata("Example Anime (2024)")
+        self.assertFalse(result["found"])
+        self.assertIn("2024", result["status"])
+
+    @patch("recap_metadata_resolver.research_anime_sources")
+    @patch("recap_metadata_resolver.fetch_tmdb_movie")
+    @patch("recap_metadata_resolver.fetch_wikidata_metadata")
+    def test_anime_cross_source_year_conflict_is_rejected(self, wikidata, tmdb, anime):
+        wikidata.return_value = {"found": False, "status": "ambiguous"}
+        tmdb.return_value = {"found": False, "status": "no exact movie"}
+        anime.return_value = {
+            "india_excluded": False,
+            "year_conflict": True,
+            "anilist": {
+                "found": True, "provider": "AniList", "title": "Example Anime",
+                "country": "JP", "year": 2024,
+            },
+            "tenrai": {"found": True, "provider": "Tenrai", "year": 2023},
+            "wikidata": {"found": False},
+        }
+        result = resolve_recap_metadata("Example Anime")
+        self.assertFalse(result["found"])
+        self.assertIn("နှစ် မကိုက်ညီ", result["status"])
+
 
 if __name__ == "__main__":
     unittest.main()
