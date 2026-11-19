@@ -31,6 +31,8 @@ The FastAPI service exposes an authenticated command endpoint for a supported Cu
 - `POST /chatgpt/command` dispatches one allow-listed, single-line command to the configured private Telegram chat.
 - The importable OpenAPI schema is `chatgpt_action_openapi.yaml`.
 
+Important: A Custom GPT Action is usable only where GPT editing and Actions are enabled. New GPT creation is currently unavailable on personal ChatGPT accounts, including Free, Go, Plus and Pro. This OpenAPI file prepares the NEXORA side; it does not make the current standard ChatGPT chat send Telegram messages by itself. Check your ChatGPT workspace/account eligibility before planning the Action setup.
+
 To enable it after the code is deployed:
 1. In Telegram, open your NEXORA bot and run `/chatid`; use the returned private chat ID only in Render Environment.
 2. In Render Environment, set `CHATGPT_BRIDGE_CHAT_ID` to that ID and set `CHATGPT_BRIDGE_API_KEY` to a long, random private secret. Never commit or share the secret in chat.
