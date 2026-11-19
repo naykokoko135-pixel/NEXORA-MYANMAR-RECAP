@@ -2250,6 +2250,11 @@ async def web_console_login(request: Request):
     return response
 
 
+@web_app.get("/console/session")
+async def web_console_session(request: Request):
+    return {"authenticated": _console_is_authorized(request)}
+
+
 @web_app.post("/console/logout")
 async def web_console_logout(request: Request):
     if not _console_origin_is_same(request):
