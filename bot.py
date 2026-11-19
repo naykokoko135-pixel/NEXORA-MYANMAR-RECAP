@@ -544,9 +544,16 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         metadata = await asyncio.to_thread(resolve_recap_metadata, query)
         countries = validate_non_indian_wikidata_metadata(metadata)
         if not script:
-            plot_title = metadata.get("mywiki_title") or metadata.get("title_my") or metadata.get("title")
+            # Only use a Burmese Wikipedia sitelink verified by Wikidata.
+            # A translated/provider display title is not proof of work identity.
+            plot_title = metadata.get("mywiki_title")
             if not plot_title:
-                raise ValueError("မြန်မာ Wikipedia ဇာတ်လမ်းရင်းမြစ်အတွက် ခေါင်းစဉ်မရရှိပါ။")
+                raise ValueError(
+                    "အခြား metadata ရင်းမြစ်မှ ခေါင်းစဉ်ကို အတည်ပြုနိုင်သော်လည်း "
+                    "ဒီဇာတ်ကား/Anime နဲ့ တိတိကျကျကိုက်ညီတဲ့ မြန်မာ Wikipedia ဇာတ်လမ်းရင်းမြစ် "
+                    "မအတည်ပြုနိုင်သေးပါ။ အလိုအလျောက် narration မလုပ်ထားပါ။ "
+                    "နောက်တစ်ကြောင်းမှာ ကိုယ်ပိုင် narration ထည့်ပြီး ပြန်ပို့ပါ။"
+                )
             try:
                 plot = await asyncio.to_thread(fetch_burmese_plot_section, plot_title)
                 script = generate_burmese_plot_narration(metadata, plot)
