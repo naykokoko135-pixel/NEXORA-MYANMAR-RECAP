@@ -16,3 +16,5 @@ services:
         sync: false
       - key: CHATGPT_BRIDGE_CHAT_ID
         sync: false
+      - key: TMDB_API_READ_ACCESS_TOKEN
+        sync: false
