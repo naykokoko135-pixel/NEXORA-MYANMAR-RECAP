@@ -25,12 +25,12 @@ class EnglishPlotRecapTests(unittest.TestCase):
         self.assertIn("လူထုတည်းဖြတ်ရင်းမြစ်", args[1])
         self.assertIn(source, args[1])
         self.assertEqual(kwargs["platform"], "youtube")
-        self.assertEqual(kwargs["duration"], "3-5")
+        self.assertEqual(kwargs["duration"], "15-20")
 
     @patch("english_plot_recap.generate_burmese_recap_script")
     def test_uses_platform_specific_duration(self, mock_generate):
         mock_generate.return_value = "မြန်မာ recap narration"
-        for platform, duration in (("youtube", "3-5"), ("facebook", "3-5"), ("tiktok", "1-3")):
+        for platform, duration in (("youtube", "15-20"), ("facebook", "10-15"), ("tiktok", "1-3")):
             with self.subTest(platform=platform):
                 generate_burmese_recap_from_english_plot(
                     "Sample Film", self.sample_plot(), platform

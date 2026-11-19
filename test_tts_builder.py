@@ -4,7 +4,7 @@ import types
 import unittest
 from unittest.mock import patch
 
-from tts_builder import VOICE_MAP, VOICE_PRESETS, get_tts_preset, validate_tts_request, build_word_aligned_srt
+from tts_builder import VOICE_MAP, VOICE_PRESETS, get_tts_preset, validate_tts_request, build_word_aligned_srt, split_tts_text
 from scene_tts import parse_scene_script
 
 
@@ -105,7 +105,13 @@ class BurmeseTtsValidationTests(unittest.TestCase):
 
     def test_text_limit_enforced(self):
         with self.assertRaises(ValueError):
-            validate_tts_request("က" * 6001, "female")
+            validate_tts_request("က" * 30001, "female")
+
+    def test_long_tts_text_is_split_at_safe_boundaries(self):
+        chunks = split_tts_text(("ပထမစာကြောင်း။ " * 300))
+        self.assertGreater(len(chunks), 1)
+        self.assertTrue(all(0 < len(chunk) <= 3000 for chunk in chunks))
+        self.assertIn("ပထမစာကြောင်း။", " ".join(chunks))
 
     def test_scene_script_maps_character_roles_to_existing_presets(self):
         scenes = parse_scene_script(

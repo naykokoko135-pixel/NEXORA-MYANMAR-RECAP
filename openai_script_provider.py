@@ -14,9 +14,10 @@ from urllib.request import Request, urlopen
 API_URL = "https://api.openai.com/v1/responses"
 DEFAULT_MODEL = "gpt-4.1-mini"
 MAX_TOPIC_CHARS = 180
-MAX_NOTES_CHARS = 3500
-MAX_OUTPUT_TOKENS = 1800
-TIMEOUT_SECONDS = 45
+MAX_NOTES_CHARS = 6000
+MAX_OUTPUT_TOKENS = 10000
+MAX_SCRIPT_CHARS = 30000
+TIMEOUT_SECONDS = 120
 
 
 class AIScriptError(RuntimeError):
@@ -44,10 +45,13 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     if not topic or len(topic) > MAX_TOPIC_CHARS:
         raise AIScriptError("ခေါင်းစဉ်သည် ဗလာမဖြစ်ရ၊ စာလုံး 180 ထက်မကျော်ရပါ။")
     if len(notes) < 80 or len(notes) > MAX_NOTES_CHARS:
-        raise AIScriptError("Research Notes ကို စာလုံး 80 မှ 3,500 အတွင်း ထည့်ပါ။")
+        raise AIScriptError("Research Notes ကို စာလုံး 80 မှ 6,000 အတွင်း ထည့်ပါ။")
     if platform not in {"youtube", "facebook", "tiktok"}:
         raise AIScriptError("Platform မမှန်ကန်ပါ။")
     model = os.getenv("OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    duration_ranges = {"youtube": (15, 20), "facebook": (10, 15), "tiktok": (1, 3)}
+    preset_ranges = {"1-3": (1, 3), "3-5": (3, 5), "5-7": (5, 7), "8-10": (8, 10), "10-15": (10, 15), "12-15": (12, 15), "15-20": (15, 20), "20-30": (20, 30), "30-45": (30, 45), "45-60": (45, 60)}
+    min_minutes, max_minutes = preset_ranges.get(duration, duration_ranges[platform])
     prompt = (
         "သင်သည် NEXORA Myanmar Recap အတွက် မြန်မာဘာသာ Script Editor ဖြစ်သည်။ "
         "အောက်ပါ research notes များကိုသာ အခြေခံ၍ recap narration draft ရေးပါ။ ရင်းမြစ်သည် လူထုတည်းဖြတ်ရင်းမြစ်ဖြစ်ပါက studio-verified canon ဟု မဆိုပါနှင့်။ မသေချာသောအချက်များကို [အချက်အလက် ထပ်စစ်ရန်] ဟု မှတ်သားပါ။ "
@@ -56,8 +60,9 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
         "မူရင်းဇာတ်ကား၏ dialogue ကို မကူးယူပါနှင့်။ မူရင်းဗီဒီယို footage ရှိသည်ဟု မဆိုပါနှင့်။ "
         "သုံးသပ်ချက်နှင့် ဖြစ်ရပ်မှန်ကို ခွဲရေးပါ။ Hook, context, chronological narration, "
         "transition, original commentary, closing တို့ကို သဘာဝကျသော မြန်မာစကားဖြင့် ဖွဲ့စည်းပါ။ "
-        "ထုတ်ဝေမီ source fact-check လိုအပ်ကြောင်း အဆုံးတွင် သတိပေးပါ။\n\n"
-        f"ခေါင်းစဉ်: {topic}\nPlatform: {platform}\nရည်မှန်းကြာချိန်: {duration} မိနစ်\n"
+        "မြန်မာ narration ပုံမှန်ပြောနှုန်း တစ်မိနစ်လျှင် စကားလုံး ၁၀၀ မှ ၁၂၀ ခန့်ဖြင့် ရည်မှန်းချိန်ပြည့်အောင် အသေးစိတ်ရေးပါ။ "
+        "အချက်အလက်မရှိဘဲ ထပ်ခါထပ်ခါ မဖြည့်ပါနှင့်။ ထုတ်ဝေမီ source fact-check လုပ်ရန် သတိပေးပါ။\n\n"
+        f"ခေါင်းစဉ်: {topic}\nPlatform: {platform}\nရည်မှန်းကြာချိန်: {duration} မိနစ် (အနည်းဆုံး {min_minutes}၊ အများဆုံး {max_minutes} မိနစ်)\n"
         f"Verified research notes:\n{notes}"
     )
     payload = json.dumps({
@@ -105,4 +110,6 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     script = "\n".join(output).strip()
     if not script:
         raise AIScriptError("OpenAI မှ Script စာသား မရရှိပါ။")
+    if len(script) > MAX_SCRIPT_CHARS:
+        raise AIScriptError("ထုတ်ပေးသော Script သည် စာလုံး 30,000 ထက် ကျော်နေပါတယ်။")
     return script

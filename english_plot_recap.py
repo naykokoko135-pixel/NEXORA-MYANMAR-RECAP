@@ -6,9 +6,9 @@ from urllib.parse import urlparse
 
 from openai_script_provider import generate_burmese_recap_script
 
-MAX_SOURCE_NOTES_CHARS = 3000
+MAX_SOURCE_NOTES_CHARS = 5500
 MIN_SOURCE_NOTES_CHARS = 80
-PLATFORM_DURATIONS = {"youtube": "3-5", "facebook": "3-5", "tiktok": "1-3"}
+PLATFORM_DURATIONS = {"youtube": "15-20", "facebook": "10-15", "tiktok": "1-3"}
 
 
 def generate_burmese_recap_from_english_plot(

@@ -4,6 +4,7 @@ Text is sent to Microsoft's online speech service when a user explicitly invokes
 This is a no-key convenience integration, not a guaranteed or official Azure API.
 """
 import asyncio
+import re
 import tempfile
 from pathlib import Path
 
@@ -33,9 +34,41 @@ def get_tts_preset(preset: str) -> dict:
     if selected not in VOICE_PRESETS:
         raise ValueError("အသံ Preset မမှန်ပါ။ /voices ကိုကြည့်ပြီး ရွေးပါ။")
     return dict(VOICE_PRESETS[selected])
-MAX_TEXT_CHARS = 6000
-MAX_AUDIO_BYTES = 20 * 1024 * 1024
+MAX_TEXT_CHARS = 30000
+MAX_AUDIO_BYTES = 45 * 1024 * 1024
 SYNTHESIS_TIMEOUT_SECONDS = 120
+TTS_CHUNK_CHARS = 3000
+
+
+def split_tts_text(text: str, max_chars: int = TTS_CHUNK_CHARS) -> list[str]:
+    """Split long narration at sentence/word boundaries for bounded TTS requests."""
+    cleaned = (text or "").strip()
+    if not cleaned or max_chars < 100:
+        raise ValueError("TTS စာသား သို့မဟုတ် အပိုင်းအရွယ်အစား မမှန်ကန်ပါ။")
+    sentences = [part.strip() for part in re.split(r"(?<=[။!?])\s+|\n+", cleaned) if part.strip()]
+    chunks = []
+    current = ""
+    for sentence in sentences:
+        while len(sentence) > max_chars:
+            split_at = sentence.rfind(" ", 0, max_chars + 1)
+            if split_at < 1:
+                split_at = max_chars
+            piece, sentence = sentence[:split_at].strip(), sentence[split_at:].strip()
+            if piece:
+                if current:
+                    chunks.append(current)
+                    current = ""
+                chunks.append(piece)
+        candidate = (current + " " + sentence).strip()
+        if len(candidate) <= max_chars:
+            current = candidate
+        else:
+            if current:
+                chunks.append(current)
+            current = sentence
+    if current:
+        chunks.append(current)
+    return chunks
 
 
 def validate_tts_request(text: str, voice: str) -> str:
@@ -43,7 +76,7 @@ def validate_tts_request(text: str, voice: str) -> str:
     if not cleaned:
         raise ValueError("မြန်မာ Voice-over စာသား ထည့်ပါ။")
     if len(cleaned) > MAX_TEXT_CHARS:
-        raise ValueError("Voice-over စာသားသည် စာလုံး ၆,၀၀၀ ထက် မကျော်ရပါ။")
+        raise ValueError("Voice-over စာသားသည် စာလုံး ၃၀,၀၀၀ ထက် မကျော်ရပါ။")
     selected = (voice or "").strip().lower()
     if selected not in VOICE_PRESETS:
         raise ValueError("အသံ Preset မမှန်ပါ။ /voices ကိုကြည့်ပြီး ရွေးပါ။")
@@ -77,7 +110,7 @@ async def synthesize_burmese_speech(text: str, voice: str = "female") -> bytes:
             raise RuntimeError("အသံဖိုင် မရရှိပါ။ ပြန်စမ်းပါ။")
         audio = output.read_bytes()
         if not audio or len(audio) > MAX_AUDIO_BYTES:
-            raise RuntimeError("MP3 ဖိုင်အရွယ်အစား ၂၀ MB ထက် ကျော်နေသည် သို့မဟုတ် ဖိုင်ဗလာဖြစ်နေသည်။")
+            raise RuntimeError("MP3 ဖိုင်အရွယ်အစား ၄၅ MB ထက် ကျော်နေသည် သို့မဟုတ် ဖိုင်ဗလာဖြစ်နေသည်။")
         return audio
 
 
@@ -149,18 +182,34 @@ async def synthesize_burmese_speech_with_srt(text: str, voice: str = "female") -
     audio_chunks = []
     boundaries = []
 
-    async def collect():
-        communicate = edge_tts.Communicate(text.strip(), voice_id, rate=preset["rate"], pitch=preset["pitch"], boundary="WordBoundary")
+    async def collect(chunk: str, offset_ticks: int):
+        local_boundaries = []
+        communicate = edge_tts.Communicate(chunk, voice_id, rate=preset["rate"], pitch=preset["pitch"], boundary="WordBoundary")
         async for message in communicate.stream():
             if message.get("type") == "audio":
                 audio_chunks.append(message.get("data", b""))
             elif message.get("type") == "WordBoundary":
-                boundaries.append(message)
+                adjusted = dict(message)
+                adjusted["offset"] = int(message.get("offset", 0)) + offset_ticks
+                local_boundaries.append(adjusted)
+        if not local_boundaries:
+            raise RuntimeError("TTS အပိုင်းတစ်ခု၏ စာတန်းအချိန်မှတ်တမ်း မရရှိပါ။")
+        boundaries.extend(local_boundaries)
+        last = local_boundaries[-1]
+        return int(last["offset"]) + int(last["duration"])
 
     try:
-        await asyncio.wait_for(collect(), timeout=SYNTHESIS_TIMEOUT_SECONDS)
+        offset_ticks = 0
+        for chunk in split_tts_text(text):
+            offset_ticks = await asyncio.wait_for(
+                collect(chunk, offset_ticks), timeout=SYNTHESIS_TIMEOUT_SECONDS
+            )
+            if sum(len(part) for part in audio_chunks) > MAX_AUDIO_BYTES:
+                raise RuntimeError("MP3 ဖိုင်အရွယ်အစား ၄၅ MB ထက် ကျော်နေပါတယ်။")
     except asyncio.TimeoutError as exc:
-        raise RuntimeError("အသံဖန်တီးချိန် ၂ မိနစ်ကျော်သွားပါတယ်။ စာသားကို အပိုင်းခွဲပါ။") from exc
+        raise RuntimeError("အသံအပိုင်းတစ်ခု ဖန်တီးချိန် ၂ မိနစ်ကျော်သွားပါတယ်။ နောက်မှ ပြန်စမ်းပါ။") from exc
+    except RuntimeError:
+        raise
     except Exception as exc:
         raise RuntimeError("Online Burmese TTS service ကို ချိတ်ဆက်မရပါ။ ခဏနေမှ ပြန်စမ်းပါ။") from exc
     audio = b"".join(audio_chunks)
