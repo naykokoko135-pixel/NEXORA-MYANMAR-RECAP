@@ -39,11 +39,9 @@ def resolve_recap_metadata(title):
         return {"found": False, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
 
     wikidata = fetch_wikidata_metadata(clean)
-    if wikidata.get("found"):
-        return {**wikidata, "provider": "Wikidata"}
 
-    # TMDB is used only when its private read token is configured. It applies
-    # exact title and optional year matching and excludes adult results.
+    # TMDB is optional and returns immediately when its private token is absent.
+    # Querying it here lets us cross-check Wikidata instead of bypassing it.
     tmdb = fetch_tmdb_movie(clean)
     if tmdb.get("found"):
         countries = tmdb.get("countries") or []
@@ -89,6 +87,15 @@ def resolve_recap_metadata(title):
             "mywiki_title": "",
             "tmdb_overview": tmdb.get("overview") or "",
             "imdb_id": tmdb.get("imdb_id") or "",
+        }
+
+    if wikidata.get("found"):
+        return {
+            **wikidata,
+            "provider": "Wikidata",
+            "metadata_source": "Wikidata",
+            "metadata_confidence": "exact_title_match",
+            "source_urls": [wikidata.get("source")] if wikidata.get("source") else [],
         }
 
     # AniList/Tenrai are no-key catalogue sources for animation. Accept only
