@@ -1,0 +1,59 @@
+import unittest
+from unittest.mock import patch
+
+import synopsis_preview as preview
+from openai_script_provider import AIScriptError
+from gemini_script_provider import GeminiScriptError
+
+
+class SynopsisPreviewTests(unittest.TestCase):
+    def test_requires_source_and_minimum_synopsis(self):
+        with self.assertRaises(ValueError):
+            preview.generate_burmese_synopsis_preview("Haikyu!!", "short", "https://anilist.co/anime/1")
+        with self.assertRaises(ValueError):
+            preview.generate_burmese_synopsis_preview("Haikyu!!", "A" * 200, "")
+
+    def test_openai_success_uses_short_tiktok_preset(self):
+        with patch.object(preview, "generate_burmese_recap_script", return_value="မြန်မာ preview") as mocked:
+            script, source = preview.generate_burmese_synopsis_preview(
+                "Haikyu!!", "A detailed series synopsis. " * 8, "https://anilist.co/anime/20464"
+            )
+        self.assertEqual(script, "မြန်မာ preview")
+        self.assertEqual(source, "https://anilist.co/anime/20464")
+        self.assertEqual(mocked.call_args.kwargs["platform"], "tiktok")
+        self.assertEqual(mocked.call_args.kwargs["duration"], "1-3")
+        self.assertIn("SERIES-LEVEL SYNOPSIS ONLY", mocked.call_args.args[1])
+        self.assertIn("Episode တစ်ခုချင်း", mocked.call_args.args[1])
+
+    def test_only_quota_error_uses_gemini(self):
+        with patch.object(preview, "generate_burmese_recap_script", side_effect=AIScriptError("OpenAI Limit/Quota")):
+            with patch.object(preview, "gemini_script_status", return_value={"configured": True}):
+                with patch.object(preview, "generate_gemini_recap_script", return_value="Gemini preview") as gemini:
+                    script, _ = preview.generate_burmese_synopsis_preview(
+                        "Haikyu!!", "A detailed series synopsis. " * 8, "https://anilist.co/anime/20464"
+                    )
+        self.assertEqual(script, "Gemini preview")
+        self.assertEqual(gemini.call_count, 1)
+
+    def test_non_quota_openai_error_does_not_call_gemini(self):
+        with patch.object(preview, "generate_burmese_recap_script", side_effect=AIScriptError("HTTP 401")):
+            with patch.object(preview, "generate_gemini_recap_script") as gemini:
+                with self.assertRaises(AIScriptError):
+                    preview.generate_burmese_synopsis_preview(
+                        "Haikyu!!", "A detailed series synopsis. " * 8, "https://anilist.co/anime/20464"
+                    )
+        gemini.assert_not_called()
+
+    def test_gemini_failure_is_reported_without_retry(self):
+        with patch.object(preview, "generate_burmese_recap_script", side_effect=AIScriptError("Limit/Quota")):
+            with patch.object(preview, "gemini_script_status", return_value={"configured": True}):
+                with patch.object(preview, "generate_gemini_recap_script", side_effect=GeminiScriptError("HTTP 404")) as gemini:
+                    with self.assertRaisesRegex(AIScriptError, "HTTP 404"):
+                        preview.generate_burmese_synopsis_preview(
+                            "Haikyu!!", "A detailed series synopsis. " * 8, "https://anilist.co/anime/20464"
+                        )
+        self.assertEqual(gemini.call_count, 1)
+
+
+if __name__ == "__main__":
+    unittest.main()
