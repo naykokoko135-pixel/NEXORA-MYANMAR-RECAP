@@ -86,8 +86,8 @@ def render_licensed_narrated_preview(
     parsed = urlparse(url)
     if parsed.scheme != "https" or parsed.hostname != ALLOWED_HOST or parsed.username or parsed.password:
         raise LicensedClipError("ခွင့်ပြုထားသော Wikimedia upload ရင်းမြစ်မဟုတ်ပါ။")
-    if not narration_mp3 or len(narration_mp3) > 20 * 1024 * 1024:
-        raise LicensedClipError("Narration MP3 သည် ဗလာဖြစ်နေခြင်း သို့မဟုတ် 20 MB ထက်ကြီးနေပါတယ်။")
+    if not narration_mp3 or len(narration_mp3) > 45 * 1024 * 1024:
+        raise LicensedClipError("Narration MP3 သည် ဗလာဖြစ်နေခြင်း သို့မဟုတ် 45 MB ထက်ကြီးနေပါတယ်။")
     if not isinstance(subtitles_srt, str) or not subtitles_srt.strip() or "-->" not in subtitles_srt:
         raise LicensedClipError("မြန်မာ SRT စာတန်းပုံစံ မမှန်ပါ။")
     if not isinstance(max_duration_seconds, int) or isinstance(max_duration_seconds, bool) or not 1 <= max_duration_seconds <= 1200:
