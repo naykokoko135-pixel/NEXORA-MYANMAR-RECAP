@@ -23,6 +23,16 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/tts_design <voice_name>` followed by Burmese text — create a fictional synthetic voice WAV (optional compatible host only)
 - `/scenedesign` followed by `[ai:story_female]` scene headers and Burmese text — create separate fictional AI voice WAV files per scene (optional compatible GPU host only)
 
+## Optional OpenAI script drafting
+
+The optional `/aiscript <title>` command drafts Burmese narration from creator-supplied verified research notes. Put the notes on the next line in the same Telegram message (80–9,000 characters). It does not research or verify plot facts, and it must not invent events absent from the notes.
+
+To enable it, the account owner/parent must create and manage an OpenAI API project/key and set `OPENAI_API_KEY` in Render Environment. Never paste the key into Telegram, GitHub, or ChatGPT. `OPENAI_MODEL` defaults to `gpt-4.1-mini`. The request is bounded to 1,800 output tokens, has no automatic retry, and reports quota/auth errors without exposing provider response bodies. API usage may incur charges; configure a low project spending limit and monitor usage before enabling. Removing the Render variable disables the feature. `/create` remains the free worksheet builder.
+
+Gemini is not configured as a fallback provider. Provider fallback must only be added when the provider's current eligibility and service terms permit use in this application. A quota error stops the OpenAI request; the bot does not silently switch to another paid provider.
+
+TMDB movie research uses the existing `TMDB_API_READ_ACCESS_TOKEN` Render variable. The token must be created by the account owner in TMDB API settings and stored only in Render Environment. TMDB attribution is required; see https://developer.themoviedb.org/docs/faq.
+
 ## Mobile web command console
 
 A separate mobile-friendly command console is available at `/console`. It lets the owner paste a command drafted with ChatGPT and dispatch it to the configured private Telegram chat without GPT Actions. It does **not** make this ordinary ChatGPT conversation automatically connected to Telegram.
