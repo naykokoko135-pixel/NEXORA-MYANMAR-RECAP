@@ -45,7 +45,7 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     if not topic or len(topic) > MAX_TOPIC_CHARS:
         raise AIScriptError("ခေါင်းစဉ်သည် ဗလာမဖြစ်ရ၊ စာလုံး 180 ထက်မကျော်ရပါ။")
     if len(notes) < 80 or len(notes) > MAX_NOTES_CHARS:
-        raise AIScriptError("Research Notes ကို စာလုံး 80 မှ 3,500 အတွင်း ထည့်ပါ။")
+        raise AIScriptError("Research Notes ကို စာလုံး 80 မှ 6,000 အတွင်း ထည့်ပါ။")
     if platform not in {"youtube", "facebook", "tiktok"}:
         raise AIScriptError("Platform မမှန်ကန်ပါ။")
     model = os.getenv("OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
