@@ -1,0 +1,78 @@
+openapi: 3.1.0
+info:
+  title: NEXORA Myanmar Recap Telegram Bridge
+  version: 1.0.0
+  description: Sends an allow-listed, single-line NEXORA command to the configured private Telegram chat. It does not expose Telegram bot tokens or chat IDs.
+servers:
+  - url: https://YOUR-RENDER-SERVICE.onrender.com
+security:
+  - NexoraBridgeKey: []
+paths:
+  /chatgpt/bridge-health:
+    get:
+      operationId: checkNexoraBridge
+      summary: Check whether the Telegram bridge is configured and ready
+      responses:
+        "200":
+          description: Configuration status only; no secret values are returned
+  /chatgpt/command:
+    post:
+      operationId: sendNexoraCommand
+      summary: Send an allow-listed NEXORA command to Telegram
+      description: Use one-line commands only. For commands requiring a multi-line script or media upload, use Telegram directly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [command]
+              properties:
+                command:
+                  type: string
+                  enum:
+                    - status
+                    - help
+                    - auto
+                    - seriesguide
+                    - create
+                    - research
+                    - draft3
+                    - allplatforms
+                    - voiceover3
+                    - render
+                    - animesynopsis
+                    - seriesresearch
+                    - animationepisodes
+                    - topratedepisodes
+                    - episodepack
+                    - episodeoutline
+                    - recapvideo
+                    - movieplotresearch
+                    - growthpack
+                    - clipsource
+                    - autoplotclip
+                    - autoclip
+                    - autonarrateclip
+                    - autofactsclip
+                    - multisourceresearch
+                argument:
+                  type: string
+                  maxLength: 3500
+                  description: Single-line command argument. Omit for status/help/render.
+      responses:
+        "200":
+          description: Command was dispatched to the configured Telegram chat
+        "400":
+          description: Command is not allowed or argument is invalid
+        "401":
+          description: Missing or invalid bridge key
+        "503":
+          description: Telegram bot or bridge chat configuration is not ready
+components:
+  securitySchemes:
+    NexoraBridgeKey:
+      type: apiKey
+      in: header
+      name: X-Nexora-Bridge-Key
