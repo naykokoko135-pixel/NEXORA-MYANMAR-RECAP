@@ -141,9 +141,15 @@ async def chatid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
+        ai_status = openai_script_status()
+        if ai_status["configured"]:
+            ai_line = f"OpenAI Script API: ချိတ်ထားသည် ({ai_status['model']})"
+        else:
+            ai_line = "OpenAI Script API: မချိတ်ရသေးပါ (Render တွင် OPENAI_API_KEY လိုအပ်သည်)"
         await update.message.reply_text(
             "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
-            "AI API: မချိတ်ထားပါ (အခပေး API မသုံးပါ)\n"
+            f"{ai_line}\n"
+            "AI Script: /aiscript <title> ပြီးနောက် Verified Research Notes ထည့်ပါ။\n"
             "လုပ်ဆောင်နိုင်မှု: Auto research + Worksheets + Voice-over TXT + TTS MP3 + အချိန်ကိုက် SRT + Image/Audio MP4 render\n"
             "Local MyanmarTTS WAV: Host setting ဖြင့်သာ ဖွင့်နိုင်ပြီး optional dependencies နှင့် သင့်တော်သော host လိုအပ်သည်။\n"
             "Daily Auto: GitHub Actions မှ မနက် ၅ နာရီ (ထိုင်းစံတော်ချိန်) Research ပို့နိုင်သည်။\n"
