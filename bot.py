@@ -437,7 +437,7 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Use only title aliases returned by an exact Wikidata match. If metadata
         # is unavailable, keep the original query rather than guessing aliases.
         alternate_titles = []
-        metadata = await asyncio.to_thread(resolve_recap_metadata, query)
+        metadata = await asyncio.to_thread(fetch_wikidata_metadata, query)
         if metadata.get("found"):
             alternate_titles = [
                 metadata.get("title", ""),
@@ -541,7 +541,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await update.message.reply_text("Wikidata၊ TMDB၊ AniList/Tenrai ရင်းမြစ်များမှ ခေါင်းစဉ်နှင့် မူရင်းနိုင်ငံကို စစ်ပြီး ခွင့်ပြုထားသော Commons footage ကို ရှာနေပါတယ်...")
     try:
-        metadata = await asyncio.to_thread(fetch_wikidata_metadata, query)
+        metadata = await asyncio.to_thread(resolve_recap_metadata, query)
         countries = validate_non_indian_wikidata_metadata(metadata)
         if not script:
             plot_title = metadata.get("mywiki_title") or metadata.get("title_my") or metadata.get("title")
