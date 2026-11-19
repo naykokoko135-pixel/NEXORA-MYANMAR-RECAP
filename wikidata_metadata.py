@@ -162,6 +162,28 @@ def fetch_wikidata_metadata(title):
                 "status": "Wikidata တွင် အမည်တိတိကျကျ သို့မဟုတ် Alternate title ကိုက်ညီသော မှတ်တမ်း မတွေ့ပါ။",
             }
         if len(exact_by_id) > 1:
+            # If the user supplied a release year, use Wikidata's structured
+            # publication-date claims to distinguish same-title works before
+            # considering the descriptive screen-work preference.
+            year_match = re.search(r"\\((\\d{4})\\)$", clean_title)
+            if year_match:
+                requested_year = year_match.group(1)
+                candidate_payload = _request_json({
+                    "action": "wbgetentities",
+                    "ids": "|".join(exact_by_id.keys()),
+                    "props": "claims",
+                    "format": "json",
+                })
+                year_matches = {}
+                for candidate_id, item in exact_by_id.items():
+                    candidate_entity = candidate_payload.get("entities", {}).get(candidate_id, {})
+                    candidate_year = _date_year(candidate_entity.get("claims", {}))
+                    if candidate_year == requested_year:
+                        year_matches[candidate_id] = item
+                if year_matches:
+                    exact_by_id = year_matches
+
+        if len(exact_by_id) > 1:
             # Prefer one clearly described screen work over manga/franchise
             # records, but never choose between multiple films or series.
             screen_work_matches = {
