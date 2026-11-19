@@ -128,8 +128,10 @@ async def chatid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "နေ့စဉ် Auto ပို့ရန် Chat ID:\n"
         f"{update.effective_chat.id}\n\n"
-        "ဒီနံပါတ်ကို GitHub Repository Settings > Secrets and variables > Actions "
-        "တွင် TELEGRAM_CHAT_ID အဖြစ် သိမ်းပါ။ Token သို့မဟုတ် Chat ID ကို အများသိအောင် မမျှဝေပါနှင့်။"
+        "ChatGPT → Telegram ချိတ်ဆက်ရန် ဒီနံပါတ်ကို Render Dashboard > "
+        "nexora-myanmar-recap-bot > Environment ထဲရှိ CHATGPT_BRIDGE_CHAT_ID "
+        "အဖြစ်သာ ထည့်ပါ။ ဒီနံပါတ်ကို ChatGPT စကားဝိုင်း၊ GitHub code သို့မဟုတ် "
+        "အများမြင်နိုင်သောနေရာတွင် မပို့ပါနှင့်။ Telegram Bot Token ကိုလည်း မမျှဝေပါနှင့်။"
     )
 
 
