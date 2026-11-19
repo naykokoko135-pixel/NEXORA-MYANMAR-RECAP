@@ -118,6 +118,59 @@ class RecapMetadataResolverTests(unittest.TestCase):
         self.assertFalse(result["found"])
         self.assertIn("နှစ် မကိုက်ညီ", result["status"])
 
+    @patch("recap_metadata_resolver.research_anime_sources")
+    @patch("recap_metadata_resolver.fetch_tmdb_movie")
+    @patch("recap_metadata_resolver.fetch_wikidata_metadata")
+    def test_tmdb_and_wikidata_year_conflict_is_rejected(self, wikidata, tmdb, anime):
+        wikidata.return_value = {
+            "found": True, "title": "Example", "countries": ["United States"],
+            "year": "1927", "source": "https://www.wikidata.org/wiki/Q1",
+        }
+        tmdb.return_value = {
+            "found": True, "title": "Example", "countries": ["United States"],
+            "year": "1926", "provider_url": "https://www.themoviedb.org/movie/1",
+        }
+        result = resolve_recap_metadata("Example")
+        self.assertFalse(result["found"])
+        self.assertIn("မကိုက်ညီ", result["status"])
+        anime.assert_not_called()
+
+    @patch("recap_metadata_resolver.research_anime_sources")
+    @patch("recap_metadata_resolver.fetch_tmdb_movie")
+    @patch("recap_metadata_resolver.fetch_wikidata_metadata")
+    def test_tmdb_and_wikidata_country_conflict_is_rejected(self, wikidata, tmdb, anime):
+        wikidata.return_value = {
+            "found": True, "title": "Example", "countries": ["France"],
+            "year": "2020", "source": "https://www.wikidata.org/wiki/Q1",
+        }
+        tmdb.return_value = {
+            "found": True, "title": "Example", "countries": ["Japan"],
+            "year": "2020", "provider_url": "https://www.themoviedb.org/movie/1",
+        }
+        result = resolve_recap_metadata("Example")
+        self.assertFalse(result["found"])
+        self.assertIn("နိုင်ငံ", result["status"])
+        anime.assert_not_called()
+
+    @patch("recap_metadata_resolver.research_anime_sources")
+    @patch("recap_metadata_resolver.fetch_tmdb_movie")
+    @patch("recap_metadata_resolver.fetch_wikidata_metadata")
+    def test_tmdb_metadata_includes_source_provenance(self, wikidata, tmdb, anime):
+        wikidata.return_value = {
+            "found": True, "title": "Example", "countries": ["United States"],
+            "year": "1926", "source": "https://www.wikidata.org/wiki/Q1",
+        }
+        tmdb.return_value = {
+            "found": True, "title": "Example", "countries": ["United States"],
+            "year": "1926", "provider_url": "https://www.themoviedb.org/movie/1",
+            "overview": "A film.",
+        }
+        result = resolve_recap_metadata("Example")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["metadata_confidence"], "cross_checked")
+        self.assertEqual(len(result["source_urls"]), 2)
+        anime.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
