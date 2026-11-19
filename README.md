@@ -23,6 +23,22 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/tts_design <voice_name>` followed by Burmese text — create a fictional synthetic voice WAV (optional compatible host only)
 - `/scenedesign` followed by `[ai:story_female]` scene headers and Burmese text — create separate fictional AI voice WAV files per scene (optional compatible GPU host only)
 
+## ChatGPT to Telegram command bridge
+
+The FastAPI service exposes an authenticated command endpoint for a supported Custom GPT Action:
+
+- `GET /chatgpt/bridge-health` reports readiness/configuration presence only.
+- `POST /chatgpt/command` dispatches one allow-listed, single-line command to the configured private Telegram chat.
+- The importable OpenAPI schema is `chatgpt_action_openapi.yaml`.
+
+To enable it after the code is deployed:
+1. In Telegram, open your NEXORA bot and run `/chatid`; use the returned private chat ID only in Render Environment.
+2. In Render Environment, set `CHATGPT_BRIDGE_CHAT_ID` to that ID and set `CHATGPT_BRIDGE_API_KEY` to a long, random private secret. Never commit or share the secret in chat.
+3. In a supported ChatGPT Custom GPT editor, create an Action by importing `chatgpt_action_openapi.yaml`, replace the placeholder server URL with the Render service URL, and configure API-key authentication using header name `X-Nexora-Bridge-Key` and the same secret.
+4. Save the Action and test `checkNexoraBridge` before sending a low-risk command such as `status`.
+
+The bridge deliberately accepts only an allow-list of single-line commands. Commands that need multi-line narration, media uploads, or interactive follow-up steps must still be completed in Telegram. A successful HTTP response means the command was dispatched to the bot; it does not guarantee a generated video or media asset was produced. Keep the API key private and rotate it if it is exposed.
+
 ## Three-part YouTube worksheets
 Use `/draft3 <movie title>` and put your checked research notes on the following lines in the same Telegram message. NEXORA creates three distinct planning worksheets:
 1. Part 1 — introduction, setting, and main characters
@@ -49,6 +65,14 @@ Use `/auto Avatar` to search English Wikipedia for up to three article summaries
 Use `/animesynopsis <Anime title>` to look up an exact-title Anime entry through the public AniList GraphQL API. NEXORA returns the title, format, year, episode count (when available), source link, and a short synopsis. No API key or paid AI provider is required.
 
 AniList search results are not treated as exact matches unless the requested title matches an official title or listed synonym. Ambiguous and fuzzy matches are rejected. Indian-origin entries are excluded. AniList synopsis text is a series-level overview, not an episode-by-episode plot summary; it is shown only as a research lead and is not passed to the automatic MP4 recap renderer. It is not automatically translated into Burmese, so verify the facts and language before using it.
+
+## Multi-source Anime research
+
+Use `/multisourceresearch <Anime title>` to compare exact-title results from AniList, Tenrai's public MyAnimeList catalogue, and Wikidata metadata. Tenrai is used instead of the discontinued public Jikan service. The lookup uses Tenrai's strict-SFW filter, rejects ambiguous title matches, and does not assume an origin country when metadata is missing. It reports year conflicts rather than silently choosing one source.
+
+Tenrai is an unofficial, community-operated MyAnimeList catalogue API and is currently documented as beta. It may be unavailable or contain stale/incomplete data. AniList and Tenrai synopsis text is a series-level overview, not an episode-by-episode plot. Wikidata is used only for structured metadata cross-checks. None of these sources grants footage reuse rights or proves that a Commons clip depicts a specific scene. The command is a research worksheet only and does not automatically feed the video renderer.
+
+Jikan's public API was discontinued on 1 October 2026, so NEXORA does not depend on the old `api.jikan.moe` public endpoint.
 
 ## Cartoon and Donghua series research
 
