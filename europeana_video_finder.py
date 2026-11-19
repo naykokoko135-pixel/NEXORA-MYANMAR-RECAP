@@ -46,16 +46,34 @@ def _license_label(uri: str) -> str:
     return f"CC BY{'-SA' if family == 'by-sa' else ''} {version}"
 
 
-def search_europeana_licensed_video(query: str, limit: int = 6) -> list[dict]:
+def _clean_queries(query: str, alternate_queries: list[str] | None) -> list[str]:
+    values = []
+    for raw in [query, *(alternate_queries or [])]:
+        clean = " ".join(str(raw or "").split())
+        if clean and len(clean) <= 160 and clean.casefold() not in {v.casefold() for v in values}:
+            values.append(clean)
+    return values[:4]
+
+
+def search_europeana_licensed_video(
+    query: str,
+    limit: int = 6,
+    alternate_queries: list[str] | None = None,
+) -> list[dict]:
     """Return title-matched VIDEO records with explicitly reusable rights URIs.
 
-    Europeana metadata is CC0, but linked media remains governed by its own rights
-    statement. The result is discovery-only; this function never fetches media URLs.
+    Verified alternate titles broaden metadata discovery only; they do not relax
+    the rights allowlist. Europeana metadata is CC0, but linked media remains
+    governed by its own rights statement. Results are discovery-only.
     """
-    clean = " ".join(str(query or "").split())
-    if not clean or len(clean) > 160:
+    queries = _clean_queries(query, alternate_queries)
+    if not queries:
         raise EuropeanaSearchError("Europeana ရှာဖွေရန် ခေါင်းစဉ်အမည် မမှန်ပါ။")
     limit = max(1, min(int(limit), 10))
+    title_filters = " ||\n  ".join(
+        f"CONTAINS(LCASE(STR(?title)), LCASE({_sparql_literal(term)}))"
+        for term in queries
+    )
     rights_values = ", ".join(f"<{uri}>" for uri in sorted(ALLOWED_RIGHTS))
     sparql = f"""
 PREFIX edm: <http://www.europeana.eu/schemas/edm/>
@@ -69,7 +87,9 @@ SELECT DISTINCT ?title ?webResource ?rights ?providedCHO ?creator ?recordRights 
                (edm:isShownBy|edm:hasView) ?webResource ;
                edm:aggregatedCHO ?providedCHO .
   OPTIONAL {{ ?proxy dc:creator ?creator }}
-  FILTER(CONTAINS(LCASE(STR(?title)), LCASE({_sparql_literal(clean)})))
+  FILTER(
+  {title_filters}
+  )
   FILTER(?rights IN ({rights_values}))
 }}
 LIMIT {limit}
@@ -98,8 +118,17 @@ LIMIT {limit}
         title = str((item.get("title") or {}).get("value", "")).strip()
         media_url = str((item.get("webResource") or {}).get("value", "")).strip()
         rights_uri = str((item.get("rights") or {}).get("value", "")).strip()
+        source_page = str((item.get("providedCHO") or {}).get("value", "")).strip()
         if not title or not media_url.startswith("https://") or rights_uri not in ALLOWED_RIGHTS:
             continue
+        # Only expose Europeana item pages as source links; do not surface arbitrary
+        # provider-supplied page URLs as trusted navigation targets.
+        parsed_page = urllib.parse.urlparse(source_page)
+        if parsed_page.scheme == "http" and parsed_page.hostname == "data.europeana.eu":
+            source_page = parsed_page._replace(scheme="https").geturl()
+        parsed_page = urllib.parse.urlparse(source_page)
+        if parsed_page.scheme != "https" or parsed_page.hostname != "data.europeana.eu":
+            source_page = ""
         key = (title.casefold(), media_url)
         if key in seen:
             continue
@@ -107,7 +136,7 @@ LIMIT {limit}
         results.append({
             "title": title,
             "url": media_url,
-            "source_page": str((item.get("providedCHO") or {}).get("value", "")).strip(),
+            "source_page": source_page,
             "license": _license_label(rights_uri),
             "license_uri": rights_uri,
             "artist": str((item.get("creator") or {}).get("value", "Unknown")).strip(),

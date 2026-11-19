@@ -93,3 +93,56 @@ def test_sparql_uses_europeana_video_proxy_structure():
     assert "dc:title ?title" in query
     assert "(edm:isShownBy|edm:hasView) ?webResource" in query
     assert "edm:rights ?rights" in query
+
+
+def test_search_uses_verified_alternate_titles_in_title_filter():
+    from urllib.parse import parse_qs, urlparse
+
+    captured = []
+
+    def fake_urlopen(request, timeout):
+        captured.append(parse_qs(urlparse(request.full_url).query)["query"][0])
+        return _response({"results": {"bindings": []}})
+
+    with patch("europeana_video_finder.urllib.request.urlopen", side_effect=fake_urlopen):
+        search_europeana_licensed_video(
+            "Frieren: Beyond Journey's End",
+            alternate_queries=[
+                "Sousou no Frieren",
+                "Frieren: Beyond Journey's End",
+                "ဥပမာခေါင်းစဉ်",
+                "Ignored fifth alias",
+            ],
+        )
+
+    query = captured[0]
+    assert '''LCASE("Frieren: Beyond Journey's End")''' in query
+    assert 'LCASE("Sousou no Frieren")' in query
+    assert 'LCASE("ဥပမာခေါင်းစဉ်")' in query
+    assert "Ignored fifth alias" not in query
+
+
+def test_rejects_non_europeana_source_page_but_keeps_discovery_record():
+    payload = {"results": {"bindings": [{
+        "title": _binding("Historic film collection"),
+        "webResource": _binding("https://media.example.org/film.mp4"),
+        "rights": _binding("http://creativecommons.org/licenses/by/4.0/"),
+        "providedCHO": _binding("https://untrusted.example.org/item/123"),
+    }]}}
+    with patch("europeana_video_finder.urllib.request.urlopen", return_value=_response(payload)):
+        results = search_europeana_licensed_video("Historic film")
+    assert len(results) == 1
+    assert results[0]["source_page"] == ""
+    assert results[0]["download_enabled"] is False
+
+
+def test_normalizes_only_europeana_http_item_page_to_https():
+    payload = {"results": {"bindings": [{
+        "title": _binding("Historic film collection"),
+        "webResource": _binding("https://media.example.org/film.mp4"),
+        "rights": _binding("http://creativecommons.org/licenses/by/4.0/"),
+        "providedCHO": _binding("http://data.europeana.eu/item/123"),
+    }]}}
+    with patch("europeana_video_finder.urllib.request.urlopen", return_value=_response(payload)):
+        results = search_europeana_licensed_video("Historic film")
+    assert results[0]["source_page"] == "https://data.europeana.eu/item/123"
