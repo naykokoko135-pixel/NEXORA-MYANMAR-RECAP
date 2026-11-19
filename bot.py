@@ -32,7 +32,7 @@ from video_renderer import render_slideshow, render_scene_timeline, VideoRenderE
 from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
-from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note
+from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note, _subtitle_duration_seconds
 from wikidata_metadata import fetch_wikidata_metadata
 from recap_metadata_resolver import resolve_recap_metadata
 from autofacts_narration import generate_burmese_facts_narration
@@ -51,6 +51,7 @@ from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
 from recap_voice_pack import parse_recap_voice_request
 from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message
+from original_visual_recap import build_original_visual_cards
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from openai_script_provider import generate_burmese_recap_script, openai_script_status, AIScriptError
@@ -96,11 +97,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/autonarrateclip <အမည်> - Licensed footage + မြန်မာ narration/SRT Preview ထုတ်ရန်\n"
             "/autofactsclip <အမည်> - Wikidata အချက်အလက်မှ မြန်မာအသံ + Licensed footage Preview အလိုအလျောက်ထုတ်ရန်\n"
             "/growthpack <category>|<title>|<summary optional> - Channel ထုတ်ဝေမှု Pack ထုတ်ရန်\n"
-            "/topratedepisodes <အမည်> - TVmaze rating အမြင့်ဆုံး Animation Episode များ ရှာရန်\\n"
-            "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\\n"
+            "/topratedepisodes <အမည်> - TVmaze rating အမြင့်ဆုံး Animation Episode များ ရှာရန်\n"
+            "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\n"
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/recapvoice [preset] - ကိုယ်ရေးထားသော Recap Script မှ MP3 + အသံနှင့်ကိုက်ညီသော SRT ထုတ်ရန်\n"
-            "/recapvideo <title> - ခေါင်းစဉ်တစ်ခုတည်းမှ အလိုအလျောက် narration + လိုင်စင်ရှိ footage + SRT Preview ထုတ်ရန်\n"
+            "/recapvideo <title> - အလိုအလျောက် narration + Licensed Footage (မရှိပါက Original Visuals) + SRT ပါ MP4 ထုတ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime အမည်> - AniList + Tenrai/MAL + Wikidata ကို တစ်ပြိုင်နက်စစ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
@@ -592,19 +593,68 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             " ".join(str(title).split()) for title in search_titles
             if str(title).strip()
         ))
-        sources = await asyncio.to_thread(
-            search_licensed_video, query, 10, search_titles
-        )
+        try:
+            sources = await asyncio.to_thread(
+                search_licensed_video, query, 10, search_titles
+            )
+        except ClipSourceError:
+            # Original visuals are a valid fallback when Commons is unavailable.
+            sources = []
         source = choose_matching_source(query, sources, search_titles)
-        if not source:
-            await update.message.reply_text(format_no_licensed_footage_message(metadata.get("title", query)))
-            return
-        await update.message.reply_text("လိုင်စင်အမျိုးအစားနှင့် ခေါင်းစဉ်ကို စစ်ပြီး narration + အချိန်ကိုက် SRT + MP4 ပြင်ဆင်နေပါတယ်...")
+        max_duration = {"tiktok": 180, "facebook": 900, "youtube": 1200}[platform]
+        await update.message.reply_text("မြန်မာ Narration + အချိန်ကိုက် SRT ပြင်ဆင်နေပါတယ်...")
         audio, srt_text = await synthesize_burmese_speech_with_srt(script, voice)
+        if _subtitle_duration_seconds(srt_text) > max_duration:
+            raise ValueError(f"ဒီ Platform အတွက် Narration သည် {max_duration} စက္ကန့်ထက် မကျော်ရပါ။ Script ကို အတိုချုံ့ပါ။")
         import tempfile
+        if not source:
+            await update.message.reply_text(
+                format_no_licensed_footage_message(metadata.get("title", query))
+                + "\n\nCommons footage မရှိသော်လည်း NEXORA ကိုယ်တိုင်ဖန်တီးသော "
+                "မူရင်း Abstract Visuals ဖြင့် MP4 ဆက်ထုတ်နေပါတယ်။ ဒီပုံများသည် မူရင်းဇာတ်ဝင်ခန်း မဟုတ်ပါ။"
+            )
+            with tempfile.TemporaryDirectory(prefix="nexora_original_recap_") as temp:
+                output = os.path.join(temp, "nexora_recap_original_visuals.mp4")
+                cards = await asyncio.to_thread(build_original_visual_cards, metadata.get("title", query), 8)
+                await asyncio.to_thread(
+                    render_slideshow, cards, ("nexora_narration.mp3", audio), output,
+                    platform, ("captions.srt", srt_text.encode("utf-8-sig"))
+                )
+                with open(output, "rb") as video_file:
+                    await update.message.reply_video(
+                        video=InputFile(video_file, filename="nexora_recap_original_visuals.mp4"),
+                        supports_streaming=True,
+                        caption=(
+                            f"NEXORA {platform.upper()} — Original Visual Recap\n"
+                            f"ခေါင်းစဉ်: {metadata.get('title', query)} | နိုင်ငံ: {', '.join(countries)}\n"
+                            f"ဇာတ်လမ်းရင်းမြစ်: {plot_source}\n"
+                            "Visuals: NEXORA မှ ကိုယ်တိုင်ဖန်တီးထားသော Abstract Graphics ဖြစ်ပြီး "
+                            "မူရင်း Anime/Film ဇာတ်ဝင်ခန်းများ မဟုတ်ပါ။\n"
+                            "မြန်မာ Narration နှင့် SRT ကို MP4 ထဲတွင် ထည့်သွင်းထားသည်။"
+                        ),
+                        read_timeout=900,
+                        write_timeout=900,
+                    )
+                audio_bytes, subtitle_bytes = build_recap_video_sidecars(audio, srt_text)
+                voice_file = BytesIO(audio_bytes)
+                voice_file.name = "nexora_recap_voiceover.mp3"
+                await update.message.reply_document(
+                    document=InputFile(voice_file, filename=voice_file.name),
+                    caption="MP4 တွင် အသုံးပြုထားသော မြန်မာ Narration MP3 မူရင်းဖိုင်ပါ။",
+                )
+                subtitle_file = BytesIO(subtitle_bytes)
+                subtitle_file.name = "nexora_recap_subtitles.srt"
+                await update.message.reply_document(
+                    document=InputFile(subtitle_file, filename=subtitle_file.name),
+                    caption="မြန်မာ SRT သီးခြားဖိုင်ပါ။",
+                )
+            return
+        await update.message.reply_text("လိုင်စင်အမျိုးအစားနှင့် ခေါင်းစဉ်ကို စစ်ပြီး licensed footage + narration + SRT + MP4 ပြင်ဆင်နေပါတယ်...")
         with tempfile.TemporaryDirectory(prefix="nexora_recap_video_") as temp:
             output = os.path.join(temp, "nexora_recap_preview.mp4")
-            await asyncio.to_thread(render_licensed_narrated_preview, source, audio, srt_text, output, platform, {"tiktok": 180, "facebook": 900, "youtube": 1200}[platform])
+            await asyncio.to_thread(
+                render_licensed_narrated_preview, source, audio, srt_text, output, platform, max_duration
+            )
             with open(output, "rb") as video_file:
                 await update.message.reply_video(
                     video=InputFile(video_file, filename="nexora_recap_preview.mp4"),
@@ -789,7 +839,7 @@ async def autoplotclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /autoplotclip <Anime/ရုပ်ရှင်အမည်>\\n"
+            "အသုံးပြုပုံ: /autoplotclip <Anime/ရုပ်ရှင်အမည်>\n"
             "Wikidata အမည်တိတိကျကျနှင့် မြန်မာ Wikipedia ဇာတ်လမ်းအကျဉ်း ရှိမှသာ "
             "ခွင့်ပြုထားသော footage + မြန်မာအသံ + SRT Preview ထုတ်ပေးပါမယ်။"
         )
@@ -827,12 +877,12 @@ async def autoplotclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     video=InputFile(video_file, filename="nexora_plot_preview.mp4"),
                     supports_streaming=True,
                     caption=(
-                        f"NEXORA {platform.upper()} — ရင်းမြစ်အခြေပြု ဇာတ်လမ်း Preview\\n"
-                        f"Wikidata: {metadata.get('source', '')}\\n"
-                        f"မြန်မာ Wikipedia: {plot.get('source', '')}\\n"
-                        f"Commons: {source.get('source_page', '')}\\n"
-                        f"လိုင်စင်: {source.get('license', '')}\\n"
-                        f"ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\\n"
+                        f"NEXORA {platform.upper()} — ရင်းမြစ်အခြေပြု ဇာတ်လမ်း Preview\n"
+                        f"Wikidata: {metadata.get('source', '')}\n"
+                        f"မြန်မာ Wikipedia: {plot.get('source', '')}\n"
+                        f"Commons: {source.get('source_page', '')}\n"
+                        f"လိုင်စင်: {source.get('license', '')}\n"
+                        f"ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\n"
                         "မှတ်ချက်: ဇာတ်လမ်းစာသားကို မြန်မာ Wikipedia မှ ရယူထားပြီး လူထုတည်းဖြတ်ရင်းမြစ်ဖြစ်သည်။ "
                         "Commons footage ခေါင်းစဉ်ကိုက်ညီမှုသာ စစ်ထားပြီး တကယ့်ဇာတ်ဝင်ခန်းဟုတ်မဟုတ် မအတည်ပြုနိုင်ပါ။ "
                         "မူရင်းဗီဒီယိုအသံကို ဖယ်ထားသည်။"
@@ -855,7 +905,7 @@ async def animesynopsis_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     query = " ".join(context.args).strip()
     if not query:
-        await update.message.reply_text("အသုံးပြုပုံ: /animesynopsis <Anime အမည်>\\nAniList မှ အမည်တိတိကျကျကိုက်ညီသော series synopsis ကို ရှာပေးပါမယ်။")
+        await update.message.reply_text("အသုံးပြုပုံ: /animesynopsis <Anime အမည်>\nAniList မှ အမည်တိတိကျကျကိုက်ညီသော series synopsis ကို ရှာပေးပါမယ်။")
         return
     await update.message.reply_text("AniList မှ Anime ခေါင်းစဉ်နှင့် synopsis ကို စစ်ဆေးနေပါတယ်...")
     result = await asyncio.to_thread(fetch_anilist_synopsis, query)
@@ -863,12 +913,12 @@ async def animesynopsis_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(result.get("status", "Synopsis မရရှိပါ။"))
         return
     message = (
-        f"Anime Research — {result.get('title', query)}\\n"
+        f"Anime Research — {result.get('title', query)}\n"
         f"အမျိုးအစား: {result.get('format') or 'မဖော်ပြထား'} | "
         f"နှစ်: {result.get('year') or 'မဖော်ပြထား'} | "
-        f"အပိုင်း: {result.get('episodes') or 'မဖော်ပြထား'}\\n\\n"
-        f"{result['synopsis'][:2600]}\\n\\n"
-        f"ရင်းမြစ်: {result.get('provider_url', '')}\\n"
+        f"အပိုင်း: {result.get('episodes') or 'မဖော်ပြထား'}\n\n"
+        f"{result['synopsis'][:2600]}\n\n"
+        f"ရင်းမြစ်: {result.get('provider_url', '')}\n"
         "သတိပြုရန်: ဒီစာသားသည် AniList ရဲ့ series အဆင့် မိတ်ဆက်စာသာဖြစ်ပြီး "
         "episode တစ်ခုချင်း ဇာတ်ကွက်မဟုတ်ပါ။ မြန်မာဘာသာပြန်/အချက်အလက်စစ်ဆေးမှု မလုပ်ရသေးသဖြင့် "
         "အလိုအလျောက် recap MP4 အဖြစ် မသုံးထားပါ။"
@@ -883,7 +933,7 @@ async def multisourceresearch_cmd(update: Update, context: ContextTypes.DEFAULT_
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /multisourceresearch <Anime အမည်>\\n"
+            "အသုံးပြုပုံ: /multisourceresearch <Anime အမည်>\n"
             "AniList + Tenrai/MyAnimeList + Wikidata ကို တစ်ပြိုင်နက် စစ်ဆေးပေးပါမယ်။"
         )
         return
@@ -909,7 +959,7 @@ async def seriesresearch_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /seriesresearch <Cartoon/Donghua အမည်>\\n"
+            "အသုံးပြုပုံ: /seriesresearch <Cartoon/Donghua အမည်>\n"
             "TVmaze မှ Animation genre ပါသော Series မိတ်ဆက်စာကို ရှာပေးပါမယ်။"
         )
         return
@@ -925,12 +975,12 @@ async def seriesresearch_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return
     message = (
-        f"Animation Series Research — {result.get('title', query)}\\n"
-        f"Genre: {', '.join(result.get('genres') or [])}\\n"
+        f"Animation Series Research — {result.get('title', query)}\n"
+        f"Genre: {', '.join(result.get('genres') or [])}\n"
         f"ထုတ်လွှင့်သည့်နေ့: {result.get('premiered') or 'မဖော်ပြထား'} | "
-        f"နိုင်ငံ: {result.get('country') or 'မဖော်ပြထား'}\\n\\n"
-        f"{result['summary'][:2500]}\\n\\n"
-        f"ရင်းမြစ်: {result.get('provider_url', '')}\\n"
+        f"နိုင်ငံ: {result.get('country') or 'မဖော်ပြထား'}\n\n"
+        f"{result['summary'][:2500]}\n\n"
+        f"ရင်းမြစ်: {result.get('provider_url', '')}\n"
         "သတိပြုရန်: TVmaze သည် community-maintained ရင်းမြစ်ဖြစ်ပြီး ဒီစာသားသည် "
         "Series မိတ်ဆက်စာသာဖြစ်သည်။ Episode recap မဟုတ်ပါ။ 2D/3D အမျိုးအစားကို "
         "TVmaze genre တစ်ခုတည်းဖြင့် မဆုံးဖြတ်ထားပါ။"
@@ -945,7 +995,7 @@ async def moviemultisourceresearch_cmd(update: Update, context: ContextTypes.DEF
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /moviemultisourceresearch <ရုပ်ရှင်အမည်>\\n"
+            "အသုံးပြုပုံ: /moviemultisourceresearch <ရုပ်ရှင်အမည်>\n"
             "TMDB + Wikidata metadata ကို တစ်ပြိုင်နက်စစ်ပေးပါမယ်။ "
             "TMDB token မရှိလျှင် Wikidata ကိုသာ ပြသပါမယ်။"
         )
@@ -969,7 +1019,7 @@ async def movieplotresearch_cmd(update: Update, context: ContextTypes.DEFAULT_TY
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /movieplotresearch <နိုင်ငံခြား Live-action ရုပ်ရှင်အမည်>\\n"
+            "အသုံးပြုပုံ: /movieplotresearch <နိုင်ငံခြား Live-action ရုပ်ရှင်အမည်>\n"
             "Wikidata အမည်တိတိကျကျနှင့် ချိတ်ထားသော English Wikipedia Plot section ကို ရှာပေးပါမယ်။"
         )
         return
@@ -1008,13 +1058,13 @@ async def movieplotresearch_cmd(update: Update, context: ContextTypes.DEFAULT_TY
             return
         plot = await asyncio.to_thread(fetch_english_plot_section, enwiki_title)
         message = (
-            f"International Movie Plot Research — {metadata.get('title', query)}\\n"
+            f"International Movie Plot Research — {metadata.get('title', query)}\n"
             f"နှစ်: {metadata.get('year') or 'မဖော်ပြထား'} | "
-            f"နိုင်ငံ: {', '.join(metadata.get('countries') or [])}\\n"
-            f"Genre: {', '.join(metadata.get('genres') or [])}\\n\\n"
-            f"{plot['plot_text'][:3000]}\\n\\n"
-            f"Wikidata: {metadata.get('source', '')}\\n"
-            f"English Wikipedia: {plot.get('source', '')}\\n"
+            f"နိုင်ငံ: {', '.join(metadata.get('countries') or [])}\n"
+            f"Genre: {', '.join(metadata.get('genres') or [])}\n\n"
+            f"{plot['plot_text'][:3000]}\n\n"
+            f"Wikidata: {metadata.get('source', '')}\n"
+            f"English Wikipedia: {plot.get('source', '')}\n"
             "သတိပြုရန်: Wikipedia သည် လူထုတည်းဖြတ်ရင်းမြစ်ဖြစ်သည်။ "
             "ဒီအကြောင်းအရာကို မြန်မာဘာသာပြန်ထားခြင်း၊ ထုတ်လုပ်သူရင်းမြစ်ဖြင့် အတည်ပြုထားခြင်း "
             "သို့မဟုတ် Recap MP4 အဖြစ် အသုံးပြုထားခြင်း မရှိသေးပါ။ Live-action အမျိုးအစားကို "
@@ -1035,7 +1085,7 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /animationepisodes <Cartoon/Donghua အမည်>\\n"
+            "အသုံးပြုပုံ: /animationepisodes <Cartoon/Donghua အမည်>\n"
             "TVmaze မှ Animation genre ပါသော Series ရဲ့ Episode summary အတိုများကို ရှာပေးပါမယ်။"
         )
         return
@@ -1065,7 +1115,7 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
         "သတိပြုရန်: ဒီအချက်အလက်တွေဟာ TVmaze ရဲ့ community-maintained Episode summary အတိုများသာဖြစ်ပြီး "
         "အပြည့်အစုံ Recap script၊ ဇာတ်ဝင်ခန်း transcript သို့မဟုတ် အတည်ပြုပြီးဖြစ်ရပ်မှန် မဟုတ်ပါ။"
     )
-    await update.message.reply_text("\\n".join(lines), disable_web_page_preview=True)
+    await update.message.reply_text("\n".join(lines), disable_web_page_preview=True)
 
 
 async def episodeoutline_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1160,7 +1210,7 @@ async def topratedepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TYP
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /topratedepisodes <Anime/Cartoon/Donghua အမည်>\\n"
+            "အသုံးပြုပုံ: /topratedepisodes <Anime/Cartoon/Donghua အမည်>\n"
             "TVmaze မှ Animation genre၊ နိုင်ငံအချက်အလက်နှင့် Episode rating ရှိသော Series ကိုသာ ရှာပါမယ်။"
         )
         return
@@ -1195,7 +1245,7 @@ async def topratedepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TYP
         "Rating ပေးသူအရေအတွက် မရရှိနိုင်ပါက ရမှတ်တစ်ခုတည်းဖြင့် လူကြိုက်များမှုဟု မသတ်မှတ်ပါနှင့်။ "
         "အမျိုးအစားနှင့် နိုင်ငံကို metadata ဖြင့်သာ စစ်ထားပြီး 2D/3D ကို မခန့်မှန်းပါ။"
     )
-    await update.message.reply_text("\\n".join(lines), disable_web_page_preview=True)
+    await update.message.reply_text("\n".join(lines), disable_web_page_preview=True)
 
 
 async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1573,15 +1623,15 @@ async def aiscript_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             except ValueError as fallback_error:
                 await update.message.reply_text(
-                    error_text + "\\n\\nFree Builder သို့ အလိုအလျောက်ပြောင်းရန် မအောင်မြင်ပါ: "
+                    error_text + "\n\nFree Builder သို့ အလိုအလျောက်ပြောင်းရန် မအောင်မြင်ပါ: "
                     + str(fallback_error)
                 )
                 return
             output = (
-                "NEXORA Free Builder Worksheet — " + title + "\\n\\n"
+                "NEXORA Free Builder Worksheet — " + title + "\n\n"
                 "OpenAI Quota ပြည့်နေသောကြောင့် အခပေး API ကို ထပ်မခေါ်ထားပါ။ "
                 "အောက်ပါသည် AI ရေးသားထားသော Script မဟုတ်ဘဲ သင်ပေးထားသော Notes ကိုသာ "
-                "အသုံးပြုသည့် အခမဲ့ အခန်းလိုက် Worksheet ဖြစ်သည်။\\n\\n"
+                "အသုံးပြုသည့် အခမဲ့ အခန်းလိုက် Worksheet ဖြစ်သည်။\n\n"
                 + worksheet
             )
             for start_at in range(0, len(output), 3900):
@@ -1593,7 +1643,7 @@ async def aiscript_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         log.exception("OpenAI script generation failed")
         await update.message.reply_text("AI Script ထုတ်လုပ်မှု မအောင်မြင်ပါ။")
         return
-    output = "NEXORA AI Script Draft — " + title + "\\n\\n" + script + "\\n\\nထုတ်ဝေမီ Source များကို ပြန်စစ်ပါ။"
+    output = "NEXORA AI Script Draft — " + title + "\n\n" + script + "\n\nထုတ်ဝေမီ Source များကို ပြန်စစ်ပါ။"
     for start_at in range(0, len(output), 3900):
         await update.message.reply_text(output[start_at:start_at + 3900])
 
@@ -2135,13 +2185,13 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/autonarrateclip <title>\n<preset>\n<script> ဖြင့် narration နှင့် selectable SRT track ထည့်နိုင်သည်။ ဇာတ်လမ်းအချက်အလက်ကို စစ်ပြီးမှ ထည့်ပါ။\n"
             "/autofactsclip <title> သည် Wikidata အချက်အလက်နှင့် ခွင့်ပြုထားသော footage ကိုသုံးပြီး မိတ်ဆက် Video အလိုအလျောက်ထုတ်သည်။ ဇာတ်ကွက် recap မဟုတ်ပါ။\n"
             "/autoplotclip <title> သည် မြန်မာ Wikipedia ဇာတ်လမ်းအကျဉ်း ရှိမှသာ ရင်းမြစ်အခြေပြု narration preview ထုတ်သည်။\n"
-            "/animesynopsis <title> သည် AniList မှ Anime series synopsis ကို research အဖြစ်ပြသည်။ Episode recap မဟုတ်ပါ။\\n"
-            "/seriesresearch <title> သည် TVmaze မှ Animation genre ပါသော Cartoon/Donghua series overview ကို ပြသည်။ Episode recap မဟုတ်ပါ။\\n"
-            "/animationepisodes <title> သည် TVmaze မှ Animation Series Episode summary အတိုများကို ရင်းမြစ်နှင့်ပြသည်။\\n"
-            "/movieplotresearch <title> သည် exact Wikidata-English Wikipedia ချိတ်ဆက်ထားသော နိုင်ငံခြားရုပ်ရှင် Plot section ကို research အဖြစ်ပြသည်။\\n"
-            "/growthpack <category>|<title>|<summary optional> သည် title၊ description၊ thumbnail၊ Hook နှင့် retention checklist ပြင်ဆင်ပေးသည်။ Live views/trends ကို မခန့်မှန်းပါ။\\n"
-            "/topratedepisodes <title> သည် TVmaze community rating အမြင့်ဆုံး Animation Episode များကိုပြသည်။ View count မဟုတ်ပါ။\\n"
-            "/episodeoutline <title> သည် အမြင့်ဆုံး rating ရှိ Episode တစ်ခုအတွက် Recap Script Worksheet ပြင်ဆင်ပေးသည်။\\n"
+            "/animesynopsis <title> သည် AniList မှ Anime series synopsis ကို research အဖြစ်ပြသည်။ Episode recap မဟုတ်ပါ။\n"
+            "/seriesresearch <title> သည် TVmaze မှ Animation genre ပါသော Cartoon/Donghua series overview ကို ပြသည်။ Episode recap မဟုတ်ပါ။\n"
+            "/animationepisodes <title> သည် TVmaze မှ Animation Series Episode summary အတိုများကို ရင်းမြစ်နှင့်ပြသည်။\n"
+            "/movieplotresearch <title> သည် exact Wikidata-English Wikipedia ချိတ်ဆက်ထားသော နိုင်ငံခြားရုပ်ရှင် Plot section ကို research အဖြစ်ပြသည်။\n"
+            "/growthpack <category>|<title>|<summary optional> သည် title၊ description၊ thumbnail၊ Hook နှင့် retention checklist ပြင်ဆင်ပေးသည်။ Live views/trends ကို မခန့်မှန်းပါ။\n"
+            "/topratedepisodes <title> သည် TVmaze community rating အမြင့်ဆုံး Animation Episode များကိုပြသည်။ View count မဟုတ်ပါ။\n"
+            "/episodeoutline <title> သည် အမြင့်ဆုံး rating ရှိ Episode တစ်ခုအတွက် Recap Script Worksheet ပြင်ဆင်ပေးသည်။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
