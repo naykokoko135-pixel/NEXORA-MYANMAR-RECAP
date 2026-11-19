@@ -82,6 +82,41 @@ class WikidataMetadataTests(unittest.TestCase):
         self.assertEqual(mock_urlopen.call_count, 4)
 
     @patch("wikidata_metadata.urlopen")
+    def test_year_suffix_disambiguates_multiple_exact_titles_by_publication_year(self, mock_urlopen):
+        search_with_year = {"search": []}
+        search_without_year = {"search": [
+            {"id": "Q850159", "label": "The General",
+             "description": "1926 American silent comedy film"},
+            {"id": "Q999", "label": "The General",
+             "description": "1950 film"},
+        ]}
+        candidate_claims = {"entities": {
+            "Q850159": {"claims": {"P577": [claim(time_value="+1926-12-25T00:00:00Z")]}},
+            "Q999": {"claims": {"P577": [claim(time_value="+1950-01-01T00:00:00Z")]}},
+        }}
+        selected_entity = {"entities": {
+            "Q850159": {"claims": {"P495": [claim("Q30")]}}
+        }}
+        labels = {"entities": {
+            "Q30": {"labels": {"en": {"value": "United States"}}}
+        }}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search_with_year).encode()),
+            Response(json.dumps(search_without_year).encode()),
+            Response(json.dumps(candidate_claims).encode()),
+            Response(json.dumps(selected_entity).encode()),
+            Response(json.dumps(labels).encode()),
+        ]
+
+        result = fetch_wikidata_metadata("The General (1926)")
+
+        self.assertTrue(result["found"])
+        self.assertEqual(result["entity_id"], "Q850159")
+        self.assertEqual(result["year"], "1926")
+        self.assertEqual(result["countries"], ["United States"])
+        self.assertEqual(mock_urlopen.call_count, 5)
+
+    @patch("wikidata_metadata.urlopen")
     def test_burmese_title_uses_burmese_wikidata_search_fallback(self, mock_urlopen):
         search_en = {"search": []}
         search_my = {"search": [{
