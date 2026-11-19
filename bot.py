@@ -2421,6 +2421,40 @@ def _bridge_authorized(request: Request) -> bool:
     )
 
 
+@web_app.post("/chatgpt/send-message")
+async def chatgpt_bridge_send_message(request: Request):
+    """Send plain text from an authenticated ChatGPT Action to the owner's private Telegram chat."""
+    if not _bridge_authorized(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if telegram_app is None:
+        raise HTTPException(status_code=503, detail="Telegram bot is not ready")
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="JSON object required")
+    message = payload.get("message")
+    if not isinstance(message, str):
+        raise HTTPException(status_code=400, detail="Message must be text")
+    message = message.strip()
+    if not message or len(message) > 3500:
+        raise HTTPException(status_code=400, detail="Message must be between 1 and 3500 characters")
+    try:
+        chat_id = int(CHATGPT_BRIDGE_CHAT_ID or "")
+    except ValueError:
+        raise HTTPException(status_code=503, detail="CHATGPT_BRIDGE_CHAT_ID is not configured")
+    if chat_id <= 0:
+        raise HTTPException(status_code=503, detail="Configure a private positive Telegram chat ID")
+    sent = await telegram_app.bot.send_message(
+        chat_id=chat_id,
+        text=message,
+        read_timeout=30,
+        write_timeout=30,
+    )
+    return {"ok": True, "message_id": sent.message_id, "delivered_to_telegram": True}
+
+
 @web_app.post("/chatgpt/command")
 async def chatgpt_bridge_command(request: Request):
     """Run one allow-listed NEXORA bot command in the owner's configured private chat."""
