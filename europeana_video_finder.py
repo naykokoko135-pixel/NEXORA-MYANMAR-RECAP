@@ -146,3 +146,10 @@ LIMIT {limit}
             "download_enabled": False,
         })
     return results
+
+
+def display_media_url(item: dict) -> str:
+    """Hide partner-hosted Europeana media URLs until provider rights are reviewed."""
+    if str(item.get("source", "")).casefold() == "europeana":
+        return "မဖော်ပြထားပါ (Provider ခွင့်ပြုချက် စစ်ဆေးရန်လိုအပ်သည်)"
+    return str(item.get("url", "")).strip()
