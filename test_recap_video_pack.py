@@ -84,7 +84,6 @@ class RecapVideoPackTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 validate_non_indian_wikidata_metadata(metadata)
 
-import unittest
 from original_visual_recap import build_original_visual_cards
 
 class OriginalVisualRecapTests(unittest.TestCase):
