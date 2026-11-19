@@ -33,6 +33,7 @@ from europeana_video_finder import search_europeana_licensed_video, EuropeanaSea
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
 from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note
 from wikidata_metadata import fetch_wikidata_metadata
+from recap_metadata_resolver import resolve_recap_metadata
 from autofacts_narration import generate_burmese_facts_narration
 from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
 from verified_plot_narration import generate_burmese_plot_narration
@@ -436,7 +437,7 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Use only title aliases returned by an exact Wikidata match. If metadata
         # is unavailable, keep the original query rather than guessing aliases.
         alternate_titles = []
-        metadata = await asyncio.to_thread(fetch_wikidata_metadata, query)
+        metadata = await asyncio.to_thread(resolve_recap_metadata, query)
         if metadata.get("found"):
             alternate_titles = [
                 metadata.get("title", ""),
@@ -538,7 +539,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError as exc:
         await update.message.reply_text(str(exc))
         return
-    await update.message.reply_text("ခေါင်းစဉ်နှင့် မူရင်းနိုင်ငံကို Wikidata မှ စစ်ပြီး ခွင့်ပြုထားသော Commons footage ကို ရှာနေပါတယ်...")
+    await update.message.reply_text("Wikidata၊ TMDB၊ AniList/Tenrai ရင်းမြစ်များမှ ခေါင်းစဉ်နှင့် မူရင်းနိုင်ငံကို စစ်ပြီး ခွင့်ပြုထားသော Commons footage ကို ရှာနေပါတယ်...")
     try:
         metadata = await asyncio.to_thread(fetch_wikidata_metadata, query)
         countries = validate_non_indian_wikidata_metadata(metadata)
