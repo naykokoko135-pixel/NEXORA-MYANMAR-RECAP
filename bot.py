@@ -29,7 +29,7 @@ from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
 from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError
 from clip_source_finder import search_licensed_video, ClipSourceError
-from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError
+from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
 from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note
 from wikidata_metadata import fetch_wikidata_metadata
@@ -471,7 +471,7 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"ဖန်တီးသူ: {str(item.get('artist', 'Unknown'))[:250]}\n"
             f"အသုံးပြုမှု: {str(item.get('usage_terms', ''))[:250]}\n"
             f"ရင်းမြစ်: {item.get('source_page', '')}\n"
-            f"Media URL: {item.get('url', '')}\n{download_note}",
+            f"Media URL: {display_media_url(item)}\n{download_note}",
             disable_web_page_preview=True,
         )
     if errors:
