@@ -61,6 +61,27 @@ class WikidataMetadataTests(unittest.TestCase):
         self.assertIn("wikidata.org/wiki/Q123", format_wikidata_metadata(result))
 
     @patch("wikidata_metadata.urlopen")
+    def test_year_suffix_retries_base_title_and_keeps_exact_match(self, mock_urlopen):
+        search_with_year = {"search": []}
+        search_without_year = {"search": [{
+            "id": "Q850159", "label": "The General",
+            "description": "1926 American silent comedy film",
+        }]}
+        entity = {"entities": {"Q850159": {"claims": {"P495": [claim("Q30")]}}}}
+        labels = {"entities": {"Q30": {"labels": {"en": {"value": "United States"}}}}}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search_with_year).encode()),
+            Response(json.dumps(search_without_year).encode()),
+            Response(json.dumps(entity).encode()),
+            Response(json.dumps(labels).encode()),
+        ]
+        result = fetch_wikidata_metadata("The General (1926)")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["entity_id"], "Q850159")
+        self.assertEqual(result["countries"], ["United States"])
+        self.assertEqual(mock_urlopen.call_count, 4)
+
+    @patch("wikidata_metadata.urlopen")
     def test_does_not_accept_unrelated_title_match(self, mock_urlopen):
         mock_urlopen.return_value = Response(json.dumps({
             "search": [{"id": "Q99", "label": "Train", "description": "rail vehicle"}]
