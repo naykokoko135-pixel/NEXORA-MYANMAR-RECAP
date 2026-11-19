@@ -25,7 +25,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 
 ## Optional OpenAI script drafting
 
-The optional `/aiscript <title>` command drafts Burmese narration from creator-supplied verified research notes. Put the notes on the next line in the same Telegram message (80–9,000 characters). It does not research or verify plot facts, and it must not invent events absent from the notes.
+The optional `/aiscript <title>` command drafts Burmese narration from creator-supplied verified research notes. Put the notes on the next line in the same Telegram message (80–3,500 characters). It does not research or verify plot facts, and it must not invent events absent from the notes.
 
 To enable it, the account owner/parent must create and manage an OpenAI API project/key and set `OPENAI_API_KEY` in Render Environment. Never paste the key into Telegram, GitHub, or ChatGPT. `OPENAI_MODEL` defaults to `gpt-4.1-mini`. The request is bounded to 1,800 output tokens, has no automatic retry, and reports quota/auth errors without exposing provider response bodies. API usage may incur charges; configure a low project spending limit and monitor usage before enabling. Removing the Render variable disables the feature. `/create` remains the free worksheet builder.
 
@@ -118,7 +118,7 @@ After the MP4, NEXORA also sends `nexora_footage_attribution.txt` with the Commo
 It also sends the narration as `nexora_recap_voiceover.mp3` and the standalone, UTF-8 Burmese captions as `nexora_recap_subtitles.srt`; the MP4 retains its embedded selectable subtitle track too.
 
 
-Use `/recapvideo <exact title>` followed by an optional preset line and creator-written Burmese narration. NEXORA requires an exact Wikidata title record with known non-Indian country metadata, searches Wikimedia Commons, and proceeds only when a strong title metadata match has an allowed CC0/CC BY/CC BY-SA/Public Domain license. It then generates Burmese narration, word-aligned SRT, and an MP4 preview up to five minutes in the selected platform ratio.
+Use `/recapvideo <exact title>` followed by an optional preset line and creator-written Burmese narration. If narration is omitted, NEXORA first tries the exact Burmese Wikipedia Plot section linked from Wikidata. If that source is missing or unusable, it may fall back to the exact English Wikipedia Plot section linked from Wikidata and draft Burmese narration through the configured OpenAI API. This English-source fallback requires `OPENAI_API_KEY` and can incur API charges; it does not run if the key is absent. English Wikipedia is community-edited, not studio-verified canon, and the narration labels uncertain details for fact-checking. NEXORA still requires an exact Wikidata title record with known non-Indian country metadata, then searches Wikimedia Commons and proceeds only when a strong title metadata match has an allowed CC0/CC BY/CC BY-SA/Public Domain license. It generates Burmese narration, word-aligned SRT, and an MP4 preview up to five minutes in the selected platform ratio.
 
 Example:
 ```
@@ -127,7 +127,7 @@ narrator
 [ကိုယ်တိုင်ရေးပြီး Episode နှင့် ပြန်စစ်ထားသော narration]
 ```
 
-The command rejects unknown country metadata and Indian-origin/co-production records. A Commons file-title match does not prove the clip depicts the correct episode or scene; inspect the finished MP4 manually and verify the license, attribution, and any Share-Alike obligations before publishing. The source footage may loop to cover narration duration. This is a preview workflow, not an automatically researched full episode recap, and it does not infer 3D animation from a generic Animation genre.
+The command rejects unknown country metadata and Indian-origin/co-production records. A Commons file-title match does not prove the clip depicts the correct episode or scene; inspect the finished MP4 manually and verify the license, attribution, and any Share-Alike obligations before publishing. The source footage may loop to cover narration duration. This is a source-assisted preview workflow, not a fully researched scene-accurate episode recap, and it does not infer 3D animation from a generic Animation genre.
 
 ## Recap voice + synchronized subtitles
 

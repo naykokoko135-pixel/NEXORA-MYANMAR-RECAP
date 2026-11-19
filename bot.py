@@ -46,6 +46,7 @@ from tvmaze_synopsis import fetch_tvmaze_episode_summaries, fetch_tvmaze_top_rat
 from animated_episode_pack import format_animated_episode_pack
 from episode_recap_outline import format_episode_recap_outline
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
+from english_plot_recap import generate_burmese_recap_from_english_plot
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
 from recap_voice_pack import parse_recap_voice_request
@@ -552,25 +553,35 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         metadata = await asyncio.to_thread(resolve_recap_metadata, query)
         countries = validate_non_indian_wikidata_metadata(metadata)
+        platform = context.user_data.get("platform", "youtube")
+        plot_source = "အသုံးပြုသူပေးထားသော narration"
         if not script:
-            # Only use a Burmese Wikipedia sitelink verified by Wikidata.
-            # A translated/provider display title is not proof of work identity.
+            # Prefer the exact Wikidata-linked Burmese plot section. If it is
+            # absent/unusable, fall back only to the exact English sitelink.
             plot_title = metadata.get("mywiki_title")
-            if not plot_title:
-                raise ValueError(
-                    "အခြား metadata ရင်းမြစ်မှ ခေါင်းစဉ်ကို အတည်ပြုနိုင်သော်လည်း "
-                    "ဒီဇာတ်ကား/Anime နဲ့ တိတိကျကျကိုက်ညီတဲ့ မြန်မာ Wikipedia ဇာတ်လမ်းရင်းမြစ် "
-                    "မအတည်ပြုနိုင်သေးပါ။ အလိုအလျောက် narration မလုပ်ထားပါ။ "
-                    "နောက်တစ်ကြောင်းမှာ ကိုယ်ပိုင် narration ထည့်ပြီး ပြန်ပို့ပါ။"
-                )
             try:
+                if not plot_title:
+                    raise PlotResearchError("Wikidata မှ မြန်မာ Wikipedia sitelink မရရှိပါ။")
                 plot = await asyncio.to_thread(fetch_burmese_plot_section, plot_title)
                 script = generate_burmese_plot_narration(metadata, plot)
-            except (PlotResearchError, ValueError) as plot_error:
-                raise ValueError(
-                    "ခေါင်းစဉ်ကို အတည်ပြုနိုင်သော်လည်း မြန်မာ Wikipedia တွင် ယုံကြည်စိတ်ချရသော "
-                    f"ဇာတ်လမ်းအကျဉ်း မရရှိပါ။ မခန့်မှန်းဘဲ ရပ်ထားပါတယ်။ ({str(plot_error)[:220]})"
-                ) from plot_error
+                plot_source = str(plot.get("source") or "မြန်မာ Wikipedia")
+            except (PlotResearchError, ValueError) as burmese_error:
+                english_title = metadata.get("enwiki_title")
+                if not english_title:
+                    raise ValueError(
+                        "မြန်မာ Wikipedia Plot မရရှိသေးသလို Wikidata မှ တိကျသော English Wikipedia sitelink လည်း မရပါ။ "
+                        "အလိုအလျောက် ဇာတ်ကွက်မခန့်မှန်းထားပါ။ ကိုယ်ပိုင် narration ထည့်ပို့ပါ။"
+                    ) from burmese_error
+                try:
+                    english_plot = await asyncio.to_thread(fetch_english_plot_section, english_title)
+                    script, plot_source = generate_burmese_recap_from_english_plot(
+                        metadata.get("title", query), english_plot, platform
+                    )
+                except EnglishPlotError as english_error:
+                    raise ValueError(
+                        "မြန်မာ Wikipedia Plot မရရှိပါ။ English Wikipedia တွင်လည်း သီးခြား Plot section မတွေ့ပါ။ "
+                        "ကိုယ်ပိုင် narration ထည့်ပို့ပါ။"
+                    ) from english_error
         validate_tts_request(script, voice)
         search_titles = [
             metadata.get("title", ""),
@@ -591,7 +602,6 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("လိုင်စင်အမျိုးအစားနှင့် ခေါင်းစဉ်ကို စစ်ပြီး narration + အချိန်ကိုက် SRT + MP4 ပြင်ဆင်နေပါတယ်...")
         audio, srt_text = await synthesize_burmese_speech_with_srt(script, voice)
         import tempfile
-        platform = context.user_data.get("platform", "youtube")
         with tempfile.TemporaryDirectory(prefix="nexora_recap_video_") as temp:
             output = os.path.join(temp, "nexora_recap_preview.mp4")
             await asyncio.to_thread(render_licensed_narrated_preview, source, audio, srt_text, output, platform, 300)
@@ -602,6 +612,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     caption=(
                         f"NEXORA {platform.upper()} — Recap Preview (အများဆုံး ၅ မိနစ်)\n"
                         f"ခေါင်းစဉ်: {metadata.get('title', query)} | နိုင်ငံ: {', '.join(countries)}\n"
+                        f"ဇာတ်လမ်းရင်းမြစ်: {plot_source}\n"
                         f"Footage: {source.get('source_page', '')}\n"
                         f"လိုင်စင်: {source.get('license', '')} | ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\n"
                         "မူရင်း footage ခေါင်းစဉ် metadata ကိုသာ ကိုက်ညီစစ်ထားပြီး ဇာတ်ဝင်ခန်းအကြောင်းအရာကို အတည်မပြုထားပါ။ "
