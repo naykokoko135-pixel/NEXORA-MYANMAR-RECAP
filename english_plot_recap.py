@@ -4,7 +4,7 @@ The source is community-edited and must not be presented as studio-verified cano
 """
 from urllib.parse import urlparse
 
-from openai_script_provider import generate_burmese_recap_script
+from openai_script_provider import generate_burmese_recap_script, AIScriptError\nfrom gemini_script_provider import generate_burmese_recap_script as generate_gemini_recap_script, gemini_script_status, GeminiScriptError
 
 MAX_SOURCE_NOTES_CHARS = 5500
 MIN_SOURCE_NOTES_CHARS = 80
@@ -32,9 +32,28 @@ def generate_burmese_recap_from_english_plot(
     )
     if platform not in PLATFORM_DURATIONS:
         raise ValueError("Platform သည် youtube/facebook/tiktok ဖြစ်ရပါမယ်။")
-    script = generate_burmese_recap_script(
-        topic, notes, platform=platform, duration=PLATFORM_DURATIONS[platform]
-    )
+    try:
+        script = generate_burmese_recap_script(
+            topic, notes, platform=platform, duration=PLATFORM_DURATIONS[platform]
+        )
+    except AIScriptError as openai_error:
+        # Switch providers only for quota exhaustion; never retry OpenAI.
+        if "Limit/Quota" not in str(openai_error):
+            raise
+        if not gemini_script_status()["configured"]:
+            raise AIScriptError(
+                "OpenAI API Quota ပြည့်နေပါတယ်။ OpenAI ကို ထပ်မခေါ်ထားပါ။ "
+                "အခြား AI ဖြင့် ဆက်ရေးနိုင်ရန် Render Environment တွင် GEMINI_API_KEY လိုအပ်ပါတယ်။"
+            ) from None
+        try:
+            script = generate_gemini_recap_script(
+                topic, notes, platform=platform, duration=PLATFORM_DURATIONS[platform]
+            )
+        except GeminiScriptError as gemini_error:
+            raise AIScriptError(
+                "OpenAI Quota ပြည့်နေပြီး Gemini Fallback လည်း မအောင်မြင်ပါ: "
+                + str(gemini_error)
+            ) from None
     if not script.strip():
         raise ValueError("Burmese recap narration မရရှိပါ။")
     return script.strip(), source_url
