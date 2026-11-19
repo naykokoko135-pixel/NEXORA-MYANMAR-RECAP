@@ -116,7 +116,7 @@ def test_search_uses_verified_alternate_titles_in_title_filter():
         )
 
     query = captured[0]
-    assert 'LCASE("Frieren: Beyond Journey\\'s End")' in query
+    assert "LCASE(\\"Frieren: Beyond Journey's End\\")" in query
     assert 'LCASE("Sousou no Frieren")' in query
     assert 'LCASE("ဥပမာခေါင်းစဉ်")' in query
     assert "Ignored fifth alias" not in query
