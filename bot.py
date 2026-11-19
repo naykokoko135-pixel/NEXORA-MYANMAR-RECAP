@@ -54,7 +54,8 @@ from recap_video_pack import parse_recap_video_request, validate_non_indian_wiki
 from original_visual_recap import build_original_visual_cards
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
-from openai_script_provider import generate_burmese_recap_script, openai_script_status, AIScriptError\nfrom gemini_script_provider import gemini_script_status
+from openai_script_provider import generate_burmese_recap_script, openai_script_status, AIScriptError
+from gemini_script_provider import gemini_script_status
 from error_reporter import report_error_to_github
 from comment_autoreply import build_reply, platform_comment_capabilities, run_comment_autoreply_cycle
 from web_console import CONSOLE_HTML, create_console_session, verify_console_session
