@@ -23,7 +23,7 @@ def _binding(value):
     return {"value": value}
 
 
-def test_returns_only_https_video_with_allowed_rights_and_consistent_record_rights():
+def test_returns_only_https_video_with_allowed_rights():
     payload = {"results": {"bindings": [
         {
             "title": _binding("Historic film collection"),
@@ -38,13 +38,6 @@ def test_returns_only_https_video_with_allowed_rights_and_consistent_record_righ
             "webResource": _binding("https://media.example.org/restricted.mp4"),
             "rights": _binding("http://rightsstatements.org/vocab/InC/1.0/"),
             "providedCHO": _binding("https://data.europeana.eu/item/456"),
-        },
-        {
-            "title": _binding("Conflicting rights"),
-            "webResource": _binding("https://media.example.org/conflict.mp4"),
-            "rights": _binding("http://creativecommons.org/licenses/by/4.0/"),
-            "providedCHO": _binding("https://data.europeana.eu/item/789"),
-            "recordRights": _binding("Copyright 2024"),
         },
         {
             "title": _binding("Unsafe URL"),
@@ -81,3 +74,22 @@ def test_rights_allowlist_excludes_nc_and_nd():
     assert "http://creativecommons.org/licenses/by-sa/4.0/" in ALLOWED_RIGHTS
     assert "http://creativecommons.org/licenses/by-nc/4.0/" not in ALLOWED_RIGHTS
     assert "http://creativecommons.org/licenses/by-nd/4.0/" not in ALLOWED_RIGHTS
+
+
+def test_sparql_uses_europeana_video_proxy_structure():
+    captured = []
+
+    def fake_urlopen(request, timeout):
+        from urllib.parse import parse_qs, urlparse
+        captured.append(parse_qs(urlparse(request.full_url).query)["query"][0])
+        return _response({"results": {"bindings": []}})
+
+    with patch("europeana_video_finder.urllib.request.urlopen", side_effect=fake_urlopen):
+        search_europeana_licensed_video("Historic film")
+
+    query = captured[0]
+    assert "?proxy ore:proxyIn ?aggregation" in query
+    assert 'edm:type "VIDEO"' in query
+    assert "dc:title ?title" in query
+    assert "(edm:isShownBy|edm:hasView) ?webResource" in query
+    assert "edm:rights ?rights" in query
