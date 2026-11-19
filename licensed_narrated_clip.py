@@ -90,8 +90,8 @@ def render_licensed_narrated_preview(
         raise LicensedClipError("Narration MP3 သည် ဗလာဖြစ်နေခြင်း သို့မဟုတ် 20 MB ထက်ကြီးနေပါတယ်။")
     if not isinstance(subtitles_srt, str) or not subtitles_srt.strip() or "-->" not in subtitles_srt:
         raise LicensedClipError("မြန်မာ SRT စာတန်းပုံစံ မမှန်ပါ။")
-    if not isinstance(max_duration_seconds, int) or isinstance(max_duration_seconds, bool) or not 1 <= max_duration_seconds <= 300:
-        raise LicensedClipError("Preview ကြာချိန်သည် 1 မှ 300 စက္ကန့်အတွင်း ဖြစ်ရပါမယ်။")
+    if not isinstance(max_duration_seconds, int) or isinstance(max_duration_seconds, bool) or not 1 <= max_duration_seconds <= 1200:
+        raise LicensedClipError("Recap ကြာချိန်သည် 1 မှ 1,200 စက္ကန့်အတွင်း ဖြစ်ရပါမယ်။")
     subtitle_duration = _subtitle_duration_seconds(subtitles_srt)
     if subtitle_duration > max_duration_seconds:
         raise LicensedClipError(f"အသံ/SRT ကြာချိန် {max_duration_seconds} စက္ကန့်ထက် ကျော်နေပါတယ်။ Script ကို အပိုင်းခွဲပါ။")
@@ -150,9 +150,9 @@ def render_licensed_narrated_preview(
             "-movflags", "+faststart", str(target),
         ]
         try:
-            result = subprocess.run(command, capture_output=True, text=True, timeout=240, check=False)
+            result = subprocess.run(command, capture_output=True, text=True, timeout=900, check=False)
         except subprocess.TimeoutExpired as exc:
-            raise LicensedClipError("Video ပြင်ဆင်ချိန် ၄ မိနစ်ကျော်သွားပါတယ်။") from exc
+            raise LicensedClipError("Video ပြင်ဆင်ချိန် ၁၅ မိနစ်ကျော်သွားပါတယ်။") from exc
         if result.returncode or not target.exists() or not target.stat().st_size:
             raise LicensedClipError("Narration ပါသော MP4 ကို မထုတ်နိုင်ပါ။")
     return target
