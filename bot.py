@@ -52,6 +52,7 @@ from recap_voice_pack import parse_recap_voice_request
 from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
+from openai_script_provider import generate_burmese_recap_script, openai_script_status, AIScriptError
 from error_reporter import report_error_to_github
 from comment_autoreply import build_reply, platform_comment_capabilities, run_comment_autoreply_cycle
 from web_console import CONSOLE_HTML, create_console_session, verify_console_session
@@ -1529,6 +1530,33 @@ async def create(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
+
+async def aiscript_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+    first_line, separator, notes = update.message.text.partition("\n")
+    title_parts = first_line.split(maxsplit=1)
+    if len(title_parts) < 2 or not separator:
+        await update.message.reply_text("အသုံးပြုပုံ: /aiscript <title> ပြီးနောက် စာကြောင်းအသစ်မှ Verified Research Notes ထည့်ပါ။")
+        return
+    title = title_parts[1].strip()
+    platform = context.user_data.get("platform", "youtube")
+    duration = context.user_data.get("duration", DEFAULT_DURATIONS.get(platform, "8-10"))
+    await update.message.reply_text("OpenAI Script Draft တောင်းဆိုမှု လက်ခံပါပြီ။")
+    try:
+        script = await asyncio.to_thread(generate_burmese_recap_script, title, notes, platform, duration)
+    except AIScriptError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    except Exception:
+        log.exception("OpenAI script generation failed")
+        await update.message.reply_text("AI Script ထုတ်လုပ်မှု မအောင်မြင်ပါ။")
+        return
+    output = "NEXORA AI Script Draft — " + title + "\n\n" + script + "\n\nထုတ်ဝေမီ Source များကို ပြန်စစ်ပါ။"
+    for start_at in range(0, len(output), 3900):
+        await update.message.reply_text(output[start_at:start_at + 3900])
+
+
 async def platform_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
@@ -2113,6 +2141,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("status", status))
     telegram_app.add_handler(CommandHandler("chatid", chatid_cmd))
     telegram_app.add_handler(CommandHandler("create", create))
+    telegram_app.add_handler(CommandHandler("aiscript", aiscript_cmd))
     telegram_app.add_handler(CommandHandler("research", research_cmd))
     telegram_app.add_handler(CommandHandler("auto", auto_research_cmd))
     telegram_app.add_handler(CommandHandler("seriesguide", series_guide_cmd))
