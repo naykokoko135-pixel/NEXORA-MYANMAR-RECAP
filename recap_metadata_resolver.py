@@ -60,7 +60,24 @@ def resolve_recap_metadata(title):
     if not clean or len(clean) > 120:
         return {"found": False, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
 
-    wikidata = fetch_wikidata_metadata(clean)
+    # Each catalogue is independent. A provider outage or unexpected schema
+    # error must not prevent the resolver from consulting the other sources.
+    def safe_fetch(fetcher, source_name):
+        try:
+            result = fetcher(clean)
+            if isinstance(result, dict):
+                return result
+            return {
+                "found": False,
+                "status": source_name + " မှ မမှန်ကန်သော တုံ့ပြန်မှု ရရှိပါသည်။",
+            }
+        except Exception:
+            return {
+                "found": False,
+                "status": source_name + " ရင်းမြစ်ကို ယခုချိန်တွင် မရရှိနိုင်ပါ။",
+            }
+
+    wikidata = safe_fetch(fetch_wikidata_metadata, "Wikidata")
     anime = None
 
     # TMDB's /search/movie endpoint is a movie-only catalogue. Do not let a
@@ -70,13 +87,13 @@ def resolve_recap_metadata(title):
     should_query_tmdb = (
         not wikidata.get("found") or _wikidata_describes_film(wikidata)
     )
-    tmdb = fetch_tmdb_movie(clean) if should_query_tmdb else {
+    tmdb = safe_fetch(fetch_tmdb_movie, "TMDB") if should_query_tmdb else {
         "found": False, "status": "Wikidata က ရုပ်ရှင်မဟုတ်သော screen work အဖြစ် ခွဲခြားထားသဖြင့် TMDB movie lookup ကို ကျော်ထားသည်။"
     }
     if tmdb.get("found") and _is_indian(tmdb.get("countries") or []):
         return {"found": False, "status": "အိန္ဒိယမူရင်း/ပူးတွဲထုတ်လုပ်မှု ဖြစ်ကြောင်း TMDB တွင်တွေ့ရှိသဖြင့် ပယ်ချထားသည်။"}
     if tmdb.get("found") and not wikidata.get("found"):
-        anime = research_anime_sources(clean)
+        anime = safe_fetch(research_anime_sources, "Anime catalogue")
         if anime.get("india_excluded"):
             return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယမူရင်းခေါင်းစဉ်များကို မထည့်ပါ။"}
         if _has_exact_anime_record(anime):
@@ -142,7 +159,7 @@ def resolve_recap_metadata(title):
     # AniList/Tenrai are no-key catalogue sources for animation. Accept only
     # exact catalogue matches with a recognized country code and reject India.
     if anime is None:
-        anime = research_anime_sources(clean)
+        anime = safe_fetch(research_anime_sources, "Anime catalogue")
     if anime.get("india_excluded"):
         return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယမူရင်းခေါင်းစဉ်များကို မထည့်ပါ။"}
     if anime.get("year_conflict"):
