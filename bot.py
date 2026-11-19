@@ -1552,13 +1552,37 @@ async def aiscript_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         script = await asyncio.to_thread(generate_burmese_recap_script, title, notes, platform, duration)
     except AIScriptError as exc:
-        await update.message.reply_text(str(exc))
+        error_text = str(exc)
+        if "Limit/Quota" in error_text:
+            # A quota failure must not trigger another paid API call. Fall back to
+            # the deterministic, non-AI worksheet using only creator-supplied notes.
+            try:
+                worksheet = generate_draft_worksheet(
+                    title, notes, platform=platform, duration=duration
+                )
+            except ValueError as fallback_error:
+                await update.message.reply_text(
+                    error_text + "\\n\\nFree Builder သို့ အလိုအလျောက်ပြောင်းရန် မအောင်မြင်ပါ: "
+                    + str(fallback_error)
+                )
+                return
+            output = (
+                "NEXORA Free Builder Worksheet — " + title + "\\n\\n"
+                "OpenAI Quota ပြည့်နေသောကြောင့် အခပေး API ကို ထပ်မခေါ်ထားပါ။ "
+                "အောက်ပါသည် AI ရေးသားထားသော Script မဟုတ်ဘဲ သင်ပေးထားသော Notes ကိုသာ "
+                "အသုံးပြုသည့် အခမဲ့ အခန်းလိုက် Worksheet ဖြစ်သည်။\\n\\n"
+                + worksheet
+            )
+            for start_at in range(0, len(output), 3900):
+                await update.message.reply_text(output[start_at:start_at + 3900])
+            return
+        await update.message.reply_text(error_text)
         return
     except Exception:
         log.exception("OpenAI script generation failed")
         await update.message.reply_text("AI Script ထုတ်လုပ်မှု မအောင်မြင်ပါ။")
         return
-    output = "NEXORA AI Script Draft — " + title + "\n\n" + script + "\n\nထုတ်ဝေမီ Source များကို ပြန်စစ်ပါ။"
+    output = "NEXORA AI Script Draft — " + title + "\\n\\n" + script + "\\n\\nထုတ်ဝေမီ Source များကို ပြန်စစ်ပါ။"
     for start_at in range(0, len(output), 3900):
         await update.message.reply_text(output[start_at:start_at + 3900])
 
