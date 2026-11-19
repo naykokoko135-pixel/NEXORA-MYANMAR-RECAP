@@ -34,8 +34,16 @@ def _is_indian(countries):
 
 def _wikidata_describes_film(metadata):
     """Only cross-check a Wikidata film item against TMDB's movie catalogue."""
-    description = str((metadata or {}).get("description") or "").casefold()
-    return "film" in description or "movie" in description
+    metadata = metadata or {}
+    # Search may resolve an exact Burmese/Japanese label whose localized
+    # description does not contain the English words "film" or "movie".
+    # Prefer explicit English description as an additional classification
+    # signal; remain conservative if neither description identifies a film.
+    descriptions = " ".join(
+        str(metadata.get(key) or "")
+        for key in ("description", "description_en")
+    ).casefold()
+    return "film" in descriptions or "movie" in descriptions
 
 
 def _has_exact_anime_record(report):
