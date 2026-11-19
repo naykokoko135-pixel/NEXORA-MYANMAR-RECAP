@@ -12,7 +12,7 @@ class WebConsoleSessionTests(unittest.TestCase):
     def test_bot_module_compiles_and_console_routes_exist(self):
         source = (Path(__file__).resolve().parent / "bot.py").read_text(encoding="utf-8")
         compile(source, "bot.py", "exec")
-        self.assertIn('@web_app.get("/console")', source)
+        self.assertIn('@web_app.get("/console",', source)
         self.assertIn('@web_app.post("/console/command")', source)
         self.assertIn('NEXORA_CONSOLE_PASSWORD', source)
 
