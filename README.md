@@ -25,21 +25,22 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 
 ## ChatGPT to Telegram command bridge
 
-The FastAPI service exposes an authenticated command endpoint for a supported Custom GPT Action:
+NEXORA exposes an optional authenticated bridge for a supported Custom GPT Action:
 
-- `GET /chatgpt/bridge-health` reports readiness/configuration presence only.
+- `GET /chatgpt/bridge-health` reports readiness/configuration presence only; it never returns secret values or the private chat ID.
 - `POST /chatgpt/command` dispatches one allow-listed, single-line command to the configured private Telegram chat.
-- The importable OpenAPI schema is `chatgpt_action_openapi.yaml`.
+- `POST /chatgpt/send-file` sends a supported creator-owned file (maximum 20 MB) to that same private chat.
+- The canonical OpenAPI schema is `chatgpt_action_openapi.yaml`; setup details are in [CHATGPT_TELEGRAM_BRIDGE.md](CHATGPT_TELEGRAM_BRIDGE.md).
 
-Important: A Custom GPT Action is usable only where GPT editing and Actions are enabled. New GPT creation is currently unavailable on personal ChatGPT accounts, including Free, Go, Plus and Pro. This OpenAPI file prepares the NEXORA side; it does not make the current standard ChatGPT chat send Telegram messages by itself. Check your ChatGPT workspace/account eligibility before planning the Action setup.
+This bridge does not automatically connect the ordinary ChatGPT conversation to Telegram. It works only when a supported GPT Action is configured and invoked in an eligible GPT editor. Availability depends on the ChatGPT account/workspace and current product features.
 
 To enable it after the code is deployed:
-1. In Telegram, open your NEXORA bot and run `/chatid`; use the returned private chat ID only in Render Environment.
-2. In Render Environment, set `CHATGPT_BRIDGE_CHAT_ID` to that ID and set `CHATGPT_BRIDGE_API_KEY` to a long, random private secret. Never commit or share the secret in chat.
-3. In a supported ChatGPT Custom GPT editor, create an Action by importing `chatgpt_action_openapi.yaml`, replace the placeholder server URL with the Render service URL, and configure API-key authentication using header name `X-Nexora-Bridge-Key` and the same secret.
-4. Save the Action and test `checkNexoraBridge` before sending a low-risk command such as `status`.
+1. In Telegram, open @NexoraMyanmarRecapBot and run `/chatid`; use the returned private chat ID only in Render Environment.
+2. In Render Environment, set `CHATGPT_BRIDGE_CHAT_ID` to that ID and `CHATGPT_BRIDGE_API_KEY` to a long, random private secret (at least 32 characters). Never commit or share the secret in chat.
+3. In a supported GPT editor, import `chatgpt_action_openapi.yaml`, replace the placeholder server URL with the Render service URL, and configure API-key authentication with header `X-Nexora-Bridge-Key` and the same secret.
+4. Save the Action and test `checkNexoraBridge`, then send a low-risk `status` command.
 
-The bridge deliberately accepts only an allow-list of single-line commands. Commands that need multi-line narration, media uploads, or interactive follow-up steps must still be completed in Telegram. A successful HTTP response means the command was dispatched to the bot; it does not guarantee a generated video or media asset was produced. Keep the API key private and rotate it if it is exposed.
+The bridge accepts only the explicit command allow-list in the OpenAPI schema. Arguments must be single-line; commands needing narration text across multiple lines or interactive follow-up still need Telegram. A successful HTTP response means the command was dispatched, not that a video or media asset was successfully generated. Keep the API key private and rotate it if exposed.
 
 ## Three-part YouTube worksheets
 Use `/draft3 <movie title>` and put your checked research notes on the following lines in the same Telegram message. NEXORA creates three distinct planning worksheets:

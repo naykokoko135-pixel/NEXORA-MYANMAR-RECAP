@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: NEXORA Myanmar Recap Telegram Bridge
-  version: 1.0.0
-  description: Sends an allow-listed, single-line NEXORA command to the configured private Telegram chat. It does not expose Telegram bot tokens or chat IDs.
+  version: 1.1.0
+  description: Authenticated bridge for allow-listed NEXORA commands and supported files. It never exposes Telegram bot tokens or chat IDs.
 servers:
   - url: https://YOUR-RENDER-SERVICE.onrender.com
 security:
@@ -11,15 +11,15 @@ paths:
   /chatgpt/bridge-health:
     get:
       operationId: checkNexoraBridge
-      summary: Check whether the Telegram bridge is configured and ready
+      summary: Check whether Telegram and bridge configuration are ready
       responses:
         "200":
           description: Configuration status only; no secret values are returned
   /chatgpt/command:
     post:
       operationId: sendNexoraCommand
-      summary: Send an allow-listed NEXORA command to Telegram
-      description: Use one-line commands only. For commands requiring a multi-line script or media upload, use Telegram directly.
+      summary: Send an allow-listed NEXORA command to the configured Telegram chat
+      description: Single-line command arguments only. A successful response confirms dispatch, not successful media generation.
       requestBody:
         required: true
         content:
@@ -43,6 +43,7 @@ paths:
                     - voiceover3
                     - render
                     - animesynopsis
+                    - multisourceresearch
                     - seriesresearch
                     - animationepisodes
                     - topratedepisodes
@@ -50,18 +51,17 @@ paths:
                     - episodeoutline
                     - recapvideo
                     - movieplotresearch
+                    - moviemultisourceresearch
                     - growthpack
                     - clipsource
                     - autoplotclip
                     - autoclip
                     - autonarrateclip
                     - autofactsclip
-                    - multisourceresearch
-                    - moviemultisourceresearch
                 argument:
                   type: string
                   maxLength: 3500
-                  description: Single-line command argument. Omit for status/help/render.
+                  description: Optional single-line command argument.
       responses:
         "200":
           description: Command was dispatched to the configured Telegram chat
@@ -69,6 +69,38 @@ paths:
           description: Command is not allowed or argument is invalid
         "401":
           description: Missing or invalid bridge key
+        "503":
+          description: Telegram bot or bridge chat configuration is not ready
+  /chatgpt/send-file:
+    post:
+      operationId: sendNexoraFile
+      summary: Send a supported file to the configured private Telegram chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [filename, content_base64]
+              properties:
+                filename:
+                  type: string
+                  maxLength: 100
+                  description: File name ending in mp3, wav, ogg, jpg, jpeg, png, webp, mp4, txt, or srt.
+                content_base64:
+                  type: string
+                  maxLength: 28000000
+                  description: Base64-encoded file, maximum decoded size 20 MB.
+      responses:
+        "200":
+          description: File sent to the configured private Telegram chat
+        "400":
+          description: Unsupported filename or invalid base64 content
+        "401":
+          description: Missing or invalid bridge key
+        "413":
+          description: File is too large
         "503":
           description: Telegram bot or bridge chat configuration is not ready
 components:
