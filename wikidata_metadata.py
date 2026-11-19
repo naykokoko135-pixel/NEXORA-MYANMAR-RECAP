@@ -128,7 +128,7 @@ def fetch_wikidata_metadata(title):
         # a film "The General" while users enter "The General (1926)".
         # The final label/alias comparison remains exact after normalization.
         search_terms = [clean_title]
-        year_free_title = re.sub(r"\\s+\\(\\d{4}\\)$", "", clean_title).strip()
+        year_free_title = re.sub(r"\s+\(\d{4}\)$", "", clean_title).strip()
         if year_free_title and year_free_title.casefold() != clean_title.casefold():
             search_terms.append(year_free_title)
         candidates_by_id = {}
@@ -144,7 +144,7 @@ def fetch_wikidata_metadata(title):
             })
             for item in search_payload.get("search", []):
                 candidate_id = item.get("id", "")
-                if re.fullmatch(r"Q\\d+", candidate_id):
+                if re.fullmatch(r"Q\d+", candidate_id):
                     candidates_by_id[candidate_id] = item
         exact_by_id = {
             candidate_id: item for candidate_id, item in candidates_by_id.items()
