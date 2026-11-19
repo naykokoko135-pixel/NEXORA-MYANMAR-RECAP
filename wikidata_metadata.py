@@ -124,22 +124,32 @@ def fetch_wikidata_metadata(title):
 
     try:
         normalized_title = _normalize_title(clean_title)
-        search_payload = _request_json({
-            "action": "wbsearchentities",
-            "search": clean_title,
-            "language": "en",
-            "uselang": "en",
-            "type": "item",
-            "limit": 50,
-            "format": "json",
-        })
-        candidates = search_payload.get("search", [])
-        exact_by_id = {}
-        for item in candidates:
-            candidate_id = item.get("id", "")
-            if re.fullmatch(r"Q\d+", candidate_id) and _candidate_matches_exact_title(item, normalized_title):
-                exact_by_id[candidate_id] = item
-
+        # Retry a title without a trailing release year. Wikidata often labels
+        # a film "The General" while users enter "The General (1926)".
+        # The final label/alias comparison remains exact after normalization.
+        search_terms = [clean_title]
+        year_free_title = re.sub(r"\s+\(\d{4}\)$", "", clean_title).strip()
+        if year_free_title and year_free_title.casefold() != clean_title.casefold():
+            search_terms.append(year_free_title)
+        candidates_by_id = {}
+        for search_term in search_terms:
+            search_payload = _request_json({
+                "action": "wbsearchentities",
+                "search": search_term,
+                "language": "en",
+                "uselang": "en",
+                "type": "item",
+                "limit": 50,
+                "format": "json",
+            })
+            for item in search_payload.get("search", []):
+                candidate_id = item.get("id", "")
+                if re.fullmatch(r"Q\d+", candidate_id):
+                    candidates_by_id[candidate_id] = item
+        exact_by_id = {
+            candidate_id: item for candidate_id, item in candidates_by_id.items()
+            if _candidate_matches_exact_title(item, normalized_title)
+        }
         if not exact_by_id:
             return {
                 "found": False,
