@@ -14,7 +14,7 @@ from urllib.request import Request, urlopen
 API_URL = "https://api.openai.com/v1/responses"
 DEFAULT_MODEL = "gpt-4.1-mini"
 MAX_TOPIC_CHARS = 180
-MAX_NOTES_CHARS = 9000
+MAX_NOTES_CHARS = 3500
 MAX_OUTPUT_TOKENS = 1800
 TIMEOUT_SECONDS = 45
 
