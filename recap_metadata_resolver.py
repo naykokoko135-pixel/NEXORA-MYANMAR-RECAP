@@ -9,6 +9,7 @@ metadata leads only, not footage rights or episode-level plot verification.
 from wikidata_metadata import fetch_wikidata_metadata
 from tmdb_movie_research import fetch_tmdb_movie
 from multi_source_research import research_anime_sources
+import re
 
 COUNTRY_NAMES = {
     "JP": "Japan",
@@ -70,11 +71,28 @@ def resolve_recap_metadata(title):
     anime = research_anime_sources(clean)
     if anime.get("india_excluded"):
         return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယမူရင်းခေါင်းစဉ်များကို မထည့်ပါ။"}
+    if anime.get("year_conflict"):
+        return {
+            "found": False,
+            "status": "Anime ရင်းမြစ်များ၏ ထုတ်ဝေသည့်နှစ် မကိုက်ညီပါ။ အတည်မပြုဘဲ ရပ်ထားပါတယ်။",
+        }
+
+    requested_year_match = re.search(r"\((\d{4})\)$", clean)
+    requested_year = requested_year_match.group(1) if requested_year_match else ""
 
     anilist = anime.get("anilist") or {}
     tenrai = anime.get("tenrai") or {}
     selected = anilist if anilist.get("found") else tenrai if tenrai.get("found") else {}
     if selected:
+        selected_year = str(selected.get("year") or "").strip()
+        if requested_year and selected_year != requested_year:
+            return {
+                "found": False,
+                "status": (
+                    f"ခေါင်းစဉ်တွင် {requested_year} ဟု တောင်းဆိုထားသော်လည်း "
+                    f"Anime ရင်းမြစ်၏နှစ် ({selected_year or 'မရရှိပါ'}) မကိုက်ညီပါ။"
+                ),
+            }
         country_code = str(anilist.get("country") or "").upper()
         if country_code == "IN":
             return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယမူရင်းခေါင်းစဉ်များကို မထည့်ပါ။"}
@@ -90,7 +108,7 @@ def resolve_recap_metadata(title):
             "found": True,
             "provider": selected.get("provider") or "AniList/Tenrai",
             "title": selected.get("title") or clean,
-            "title_my": selected.get("title") or clean,
+            "title_my": "",
             "description": selected.get("format") or "anime",
             "countries": countries,
             "year": str(selected.get("year") or "") or None,
