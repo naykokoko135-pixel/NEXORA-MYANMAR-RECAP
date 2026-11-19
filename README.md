@@ -68,6 +68,12 @@ Use `/animesynopsis <Anime title>` to look up an exact-title Anime entry through
 
 AniList search results are not treated as exact matches unless the requested title matches an official title or listed synonym. Ambiguous and fuzzy matches are rejected. Indian-origin entries are excluded. AniList synopsis text is a series-level overview, not an episode-by-episode plot summary; it is shown only as a research lead and is not passed to the automatic MP4 recap renderer. It is not automatically translated into Burmese, so verify the facts and language before using it.
 
+## Multi-source International Movie research
+
+Use `/moviemultisourceresearch <movie title>` to compare TMDB movie metadata with Wikidata. TMDB is optional and requires the private `TMDB_API_READ_ACCESS_TOKEN` environment variable; without it, the command reports TMDB as not configured and still shows Wikidata metadata. Searches explicitly set `include_adult=false`, require an exact title match, and reject ambiguous results. Add a release year as `Title (YYYY)` when same-title films need disambiguation. Known India production-country records are excluded; missing country data is reported as unknown.
+
+TMDB may return an IMDb identifier through its external-ID field. NEXORA does not query IMDb directly. TMDB API access requires an API Read Access Token. TMDB's official FAQ says free API use is for non-commercial use and requires attribution; commercial use requires contacting TMDB. Review the current TMDB terms before using this source for a monetized channel. TMDB metadata is not a media license and does not authorize reuse of posters, footage, or other assets.
+
 ## Multi-source Anime research
 
 Use `/multisourceresearch <Anime title>` to compare exact-title results from AniList, Tenrai's public MyAnimeList catalogue, and Wikidata metadata. Tenrai is used instead of the discontinued public Jikan service. The lookup uses Tenrai's strict-SFW filter, rejects ambiguous title matches, and does not assume an origin country when metadata is missing. It reports year conflicts rather than silently choosing one source.
