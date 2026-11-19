@@ -2277,7 +2277,7 @@ async def web_console_command(request: Request):
     argument = str(payload.get("argument", "")).strip()
     if command not in BRIDGE_ALLOWED_COMMANDS:
         raise HTTPException(status_code=400, detail="Command is not allowed")
-    if len(argument) > 3500 or "\\n" in argument or "\\r" in argument:
+    if len(argument) > 3500 or "\n" in argument or "\r" in argument:
         raise HTTPException(status_code=400, detail="Argument is too long or invalid")
     try:
         chat_id = int(os.getenv("CHATGPT_BRIDGE_CHAT_ID", ""))
