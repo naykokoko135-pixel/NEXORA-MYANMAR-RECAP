@@ -62,16 +62,15 @@ PREFIX edm: <http://www.europeana.eu/schemas/edm/>
 PREFIX dc: <http://purl.org/dc/elements/1.1/>
 PREFIX ore: <http://www.openarchives.org/ore/terms/>
 SELECT DISTINCT ?title ?webResource ?rights ?providedCHO ?creator ?recordRights WHERE {{
+  ?proxy ore:proxyIn ?aggregation ;
+         edm:type "VIDEO" ;
+         dc:title ?title .
   ?aggregation edm:rights ?rights ;
-               edm:isShownBy|edm:hasView ?webResource ;
+               (edm:isShownBy|edm:hasView) ?webResource ;
                edm:aggregatedCHO ?providedCHO .
-  ?proxy ore:proxyIn ?aggregation ; edm:type "VIDEO" .
-  ?providedCHO dc:title ?title .
-  OPTIONAL {{ ?providedCHO dc:creator ?creator }}
-  OPTIONAL {{ ?providedCHO dc:rights ?recordRights }}
+  OPTIONAL {{ ?proxy dc:creator ?creator }}
   FILTER(CONTAINS(LCASE(STR(?title)), LCASE({_sparql_literal(clean)})))
   FILTER(?rights IN ({rights_values}))
-  FILTER(!BOUND(?recordRights) || STR(?recordRights) = STR(?rights))
 }}
 LIMIT {limit}
 """
@@ -99,10 +98,7 @@ LIMIT {limit}
         title = str((item.get("title") or {}).get("value", "")).strip()
         media_url = str((item.get("webResource") or {}).get("value", "")).strip()
         rights_uri = str((item.get("rights") or {}).get("value", "")).strip()
-        record_rights = str((item.get("recordRights") or {}).get("value", "")).strip()
         if not title or not media_url.startswith("https://") or rights_uri not in ALLOWED_RIGHTS:
-            continue
-        if record_rights and record_rights != rights_uri:
             continue
         key = (title.casefold(), media_url)
         if key in seen:
