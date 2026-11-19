@@ -91,7 +91,7 @@ class OriginalVisualRecapTests(unittest.TestCase):
         cards = build_original_visual_cards("Frieren: Beyond Journey's End", count=3)
         self.assertEqual(len(cards), 3)
         self.assertTrue(all(name.endswith(".png") for name, _ in cards))
-        self.assertTrue(all(data.startswith(b"\\x89PNG\\r\\n\\x1a\\n") for _, data in cards))
+        self.assertTrue(all(data.startswith(b"\x89PNG\r\n\x1a\n") for _, data in cards))
 
     def test_rejects_invalid_card_count(self):
         for count in (0, 13, True):
@@ -101,7 +101,7 @@ class OriginalVisualRecapTests(unittest.TestCase):
     def test_non_ascii_title_uses_safe_fallback_font_text(self):
         cards = build_original_visual_cards("မြန်မာခေါင်းစဉ်", count=1)
         self.assertEqual(len(cards), 1)
-        self.assertTrue(cards[0][1].startswith(b"\\x89PNG"))
+        self.assertTrue(cards[0][1].startswith(b"\x89PNG"))
 
 if __name__ == "__main__":
     unittest.main()
