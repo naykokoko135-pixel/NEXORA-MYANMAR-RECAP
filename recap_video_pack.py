@@ -1,5 +1,5 @@
 """Input and metadata guards for longer licensed recap preview generation."""
-MAX_RECAP_SCRIPT_CHARS = 6000
+MAX_RECAP_SCRIPT_CHARS = 30000
 INDIAN_COUNTRY_NAMES = {"india", "republic of india"}
 
 def parse_recap_video_request(message_text: str, available_presets) -> tuple[str, str, str]:
