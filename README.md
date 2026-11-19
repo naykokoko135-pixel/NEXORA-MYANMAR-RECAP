@@ -71,7 +71,7 @@ The selected YouTube duration is divided approximately across the three parts. T
 ## Platform duration presets
 - YouTube: `8-10`, `12-15`, `15-20`, `20-30`, `30-45`, `45-60` minutes. Default: `15-20`.
 - TikTok: `1-3`, `3-5` minutes. Default: `1-3`.
-- Facebook: `3-5`, `5-7`, `8-10`, `10-15` minutes. Default: `5-7`.
+- Facebook: `3-5`, `5-7`, `8-10`, `10-15` minutes. Default: `10-15`.
 
 YouTube long-form worksheets include chapter-based story development, character/background prompts, plot progression, turning points, climax, ending, and review. Duration presets guide the outline; they do not automatically write a timed or fact-checked script. Platform and duration selections are stored in Telegram's per-user session data and may reset when the service restarts.
 
@@ -118,7 +118,7 @@ After the MP4, NEXORA also sends `nexora_footage_attribution.txt` with the Commo
 It also sends the narration as `nexora_recap_voiceover.mp3` and the standalone, UTF-8 Burmese captions as `nexora_recap_subtitles.srt`; the MP4 retains its embedded selectable subtitle track too.
 
 
-Use `/recapvideo <exact title>` followed by an optional preset line and creator-written Burmese narration. If narration is omitted, NEXORA first tries the exact Burmese Wikipedia Plot section linked from Wikidata. If that source is missing or unusable, it may fall back to the exact English Wikipedia Plot section linked from Wikidata and draft Burmese narration through the configured OpenAI API. This English-source fallback requires `OPENAI_API_KEY` and can incur API charges; it does not run if the key is absent. English Wikipedia is community-edited, not studio-verified canon, and the narration labels uncertain details for fact-checking. NEXORA still requires an exact Wikidata title record with known non-Indian country metadata, then searches Wikimedia Commons and proceeds only when a strong title metadata match has an allowed CC0/CC BY/CC BY-SA/Public Domain license. It generates Burmese narration, word-aligned SRT, and an MP4 preview in the selected platform ratio (up to five minutes for YouTube/Facebook and three minutes for TikTok).
+Use `/recapvideo <exact title>` followed by an optional preset line and creator-written Burmese narration. If narration is omitted, NEXORA first tries the exact Burmese Wikipedia Plot section linked from Wikidata. If that source is missing or unusable, it may fall back to the exact English Wikipedia Plot section linked from Wikidata and draft Burmese narration through the configured OpenAI API. This English-source fallback requires `OPENAI_API_KEY` and can incur API charges; it does not run if the key is absent. English Wikipedia is community-edited, not studio-verified canon, and the narration labels uncertain details for fact-checking. NEXORA still requires an exact Wikidata title record with known non-Indian country metadata, then searches Wikimedia Commons and proceeds only when a strong title metadata match has an allowed CC0/CC BY/CC BY-SA/Public Domain license. It generates Burmese narration, word-aligned SRT, and an MP4 recap in the selected platform ratio: YouTube up to 20 minutes, Facebook up to 15 minutes, and TikTok up to 3 minutes. Long narration is synthesized in bounded TTS chunks. Long renders may take substantially longer and can be limited by the Render instance and Telegram upload-size limits. Longer automatic scripts use more OpenAI output tokens and can cost more; the Free Builder fallback remains a worksheet, not a generated script.
 
 Example:
 ```
