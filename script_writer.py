@@ -17,7 +17,7 @@ PLATFORM_DURATIONS = {
     "facebook": ("3-5", "5-7", "8-10", "10-15"),
 }
 
-DEFAULT_DURATIONS = {"youtube": "15-20", "tiktok": "1-3", "facebook": "5-7"}
+DEFAULT_DURATIONS = {"youtube": "15-20", "tiktok": "1-3", "facebook": "10-15"}
 
 PLATFORM_GUIDES = {
     "youtube": "YouTube Long-form ပုံစံဖြင့် ဇာတ်လမ်းကို အစဉ်လိုက်၊ အကြောင်းရင်းနှင့် အကျိုးဆက်ကို ရှင်းပြပါ။ အပိုင်းတစ်ခုစီအဆုံးတွင် နောက်တစ်ဆင့်ကို စိတ်ဝင်စားစေမည့် ဆက်စပ်ချက်ထားပါ။",
@@ -27,7 +27,7 @@ PLATFORM_GUIDES = {
 
 
 def _duration_plan(duration: str) -> str:
-    if duration in {"8-10", "12-15"}:
+    if duration in {"8-10", "12-15", "10-15"}:
         return """အချိန်ခွဲဝေမှု အကြံပြုချက်
 - Hook နှင့် မိတ်ဆက်: ၅–၁၀%
 - ဇာတ်ကောင်/နောက်ခံ: ၁၀–၁၅%
