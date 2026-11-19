@@ -36,3 +36,9 @@ File sending accepts only `.mp3`, `.wav`, `.ogg`, `.jpg`, `.jpeg`, `.png`, `.web
 - A successful HTTP response confirms dispatch to the bot handler; it does not guarantee that a recap video or media asset was generated.
 - The Action works only in the GPT where it is configured and only when that GPT invokes it. It does not grant this ordinary ChatGPT chat a persistent Telegram connector.
 - Keep the bridge key private. If exposed, rotate it in Render and in the GPT Action authentication settings.
+
+## Mobile web console alternative
+
+When GPT Actions are unavailable, the owner can use the mobile command console at `/console`. Set a separate `NEXORA_CONSOLE_PASSWORD` in Render Environment (at least 16 characters), redeploy, then sign in at the Render service's `/console` URL. The console uses the already configured private `CHATGPT_BRIDGE_CHAT_ID`, a server-verified password, an eight-hour signed HttpOnly/Secure/SameSite cookie, same-origin POST checks, and the same command allow-list. The password is never stored in browser JavaScript or sent to Telegram. Do not reuse either Telegram Bot Token or `CHATGPT_BRIDGE_API_KEY` as the console password.
+
+This is a manual handoff: ChatGPT drafts a command, and the owner pastes it into the console. It does not create a direct connector from an ordinary ChatGPT conversation. Multi-line narration and interactive file workflows remain Telegram-only.

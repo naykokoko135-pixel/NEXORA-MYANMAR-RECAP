@@ -23,6 +23,14 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/tts_design <voice_name>` followed by Burmese text — create a fictional synthetic voice WAV (optional compatible host only)
 - `/scenedesign` followed by `[ai:story_female]` scene headers and Burmese text — create separate fictional AI voice WAV files per scene (optional compatible GPU host only)
 
+## Mobile web command console
+
+A separate mobile-friendly command console is available at `/console`. It lets the owner paste a command drafted with ChatGPT and dispatch it to the configured private Telegram chat without GPT Actions. It does **not** make this ordinary ChatGPT conversation automatically connected to Telegram.
+
+To enable it, set `NEXORA_CONSOLE_PASSWORD` in Render Environment to a new, unique password of at least 16 characters, then redeploy. Do not reuse the Telegram Bot Token or bridge API key. Open `https://YOUR-RENDER-SERVICE.onrender.com/console`, sign in, choose an allow-listed command, enter a single-line argument, and send. The password is checked server-side; the browser receives only a short-lived HttpOnly, Secure, SameSite=Strict signed session cookie. Requests are restricted to same-origin and the existing command allow-list. Sessions expire after eight hours.
+
+The console uses the existing `CHATGPT_BRIDGE_CHAT_ID` as its fixed destination and requires the Telegram bot to be ready. It does not expose the bridge API key, accept arbitrary chat IDs, or send arbitrary Telegram methods. Multi-line narration and interactive media workflows still need Telegram directly. A successful dispatch response does not mean a recap video was generated.
+
 ## ChatGPT to Telegram command bridge
 
 NEXORA exposes an optional authenticated bridge for a supported Custom GPT Action:
