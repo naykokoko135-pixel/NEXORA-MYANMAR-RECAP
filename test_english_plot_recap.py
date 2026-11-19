@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from english_plot_recap import generate_burmese_recap_from_english_plot
+from openai_script_provider import AIScriptError
 
 
 class EnglishPlotRecapTests(unittest.TestCase):
@@ -36,6 +37,42 @@ class EnglishPlotRecapTests(unittest.TestCase):
                     "Sample Film", self.sample_plot(), platform
                 )
                 self.assertEqual(mock_generate.call_args.kwargs["duration"], duration)
+
+
+    @patch("english_plot_recap.generate_gemini_recap_script")
+    @patch("english_plot_recap.gemini_script_status")
+    @patch("english_plot_recap.generate_burmese_recap_script")
+    def test_falls_back_to_gemini_only_on_openai_quota(self, mock_openai, mock_status, mock_gemini):
+        mock_openai.side_effect = AIScriptError("OpenAI API Limit/Quota ပြည့်နေသည်။")
+        mock_status.return_value = {"configured": True}
+        mock_gemini.return_value = "Gemini ဖြင့်ရေးသားထားသော မြန်မာဇာတ်ညွှန်း"
+        script, _ = generate_burmese_recap_from_english_plot(
+            "Sample Film", self.sample_plot(), "youtube"
+        )
+        self.assertIn("Gemini", script)
+        mock_openai.assert_called_once()
+        mock_gemini.assert_called_once()
+
+    @patch("english_plot_recap.gemini_script_status")
+    @patch("english_plot_recap.generate_burmese_recap_script")
+    def test_does_not_call_gemini_when_openai_error_is_not_quota(self, mock_openai, mock_status):
+        mock_openai.side_effect = AIScriptError("OpenAI API authentication မမှန်ပါ။")
+        mock_status.return_value = {"configured": True}
+        with self.assertRaises(AIScriptError):
+            generate_burmese_recap_from_english_plot(
+                "Sample Film", self.sample_plot(), "youtube"
+            )
+        mock_status.assert_not_called()
+
+    @patch("english_plot_recap.gemini_script_status")
+    @patch("english_plot_recap.generate_burmese_recap_script")
+    def test_explains_gemini_key_requirement_when_openai_quota_is_exhausted(self, mock_openai, mock_status):
+        mock_openai.side_effect = AIScriptError("OpenAI API Limit/Quota ပြည့်နေသည်။")
+        mock_status.return_value = {"configured": False}
+        with self.assertRaisesRegex(AIScriptError, "GEMINI_API_KEY"):
+            generate_burmese_recap_from_english_plot(
+                "Sample Film", self.sample_plot(), "youtube"
+            )
 
     def test_rejects_unknown_platform_before_calling_provider(self):
         with patch("english_plot_recap.generate_burmese_recap_script") as mock_generate:
