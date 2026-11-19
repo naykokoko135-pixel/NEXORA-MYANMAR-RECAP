@@ -277,6 +277,7 @@ def fetch_wikidata_metadata(title):
             "title_my": entity_labels.get("my", {}).get("value", selected.get("label", clean_title)),
             "description": selected.get("description", ""),
             "description_my": entity_descriptions.get("my", {}).get("value", ""),
+            "description_en": entity_descriptions.get("en", {}).get("value", ""),
             "entity_id": entity_id,
             "mywiki_title": entity.get("sitelinks", {}).get("mywiki", {}).get("title", ""),
             "enwiki_title": entity.get("sitelinks", {}).get("enwiki", {}).get("title", ""),
