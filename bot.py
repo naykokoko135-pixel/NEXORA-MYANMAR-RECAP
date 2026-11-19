@@ -47,6 +47,7 @@ from animated_episode_pack import format_animated_episode_pack
 from episode_recap_outline import format_episode_recap_outline
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
 from english_plot_recap import generate_burmese_recap_from_english_plot
+from synopsis_preview import generate_burmese_synopsis_preview
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
 from recap_voice_pack import parse_recap_voice_request
@@ -587,10 +588,30 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         metadata.get("title", query), english_plot, platform
                     )
                 except EnglishPlotError as english_error:
-                    raise ValueError(
-                        "မြန်မာ Wikipedia Plot မရရှိပါ။ English Wikipedia တွင်လည်း သီးခြား Plot section မတွေ့ပါ။ "
-                        "ကိုယ်ပိုင် narration ထည့်ပို့ပါ။"
-                    ) from english_error
+                    # A catalogue synopsis may support a short, clearly labelled
+                    # series overview. It is never represented as an episode plot
+                    # or a full recap, and it is not stretched to long-form duration.
+                    synopsis = (
+                        metadata.get("anime_synopsis")
+                        or metadata.get("tmdb_overview")
+                    )
+                    synopsis_url = str(metadata.get("source") or "")
+                    if not synopsis or not synopsis_url:
+                        raise ValueError(
+                            "မြန်မာ/English Wikipedia Plot မရရှိပါ။ AniList/TMDB မှာလည်း "
+                            "အသုံးပြုနိုင်သော Series synopsis မရှိပါ။ ဇာတ်ကွက်ကို မခန့်မှန်းထားပါ။"
+                        ) from english_error
+                    script, synopsis_source = generate_burmese_synopsis_preview(
+                        metadata.get("title", query), synopsis, synopsis_url
+                    )
+                    plot_source = (
+                        "Series synopsis အခြေခံ 1–3 မိနစ် မိတ်ဆက် Preview သာဖြစ်ပြီး "
+                        "Episode/Season full recap မဟုတ်ပါ — " + synopsis_source
+                    )
+                    await update.message.reply_text(
+                        "သတိပြုရန် — Plot အပြည့်မရရှိပါ။ အတည်ပြုနိုင်သော catalogue synopsis ကိုသာ "
+                        "အသုံးပြုပြီး 1–3 မိနစ် မိတ်ဆက် Preview ထုတ်ပေးပါမည်။ Full recap မဟုတ်ပါ။"
+                    )
         validate_tts_request(script, voice)
         search_titles = [
             metadata.get("title", ""),
