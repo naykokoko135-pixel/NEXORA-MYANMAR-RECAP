@@ -577,17 +577,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 plot_source = str(plot.get("source") or "မြန်မာ Wikipedia")
             except (PlotResearchError, ValueError) as burmese_error:
                 english_title = metadata.get("enwiki_title")
-                if not english_title:
-                    raise ValueError(
-                        "မြန်မာ Wikipedia Plot မရရှိသေးသလို Wikidata မှ တိကျသော English Wikipedia sitelink လည်း မရပါ။ "
-                        "အလိုအလျောက် ဇာတ်ကွက်မခန့်မှန်းထားပါ။ ကိုယ်ပိုင် narration ထည့်ပို့ပါ။"
-                    ) from burmese_error
-                try:
-                    english_plot = await asyncio.to_thread(fetch_english_plot_section, english_title)
-                    script, plot_source = generate_burmese_recap_from_english_plot(
-                        metadata.get("title", query), english_plot, platform
-                    )
-                except EnglishPlotError as english_error:
+                def build_catalogue_synopsis_preview():
                     # A catalogue synopsis may support a short, clearly labelled
                     # series overview. It is never represented as an episode plot
                     # or a full recap, and it is not stretched to long-form duration.
@@ -600,18 +590,37 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         raise ValueError(
                             "မြန်မာ/English Wikipedia Plot မရရှိပါ။ AniList/TMDB မှာလည်း "
                             "အသုံးပြုနိုင်သော Series synopsis မရှိပါ။ ဇာတ်ကွက်ကို မခန့်မှန်းထားပါ။"
-                        ) from english_error
-                    script, synopsis_source = generate_burmese_synopsis_preview(
+                        )
+                    preview, synopsis_source = generate_burmese_synopsis_preview(
                         metadata.get("title", query), synopsis, synopsis_url
                     )
-                    plot_source = (
+                    source_label = (
                         "Series synopsis အခြေခံ 1–3 မိနစ် မိတ်ဆက် Preview သာဖြစ်ပြီး "
                         "Episode/Season full recap မဟုတ်ပါ — " + synopsis_source
                     )
+                    return preview, source_label
+
+                if not english_title:
+                    # AniList/Tenrai exact catalogue matches often have no
+                    # Wikidata Wikipedia sitelink. Do not exit before trying
+                    # the already-verified catalogue synopsis fallback.
+                    script, plot_source = build_catalogue_synopsis_preview()
                     await update.message.reply_text(
-                        "သတိပြုရန် — Plot အပြည့်မရရှိပါ။ အတည်ပြုနိုင်သော catalogue synopsis ကိုသာ "
+                        "သတိပြုရန် — Wikipedia Plot မရရှိပါ။ အတည်ပြုနိုင်သော catalogue synopsis ကိုသာ "
                         "အသုံးပြုပြီး 1–3 မိနစ် မိတ်ဆက် Preview ထုတ်ပေးပါမည်။ Full recap မဟုတ်ပါ။"
                     )
+                else:
+                    try:
+                        english_plot = await asyncio.to_thread(fetch_english_plot_section, english_title)
+                        script, plot_source = generate_burmese_recap_from_english_plot(
+                            metadata.get("title", query), english_plot, platform
+                        )
+                    except EnglishPlotError:
+                        script, plot_source = build_catalogue_synopsis_preview()
+                        await update.message.reply_text(
+                            "သတိပြုရန် — Plot အပြည့်မရရှိပါ။ အတည်ပြုနိုင်သော catalogue synopsis ကိုသာ "
+                            "အသုံးပြုပြီး 1–3 မိနစ် မိတ်ဆက် Preview ထုတ်ပေးပါမည်။ Full recap မဟုတ်ပါ။"
+                        )
         validate_tts_request(script, voice)
         search_titles = [
             metadata.get("title", ""),
