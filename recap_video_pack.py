@@ -72,6 +72,6 @@ def format_original_visual_fallback_notice(title: str, search_failed: bool = Fal
             "MP4 မထုတ်ထားပါ။", "မူရင်း footage မသုံးထားပါ။"
         )
     return (
-        reason + "\\n\\nNEXORA ကိုယ်တိုင်ဖန်တီးသော Original Abstract Visuals ဖြင့် "
+        reason + "\n\nNEXORA ကိုယ်တိုင်ဖန်တီးသော Original Abstract Visuals ဖြင့် "
         "MP4 ဆက်ထုတ်နေပါတယ်။ ဒီပုံများသည် မူရင်း Anime/Film ဇာတ်ဝင်ခန်း မဟုတ်ပါ။"
     )
