@@ -148,7 +148,7 @@ def fetch_wikidata_metadata(title):
                 })
                 for item in search_payload.get("search", []):
                     candidate_id = item.get("id", "")
-                    if re.fullmatch(r"Q\\d+", candidate_id):
+                    if re.fullmatch(r"Q\d+", candidate_id):
                         candidates_by_id[candidate_id] = item
             exact_by_id = {
                 candidate_id: item for candidate_id, item in candidates_by_id.items()
