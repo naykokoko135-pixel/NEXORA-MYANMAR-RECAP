@@ -2131,7 +2131,9 @@ async def home():
 
 @web_app.get("/health")
 async def health():
-    return {"status": "ok", "telegram": telegram_app is not None}
+    if telegram_app is None:
+        raise HTTPException(status_code=503, detail="Telegram bot is not ready")
+    return {"status": "ok", "telegram": True}
 
 
 @web_app.get("/chatgpt/bridge-health")

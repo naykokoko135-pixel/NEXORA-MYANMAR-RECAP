@@ -3,6 +3,8 @@ services:
     name: nexora-myanmar-recap-bot
     runtime: python
     plan: free
+    autoDeployTrigger: checksPass
+    healthCheckPath: /health
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn bot:web_app --host 0.0.0.0 --port $PORT
     envVars:
