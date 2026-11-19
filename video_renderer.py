@@ -8,8 +8,8 @@ from pathlib import Path
 
 MAX_IMAGES = 12
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
-MAX_AUDIO_BYTES = 20 * 1024 * 1024
-MAX_AUDIO_SECONDS = 600
+MAX_AUDIO_BYTES = 45 * 1024 * 1024
+MAX_AUDIO_SECONDS = 1200
 MAX_SUBTITLE_BYTES = 1024 * 1024
 SUBTITLE_SUFFIXES = {".srt"}
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
@@ -35,7 +35,7 @@ def _duration_seconds(ffmpeg: str, audio_path: Path) -> float:
     hours, minutes, seconds = match.groups()
     duration = int(hours) * 3600 + int(minutes) * 60 + float(seconds)
     if duration <= 0 or duration > MAX_AUDIO_SECONDS:
-        raise VideoRenderError("အသံဖိုင်သည် ၁၀ မိနစ်ထက် မကျော်ရပါ။")
+        raise VideoRenderError("အသံဖိုင်သည် ၂၀ မိနစ်ထက် မကျော်ရပါ။")
     return duration
 
 
@@ -104,7 +104,7 @@ def render_slideshow(
             duration += track_duration
             audio_paths.append(audio_path)
         if duration > MAX_AUDIO_SECONDS:
-            raise VideoRenderError("အသံ Track အားလုံးပေါင်း ၁၀ မိနစ်ထက် မကျော်ရပါ။")
+            raise VideoRenderError("အသံ Track အားလုံးပေါင်း ၂၀ မိနစ်ထက် မကျော်ရပါ။")
 
         subtitle_path = None
         if subtitle is not None:
@@ -151,9 +151,9 @@ def render_slideshow(
             "-movflags", "+faststart", str(target),
         ]
         try:
-            result = subprocess.run(command, capture_output=True, text=True, timeout=300, check=False)
+            result = subprocess.run(command, capture_output=True, text=True, timeout=900, check=False)
         except subprocess.TimeoutExpired as exc:
-            raise VideoRenderError("Video ထုတ်လုပ်ချိန် ၅ မိနစ်ကျော်သွားပါတယ်။ ပိုတိုတဲ့ အသံဖိုင်သုံးပါ။") from exc
+            raise VideoRenderError("Video ထုတ်လုပ်ချိန် ၁၅ မိနစ်ကျော်သွားပါတယ်။ ပိုတိုတဲ့ အသံဖိုင်သုံးပါ။") from exc
         if result.returncode != 0 or not target.exists() or target.stat().st_size == 0:
             raise VideoRenderError("MP4 ထုတ်လုပ်မှု မအောင်မြင်ပါ။ ပုံနဲ့အသံဖိုင်ကို ပြန်စစ်ပါ။")
     return target
