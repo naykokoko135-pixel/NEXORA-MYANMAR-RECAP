@@ -20,8 +20,8 @@ USER_AGENT = "NEXORA-Myanmar-Recap/1.0"
 
 def _norm(value):
     value = unicodedata.normalize("NFKC", str(value or "")).casefold().strip()
-    value = re.sub(r"\\s+\\(\\d{4}\\)$", "", value)
-    return " ".join(re.findall(r"[^\\W_]+", value, flags=re.UNICODE))
+    value = re.sub(r"\s+\(\d{4}\)$", "", value)
+    return " ".join(re.findall(r"[^\W_]+", value, flags=re.UNICODE))
 
 
 def fetch_tenrai_synopsis(title):
@@ -56,7 +56,7 @@ def fetch_tenrai_synopsis(title):
                 ),
             }
         item = exact[0]
-        synopsis = re.sub(r"\\s+", " ", str(item.get("synopsis") or "")).strip()
+        synopsis = re.sub(r"\s+", " ", str(item.get("synopsis") or "")).strip()
         if len(synopsis) < 60:
             return {"found": False, "status": "Tenrai မှာ အသုံးပြုနိုင်သော synopsis မလုံလောက်ပါ။"}
         aired = item.get("aired") or {}
@@ -171,4 +171,4 @@ def format_anime_source_report(report):
         "မှတ်ချက်: Synopsis များသည် series-level မိတ်ဆက်စာများသာဖြစ်ပြီး episode ဇာတ်ကွက်အပြည့် မဟုတ်ပါ။",
         "ဒီ report သည် research lead သာဖြစ်ပြီး /recapvideo အတွက် footage/license ခွင့်ပြုချက် မပေးပါ။",
     ])
-    return "\\n".join(lines)
+    return "\n".join(lines)
