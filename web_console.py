@@ -82,7 +82,8 @@ button.secondary{background:#334155}button:disabled{opacity:.55}
 </section>
 </main>
 <script>
-const $=id=>document.getElementById(id);\nfetch("/console/session",{credentials:"same-origin"}).then(r=>r.json()).then(s=>{if(s.authenticated){$("loginPanel").classList.add("hidden");$("commandPanel").classList.remove("hidden");}}).catch(()=>{});
+const $=id=>document.getElementById(id);
+fetch("/console/session",{credentials:"same-origin"}).then(r=>r.json()).then(s=>{if(s.authenticated){$("loginPanel").classList.add("hidden");$("commandPanel").classList.remove("hidden");}}).catch(()=>{});
 async function api(path,data){
  const response=await fetch(path,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(data||{})});
  const body=await response.json().catch(()=>({detail:"Invalid server response"}));
