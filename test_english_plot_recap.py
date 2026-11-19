@@ -73,7 +73,8 @@ class EnglishPlotRecapTests(unittest.TestCase):
             generate_burmese_recap_from_english_plot(
                 "Sample Film", self.sample_plot(), "youtube"
             )
-\n    def test_rejects_unknown_platform_before_calling_provider(self):
+
+    def test_rejects_unknown_platform_before_calling_provider(self):
         with patch("english_plot_recap.generate_burmese_recap_script") as mock_generate:
             with self.assertRaises(ValueError):
                 generate_burmese_recap_from_english_plot(
