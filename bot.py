@@ -604,13 +604,13 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         import tempfile
         with tempfile.TemporaryDirectory(prefix="nexora_recap_video_") as temp:
             output = os.path.join(temp, "nexora_recap_preview.mp4")
-            await asyncio.to_thread(render_licensed_narrated_preview, source, audio, srt_text, output, platform, 300)
+            await asyncio.to_thread(render_licensed_narrated_preview, source, audio, srt_text, output, platform, 180 if platform == "tiktok" else 300)
             with open(output, "rb") as video_file:
                 await update.message.reply_video(
                     video=InputFile(video_file, filename="nexora_recap_preview.mp4"),
                     supports_streaming=True,
                     caption=(
-                        f"NEXORA {platform.upper()} — Recap Preview (အများဆုံး ၅ မိနစ်)\n"
+                        f"NEXORA {platform.upper()} — Recap Preview (အများဆုံး {3 if platform == 'tiktok' else 5} မိနစ်)\n"
                         f"ခေါင်းစဉ်: {metadata.get('title', query)} | နိုင်ငံ: {', '.join(countries)}\n"
                         f"ဇာတ်လမ်းရင်းမြစ်: {plot_source}\n"
                         f"Footage: {source.get('source_page', '')}\n"
