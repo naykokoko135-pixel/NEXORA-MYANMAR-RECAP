@@ -157,6 +157,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
             f"{ai_line}\n"
+            f"{gemini_line}\n"
             "AI Script: /aiscript <title> ပြီးနောက် Verified Research Notes ထည့်ပါ။\n"
             "လုပ်ဆောင်နိုင်မှု: Auto research + Worksheets + Voice-over TXT + TTS MP3 + အချိန်ကိုက် SRT + Image/Audio MP4 render\n"
             "Local MyanmarTTS WAV: Host setting ဖြင့်သာ ဖွင့်နိုင်ပြီး optional dependencies နှင့် သင့်တော်သော host လိုအပ်သည်။\n"
