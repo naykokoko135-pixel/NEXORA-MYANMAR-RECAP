@@ -37,6 +37,7 @@ from autofacts_narration import generate_burmese_facts_narration
 from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
 from verified_plot_narration import generate_burmese_plot_narration
 from anilist_synopsis import fetch_anilist_synopsis
+from multi_source_research import research_anime_sources, format_anime_source_report
 from tvmaze_synopsis import fetch_tvmaze_synopsis
 from tvmaze_synopsis import fetch_tvmaze_episode_summaries, fetch_tvmaze_top_rated_episodes
 from animated_episode_pack import format_animated_episode_pack
@@ -840,6 +841,32 @@ async def animesynopsis_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "အလိုအလျောက် recap MP4 အဖြစ် မသုံးထားပါ။"
     )
     await update.message.reply_text(message, disable_web_page_preview=True)
+
+
+async def multisourceresearch_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Compare exact-match AniList, Tenrai/MAL and Wikidata anime metadata."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /multisourceresearch <Anime အမည်>\\n"
+            "AniList + Tenrai/MyAnimeList + Wikidata ကို တစ်ပြိုင်နက် စစ်ဆေးပေးပါမယ်။"
+        )
+        return
+    await update.message.reply_text(
+        "AniList၊ Tenrai/MyAnimeList နှင့် Wikidata အရင်းအမြစ်များကို "
+        "တိကျသောခေါင်းစဉ်ဖြင့် တစ်ပြိုင်နက် စစ်ဆေးနေပါတယ်..."
+    )
+    try:
+        report = await asyncio.to_thread(research_anime_sources, query)
+        output = format_anime_source_report(report)
+    except Exception:
+        log.exception("Multi-source anime research failed")
+        await update.message.reply_text("Multi-Source Research မအောင်မြင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
+        return
+    for start_at in range(0, len(output), 3900):
+        await update.message.reply_text(output[start_at:start_at + 3900], disable_web_page_preview=True)
 
 
 async def seriesresearch_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2059,6 +2086,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("autofactsclip", autofactsclip_cmd))
     telegram_app.add_handler(CommandHandler("autoplotclip", autoplotclip_cmd))
     telegram_app.add_handler(CommandHandler("animesynopsis", animesynopsis_cmd))
+    telegram_app.add_handler(CommandHandler("multisourceresearch", multisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("seriesresearch", seriesresearch_cmd))
     telegram_app.add_handler(CommandHandler("animationepisodes", animationepisodes_cmd))
     telegram_app.add_handler(CommandHandler("topratedepisodes", topratedepisodes_cmd))
@@ -2173,7 +2201,7 @@ async def telegram_webhook(
 # Render Environment; never commit either secret or put them in chat.
 CHATGPT_BRIDGE_API_KEY = os.getenv("CHATGPT_BRIDGE_API_KEY")
 CHATGPT_BRIDGE_CHAT_ID = os.getenv("CHATGPT_BRIDGE_CHAT_ID")
-BRIDGE_ALLOWED_COMMANDS = {"status", "help", "auto", "seriesguide", "create", "research", "draft3", "allplatforms", "voiceover3", "render"}
+BRIDGE_ALLOWED_COMMANDS = {\n    "status", "help", "auto", "seriesguide", "create", "research", "draft3",\n    "allplatforms", "voiceover3", "render", "animesynopsis", "multisourceresearch",\n    "seriesresearch", "animationepisodes", "topratedepisodes", "episodepack",\n    "episodeoutline", "recapvideo", "movieplotresearch", "growthpack",\n    "clipsource", "autoplotclip", "autoclip", "autonarrateclip", "autofactsclip",\n}
 
 
 def _bridge_authorized(request: Request) -> bool:
