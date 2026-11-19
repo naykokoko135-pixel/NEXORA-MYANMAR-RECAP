@@ -9,14 +9,13 @@ def parse_recap_video_request(message_text: str, available_presets) -> tuple[str
     parts = first_line.strip().split(maxsplit=1)
     title = parts[1].strip() if len(parts) > 1 else ""
     if not title or len(title) > 120:
-        raise ValueError("အသုံးပြုပုံ: /recapvideo <ခေါင်းစဉ်> ပြီးနောက် narration ထည့်ပါ။")
+        raise ValueError("အသုံးပြုပုံ: /recapvideo <ခေါင်းစဉ်>")
     lines = body.strip().splitlines() if separator else []
     preset = "narrator"
     if lines and lines[0].strip().lower() in available_presets:
         preset = lines.pop(0).strip().lower()
     narration = "\n".join(lines).strip()
-    if not narration:
-        raise ValueError("အသုံးပြုပုံ: /recapvideo <ခေါင်းစဉ်>\nnarrator\nကိုယ်တိုင်ရေးထားသော မြန်မာ narration...")
+    # Empty narration signals automatic retrieval of a verified plot section.
     if len(narration) > MAX_RECAP_SCRIPT_CHARS:
         raise ValueError("Narration သည် စာလုံး ၆,၀၀၀ ထက် မကျော်ရပါ။ အပိုင်းခွဲပါ။")
     return title, preset, narration
