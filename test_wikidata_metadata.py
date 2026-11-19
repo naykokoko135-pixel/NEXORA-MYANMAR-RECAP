@@ -124,9 +124,13 @@ class WikidataMetadataTests(unittest.TestCase):
 
     @patch("wikidata_metadata.urlopen")
     def test_does_not_accept_unrelated_title_match(self, mock_urlopen):
-        mock_urlopen.return_value = Response(json.dumps({
+        unrelated = json.dumps({
             "search": [{"id": "Q99", "label": "Train", "description": "rail vehicle"}]
-        }).encode())
+        }).encode()
+        # Each mocked response is a context-managed stream and must be fresh.
+        mock_urlopen.side_effect = [
+            Response(unrelated), Response(unrelated), Response(unrelated)
+        ]
         result = fetch_wikidata_metadata("Train to Busan")
         self.assertFalse(result["found"])
         self.assertIn("အမည်တိတိကျကျ", result["status"])
