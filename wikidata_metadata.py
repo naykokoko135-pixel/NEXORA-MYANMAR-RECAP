@@ -132,24 +132,30 @@ def fetch_wikidata_metadata(title):
         if year_free_title and year_free_title.casefold() != clean_title.casefold():
             search_terms.append(year_free_title)
         candidates_by_id = {}
-        for search_term in search_terms:
-            search_payload = _request_json({
-                "action": "wbsearchentities",
-                "search": search_term,
-                "language": "en",
-                "uselang": "en",
-                "type": "item",
-                "limit": 50,
-                "format": "json",
-            })
-            for item in search_payload.get("search", []):
-                candidate_id = item.get("id", "")
-                if re.fullmatch(r"Q\d+", candidate_id):
-                    candidates_by_id[candidate_id] = item
-        exact_by_id = {
-            candidate_id: item for candidate_id, item in candidates_by_id.items()
-            if _candidate_matches_exact_title(item, normalized_title)
-        }
+        exact_by_id = {}
+        # Search likely title languages. English remains first for backwards
+        # compatibility; Burmese and Japanese are fallbacks for localized names.
+        for language in ("en", "my", "ja"):
+            for search_term in search_terms:
+                search_payload = _request_json({
+                    "action": "wbsearchentities",
+                    "search": search_term,
+                    "language": language,
+                    "uselang": language,
+                    "type": "item",
+                    "limit": 50,
+                    "format": "json",
+                })
+                for item in search_payload.get("search", []):
+                    candidate_id = item.get("id", "")
+                    if re.fullmatch(r"Q\\d+", candidate_id):
+                        candidates_by_id[candidate_id] = item
+            exact_by_id = {
+                candidate_id: item for candidate_id, item in candidates_by_id.items()
+                if _candidate_matches_exact_title(item, normalized_title)
+            }
+            if exact_by_id:
+                break
         if not exact_by_id:
             return {
                 "found": False,
