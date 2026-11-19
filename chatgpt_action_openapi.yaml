@@ -15,6 +15,34 @@ paths:
       responses:
         "200":
           description: Configuration status only; no secret values are returned
+  /chatgpt/send-message:
+    post:
+      operationId: sendNexoraMessage
+      summary: Send a plain text message to the owner's configured private Telegram chat
+      description: Sends only to the private chat configured on the server. Messages are plain text, 1–3500 characters. A successful response confirms Telegram accepted the message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 3500
+                  description: The exact plain text to send; supports line breaks.
+      responses:
+        "200":
+          description: Telegram accepted the message
+        "400":
+          description: Message is missing, invalid, or too long
+        "401":
+          description: Missing or invalid bridge key
+        "503":
+          description: Telegram bot or destination configuration is not ready
   /chatgpt/command:
     post:
       operationId: sendNexoraCommand
