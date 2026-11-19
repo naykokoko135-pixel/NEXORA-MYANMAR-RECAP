@@ -32,7 +32,7 @@ from video_renderer import render_slideshow, render_scene_timeline, VideoRenderE
 from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
-from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note
+from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note, _subtitle_duration_seconds
 from wikidata_metadata import fetch_wikidata_metadata
 from recap_metadata_resolver import resolve_recap_metadata
 from autofacts_narration import generate_burmese_facts_narration
@@ -51,6 +51,7 @@ from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
 from recap_voice_pack import parse_recap_voice_request
 from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message
+from original_visual_recap import build_original_visual_cards
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from openai_script_provider import generate_burmese_recap_script, openai_script_status, AIScriptError
@@ -592,19 +593,63 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             " ".join(str(title).split()) for title in search_titles
             if str(title).strip()
         ))
-        sources = await asyncio.to_thread(
-            search_licensed_video, query, 10, search_titles
-        )
+        try:
+            sources = await asyncio.to_thread(
+                search_licensed_video, query, 10, search_titles
+            )
+        except ClipSourceError:
+            # Original visuals are a valid fallback when Commons is unavailable.
+            sources = []
         source = choose_matching_source(query, sources, search_titles)
-        if not source:
-            await update.message.reply_text(format_no_licensed_footage_message(metadata.get("title", query)))
-            return
-        await update.message.reply_text("လိုင်စင်အမျိုးအစားနှင့် ခေါင်းစဉ်ကို စစ်ပြီး narration + အချိန်ကိုက် SRT + MP4 ပြင်ဆင်နေပါတယ်...")
+        max_duration = {"tiktok": 180, "facebook": 900, "youtube": 1200}[platform]
+        await update.message.reply_text("မြန်မာ Narration + အချိန်ကိုက် SRT ပြင်ဆင်နေပါတယ်...")
         audio, srt_text = await synthesize_burmese_speech_with_srt(script, voice)
+        if _subtitle_duration_seconds(srt_text) > max_duration:
+            raise ValueError(f"ဒီ Platform အတွက် Narration သည် {max_duration} စက္ကန့်ထက် မကျော်ရပါ။ Script ကို အတိုချုံ့ပါ။")
         import tempfile
-        with tempfile.TemporaryDirectory(prefix="nexora_recap_video_") as temp:
-            output = os.path.join(temp, "nexora_recap_preview.mp4")
-            await asyncio.to_thread(render_licensed_narrated_preview, source, audio, srt_text, output, platform, {"tiktok": 180, "facebook": 900, "youtube": 1200}[platform])
+        if not source:
+            await update.message.reply_text(
+                format_no_licensed_footage_message(metadata.get("title", query))
+                + "\\n\\nCommons footage မရှိသော်လည်း NEXORA ကိုယ်တိုင်ဖန်တီးသော "
+                "မူရင်း Abstract Visuals ဖြင့် MP4 ဆက်ထုတ်နေပါတယ်။ ဒီပုံများသည် မူရင်းဇာတ်ဝင်ခန်း မဟုတ်ပါ။"
+            )
+            with tempfile.TemporaryDirectory(prefix="nexora_original_recap_") as temp:
+                output = os.path.join(temp, "nexora_recap_original_visuals.mp4")
+                cards = await asyncio.to_thread(build_original_visual_cards, metadata.get("title", query), 8)
+                await asyncio.to_thread(
+                    render_slideshow, cards, ("nexora_narration.mp3", audio), output,
+                    platform, ("captions.srt", srt_text.encode("utf-8-sig"))
+                )
+                with open(output, "rb") as video_file:
+                    await update.message.reply_video(
+                        video=InputFile(video_file, filename="nexora_recap_original_visuals.mp4"),
+                        supports_streaming=True,
+                        caption=(
+                            f"NEXORA {platform.upper()} — Original Visual Recap\\n"
+                            f"ခေါင်းစဉ်: {metadata.get('title', query)} | နိုင်ငံ: {', '.join(countries)}\\n"
+                            f"ဇာတ်လမ်းရင်းမြစ်: {plot_source}\\n"
+                            "Visuals: NEXORA မှ ကိုယ်တိုင်ဖန်တီးထားသော Abstract Graphics ဖြစ်ပြီး "
+                            "မူရင်း Anime/Film ဇာတ်ဝင်ခန်းများ မဟုတ်ပါ။\\n"
+                            "မြန်မာ Narration နှင့် SRT ကို MP4 ထဲတွင် ထည့်သွင်းထားသည်။"
+                        ),
+                        read_timeout=900,
+                        write_timeout=900,
+                    )
+                audio_bytes, subtitle_bytes = build_recap_video_sidecars(audio, srt_text)
+                voice_file = BytesIO(audio_bytes)
+                voice_file.name = "nexora_recap_voiceover.mp3"
+                await update.message.reply_document(
+                    document=InputFile(voice_file, filename=voice_file.name),
+                    caption="MP4 တွင် အသုံးပြုထားသော မြန်မာ Narration MP3 မူရင်းဖိုင်ပါ။",
+                )
+                subtitle_file = BytesIO(subtitle_bytes)
+                subtitle_file.name = "nexora_recap_subtitles.srt"
+                await update.message.reply_document(
+                    document=InputFile(subtitle_file, filename=subtitle_file.name),
+                    caption="မြန်မာ SRT သီးခြားဖိုင်ပါ။",
+                )
+            return
+        await update.message.reply_text("လိုင်စင်အမျိုးအစားနှင့် ခေါင်းစဉ်ကို စစ်ပြီး licensed footage + narration + SRT + MP4 ပြင်ဆင်နေပါတယ်...")
             with open(output, "rb") as video_file:
                 await update.message.reply_video(
                     video=InputFile(video_file, filename="nexora_recap_preview.mp4"),
