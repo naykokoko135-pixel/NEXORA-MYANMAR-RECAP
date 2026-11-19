@@ -65,6 +65,8 @@ def resolve_recap_metadata(title):
     tmdb = fetch_tmdb_movie(clean) if should_query_tmdb else {
         "found": False, "status": "Wikidata က ရုပ်ရှင်မဟုတ်သော screen work အဖြစ် ခွဲခြားထားသဖြင့် TMDB movie lookup ကို ကျော်ထားသည်။"
     }
+    if tmdb.get("found") and _is_indian(tmdb.get("countries") or []):
+        return {"found": False, "status": "အိန္ဒိယမူရင်း/ပူးတွဲထုတ်လုပ်မှု ဖြစ်ကြောင်း TMDB တွင်တွေ့ရှိသဖြင့် ပယ်ချထားသည်။"}
     if tmdb.get("found") and not wikidata.get("found"):
         anime = research_anime_sources(clean)
         if anime.get("india_excluded"):
