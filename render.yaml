@@ -12,3 +12,7 @@ services:
         sync: false
       - key: TELEGRAM_WEBHOOK_SECRET
         generateValue: true
+      - key: CHATGPT_BRIDGE_API_KEY
+        sync: false
+      - key: CHATGPT_BRIDGE_CHAT_ID
+        sync: false
