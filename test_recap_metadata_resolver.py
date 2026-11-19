@@ -80,7 +80,7 @@ class RecapMetadataResolverTests(unittest.TestCase):
         result = resolve_recap_metadata("Example")
         self.assertFalse(result["found"])
         self.assertIn("နိုင်ငံ", result["status"])
-        anime.assert_not_called()
+        anime.assert_called_once_with("Example")
 
     @patch("recap_metadata_resolver.research_anime_sources")
     @patch("recap_metadata_resolver.fetch_tmdb_movie")
