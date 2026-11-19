@@ -182,6 +182,20 @@ def fetch_wikidata_metadata(title):
                         year_matches[candidate_id] = item
                 if year_matches:
                     exact_by_id = year_matches
+                else:
+                    return {
+                        "found": False,
+                        "status": "ပေးထားသော ခုနှစ်နှင့် ကိုက်ညီသော Wikidata မှတ်တမ်း မတွေ့ပါ။ မှတ်တမ်းများကို မခန့်မှန်းဘဲ အတည်ပြုရန် လိုအပ်ပါသည်။",
+                        "candidates": [
+                            {
+                                "entity_id": entity_id,
+                                "title": item.get("label", ""),
+                                "description": item.get("description", "မရရှိပါ"),
+                                "source": "https://www.wikidata.org/wiki/" + entity_id,
+                            }
+                            for entity_id, item in exact_by_id.items()
+                        ],
+                    }
 
         if len(exact_by_id) > 1:
             # Prefer one clearly described screen work over manga/franchise
