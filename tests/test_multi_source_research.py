@@ -37,7 +37,7 @@ class MultiSourceResearchTests(unittest.TestCase):
     def test_country_unknown_is_not_assumed_and_india_is_excluded(
         self, anilist, tenrai, wikidata
     ):
-        anilist.return_value = {"found": True, "country": "JP", "year": "2023"}
+        anilist.return_value = {"found": True, "country": "", "year": "2023"}
         tenrai.return_value = {"found": True, "year": "2023"}
         wikidata.return_value = {"found": False, "status": "not found"}
         report = research_anime_sources("Example")
