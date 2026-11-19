@@ -146,3 +146,25 @@ def test_normalizes_only_europeana_http_item_page_to_https():
     with patch("europeana_video_finder.urllib.request.urlopen", return_value=_response(payload)):
         results = search_europeana_licensed_video("Historic film")
     assert results[0]["source_page"] == "https://data.europeana.eu/item/123"
+
+
+def test_display_hides_europeana_media_url_until_provider_review():
+    from europeana_video_finder import display_media_url
+
+    item = {
+        "source": "Europeana",
+        "url": "https://media.partner.example/video.mp4",
+    }
+    shown = display_media_url(item)
+    assert "media.partner.example" not in shown
+    assert "စစ်ဆေးရန်လိုအပ်သည်" in shown
+
+
+def test_display_keeps_commons_media_url():
+    from europeana_video_finder import display_media_url
+
+    item = {
+        "source": "Wikimedia Commons",
+        "url": "https://upload.wikimedia.org/video.webm",
+    }
+    assert display_media_url(item) == item["url"]
