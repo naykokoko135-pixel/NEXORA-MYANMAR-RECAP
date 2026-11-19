@@ -82,6 +82,47 @@ class WikidataMetadataTests(unittest.TestCase):
         self.assertEqual(mock_urlopen.call_count, 4)
 
     @patch("wikidata_metadata.urlopen")
+    def test_burmese_title_uses_burmese_wikidata_search_fallback(self, mock_urlopen):
+        search_en = {"search": []}
+        search_my = {"search": [{
+            "id": "Q777001", "label": "ဖရီရင်",
+            "description": "Japanese anime television series",
+        }]}
+        entity = {"entities": {"Q777001": {"claims": {}}}}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search_en).encode()),
+            Response(json.dumps(search_my).encode()),
+            Response(json.dumps(entity).encode()),
+        ]
+
+        result = fetch_wikidata_metadata("ဖရီရင်")
+
+        self.assertTrue(result["found"])
+        self.assertEqual(result["entity_id"], "Q777001")
+        self.assertEqual(mock_urlopen.call_count, 3)
+
+    @patch("wikidata_metadata.urlopen")
+    def test_japanese_title_uses_japanese_wikidata_search_fallback(self, mock_urlopen):
+        search_empty = {"search": []}
+        search_ja = {"search": [{
+            "id": "Q777002", "label": "葬送のフリーレン",
+            "description": "Japanese anime television series",
+        }]}
+        entity = {"entities": {"Q777002": {"claims": {}}}}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search_empty).encode()),
+            Response(json.dumps(search_empty).encode()),
+            Response(json.dumps(search_ja).encode()),
+            Response(json.dumps(entity).encode()),
+        ]
+
+        result = fetch_wikidata_metadata("葬送のフリーレン")
+
+        self.assertTrue(result["found"])
+        self.assertEqual(result["entity_id"], "Q777002")
+        self.assertEqual(mock_urlopen.call_count, 4)
+
+    @patch("wikidata_metadata.urlopen")
     def test_does_not_accept_unrelated_title_match(self, mock_urlopen):
         mock_urlopen.return_value = Response(json.dumps({
             "search": [{"id": "Q99", "label": "Train", "description": "rail vehicle"}]
@@ -89,7 +130,7 @@ class WikidataMetadataTests(unittest.TestCase):
         result = fetch_wikidata_metadata("Train to Busan")
         self.assertFalse(result["found"])
         self.assertIn("အမည်တိတိကျကျ", result["status"])
-        self.assertEqual(mock_urlopen.call_count, 1)
+        self.assertEqual(mock_urlopen.call_count, 3)
 
     @patch("wikidata_metadata.urlopen")
     def test_api_failure_is_reported_without_crashing(self, mock_urlopen):
