@@ -10,12 +10,14 @@ class RecapMetadataResolverTests(unittest.TestCase):
     def test_wikidata_remains_primary(self, wikidata, tmdb):
         wikidata.return_value = {
             "found": True, "title": "Example", "countries": ["United States"],
-            "source": "https://www.wikidata.org/wiki/Q1",
+            "year": "2020", "source": "https://www.wikidata.org/wiki/Q1",
         }
+        tmdb.return_value = {"found": False, "status": "TMDB token missing"}
         result = resolve_recap_metadata("Example")
         self.assertTrue(result["found"])
         self.assertEqual(result["provider"], "Wikidata")
-        tmdb.assert_not_called()
+        self.assertEqual(result["metadata_confidence"], "exact_title_match")
+        tmdb.assert_called_once_with("Example")
 
     @patch("recap_metadata_resolver.research_anime_sources")
     @patch("recap_metadata_resolver.fetch_tmdb_movie")
