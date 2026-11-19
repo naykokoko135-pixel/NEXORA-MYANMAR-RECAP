@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: NEXORA Myanmar Recap Telegram Bridge
-  version: 1.1.0
+  version: 1.2.0
   description: Authenticated bridge for allow-listed NEXORA commands and supported files. It never exposes Telegram bot tokens or chat IDs.
 servers:
-  - url: https://YOUR-RENDER-SERVICE.onrender.com
+  - url: https://nexora-myanmar-recap-bot.onrender.com
 security:
   - NexoraBridgeKey: []
 paths:
