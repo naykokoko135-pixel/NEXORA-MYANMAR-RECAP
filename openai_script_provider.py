@@ -50,7 +50,8 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
         raise AIScriptError("Platform မမှန်ကန်ပါ။")
     model = os.getenv("OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     duration_ranges = {"youtube": (15, 20), "facebook": (10, 15), "tiktok": (1, 3)}
-    min_minutes, max_minutes = duration_ranges[platform]
+    preset_ranges = {"1-3": (1, 3), "3-5": (3, 5), "5-7": (5, 7), "8-10": (8, 10), "10-15": (10, 15), "12-15": (12, 15), "15-20": (15, 20), "20-30": (20, 30), "30-45": (30, 45), "45-60": (45, 60)}
+    min_minutes, max_minutes = preset_ranges.get(duration, duration_ranges[platform])
     prompt = (
         "သင်သည် NEXORA Myanmar Recap အတွက် မြန်မာဘာသာ Script Editor ဖြစ်သည်။ "
         "အောက်ပါ research notes များကိုသာ အခြေခံ၍ recap narration draft ရေးပါ။ ရင်းမြစ်သည် လူထုတည်းဖြတ်ရင်းမြစ်ဖြစ်ပါက studio-verified canon ဟု မဆိုပါနှင့်။ မသေချာသောအချက်များကို [အချက်အလက် ထပ်စစ်ရန်] ဟု မှတ်သားပါ။ "
