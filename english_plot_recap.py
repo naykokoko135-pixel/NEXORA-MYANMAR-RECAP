@@ -5,7 +5,7 @@ The source is community-edited and must not be presented as studio-verified cano
 from urllib.parse import urlparse
 
 from openai_script_provider import generate_burmese_recap_script, AIScriptError
-from gemini_script_provider import generate_burmese_recap_script as generate_gemini_recap_script, gemini_script_status, GeminiScriptError
+from gemini_script_provider import generate_burmese_recap_script as generate_gemini_recap_script, gemini_script_status
 
 MAX_SOURCE_NOTES_CHARS = 5500
 MIN_SOURCE_NOTES_CHARS = 80
