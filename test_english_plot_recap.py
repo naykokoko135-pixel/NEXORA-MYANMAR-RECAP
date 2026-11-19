@@ -1,7 +1,8 @@
 import unittest
 from unittest.mock import patch
 
-from english_plot_recap import generate_burmese_recap_from_english_plot\nfrom openai_script_provider import AIScriptError
+from english_plot_recap import generate_burmese_recap_from_english_plot
+from openai_script_provider import AIScriptError
 
 
 class EnglishPlotRecapTests(unittest.TestCase):
