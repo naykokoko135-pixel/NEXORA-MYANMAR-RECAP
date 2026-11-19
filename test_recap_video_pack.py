@@ -24,10 +24,17 @@ class RecapVideoPackTests(unittest.TestCase):
     def test_default_preset(self):
         self.assertEqual(parse_recap_video_request("/recapvideo Example Show\nဇာတ်လမ်းစာသား", PRESETS),
                          ("Example Show", "narrator", "ဇာတ်လမ်းစာသား"))
-    def test_missing_title_or_script_rejected(self):
-        for message in ("/recapvideo\nဇာတ်လမ်း", "/recapvideo Example Show"):
-            with self.assertRaises(ValueError):
-                parse_recap_video_request(message, PRESETS)
+    def test_missing_title_rejected_but_title_only_is_accepted(self):
+        with self.assertRaises(ValueError):
+            parse_recap_video_request("/recapvideo", PRESETS)
+        self.assertEqual(
+            parse_recap_video_request("/recapvideo Example Show", PRESETS),
+            ("Example Show", "narrator", ""),
+        )
+        self.assertEqual(
+            parse_recap_video_request("/recapvideo Example Show\nnarrator", PRESETS),
+            ("Example Show", "narrator", ""),
+        )
     def test_script_limit_and_preset(self):
         with self.assertRaises(ValueError):
             parse_recap_video_request("/recapvideo Example\n" + ("က" * (MAX_RECAP_SCRIPT_CHARS + 1)), PRESETS)

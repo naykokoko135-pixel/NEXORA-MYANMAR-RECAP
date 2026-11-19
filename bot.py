@@ -93,7 +93,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\\n"
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/recapvoice [preset] - ကိုယ်ရေးထားသော Recap Script မှ MP3 + အသံနှင့်ကိုက်ညီသော SRT ထုတ်ရန်\n"
-            "/recapvideo <title> - ခွင့်ပြုထားသော footage + မြန်မာ narration + SRT ပါသော ၅ မိနစ် Preview ထုတ်ရန်\n"
+            "/recapvideo <title> - ခေါင်းစဉ်တစ်ခုတည်းမှ အလိုအလျောက် narration + လိုင်စင်ရှိ footage + SRT Preview ထုတ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -529,7 +529,6 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     try:
         query, voice, script = parse_recap_video_request(update.message.text, VOICE_PRESETS)
-        validate_tts_request(script, voice)
     except ValueError as exc:
         await update.message.reply_text(str(exc))
         return
@@ -537,6 +536,19 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         metadata = await asyncio.to_thread(fetch_wikidata_metadata, query)
         countries = validate_non_indian_wikidata_metadata(metadata)
+        if not script:
+            plot_title = metadata.get("mywiki_title") or metadata.get("title_my") or metadata.get("title")
+            if not plot_title:
+                raise ValueError("မြန်မာ Wikipedia ဇာတ်လမ်းရင်းမြစ်အတွက် ခေါင်းစဉ်မရရှိပါ။")
+            try:
+                plot = await asyncio.to_thread(fetch_burmese_plot_section, plot_title)
+                script = generate_burmese_plot_narration(metadata, plot)
+            except (PlotResearchError, ValueError) as plot_error:
+                raise ValueError(
+                    "ခေါင်းစဉ်ကို အတည်ပြုနိုင်သော်လည်း မြန်မာ Wikipedia တွင် ယုံကြည်စိတ်ချရသော "
+                    f"ဇာတ်လမ်းအကျဉ်း မရရှိပါ။ မခန့်မှန်းဘဲ ရပ်ထားပါတယ်။ ({str(plot_error)[:220]})"
+                ) from plot_error
+        validate_tts_request(script, voice)
         search_titles = [
             metadata.get("title", ""),
             metadata.get("enwiki_title", ""),
