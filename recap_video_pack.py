@@ -57,3 +57,21 @@ def format_no_licensed_footage_message(title: str) -> str:
         "မူပိုင်ခွင့်ရှိသော TV/DVD ဇာတ်ဝင်ခန်းများကို ပုံမှန်အားဖြင့် လက်မခံပါ။ "
         "မသက်ဆိုင်သော footage ကို အစားမထိုးထားပါ။ MP4 မထုတ်ထားပါ။"
     )
+
+
+def format_original_visual_fallback_notice(title: str, search_failed: bool = False) -> str:
+    """Explain that the renderer will continue with NEXORA-authored abstract cards."""
+    clean_title = " ".join(str(title or "").split())[:120] or "ဤခေါင်းစဉ်"
+    if search_failed:
+        reason = (
+            f"{clean_title} အတွက် Commons ရင်းမြစ်ကို ယခုချိန်တွင် စစ်ဆေးမရပါ။ "
+            "မသက်ဆိုင်သော သို့မဟုတ် မအတည်ပြုထားသော footage ကို မသုံးထားပါ။"
+        )
+    else:
+        reason = format_no_licensed_footage_message(clean_title).replace(
+            "MP4 မထုတ်ထားပါ။", "မူရင်း footage မသုံးထားပါ။"
+        )
+    return (
+        reason + "\\n\\nNEXORA ကိုယ်တိုင်ဖန်တီးသော Original Abstract Visuals ဖြင့် "
+        "MP4 ဆက်ထုတ်နေပါတယ်။ ဒီပုံများသည် မူရင်း Anime/Film ဇာတ်ဝင်ခန်း မဟုတ်ပါ။"
+    )
