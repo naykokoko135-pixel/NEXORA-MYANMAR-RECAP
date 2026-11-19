@@ -193,6 +193,26 @@ class RecapMetadataResolverTests(unittest.TestCase):
     @patch("recap_metadata_resolver.research_anime_sources")
     @patch("recap_metadata_resolver.fetch_tmdb_movie")
     @patch("recap_metadata_resolver.fetch_wikidata_metadata")
+    def test_localized_wikidata_description_uses_english_film_description(self, wikidata, tmdb, anime):
+        wikidata.return_value = {
+            "found": True, "title": "Example", "countries": ["United States"],
+            "year": "1926", "description": "ရုပ်ရှင်",
+            "description_en": "silent comedy film",
+            "source": "https://www.wikidata.org/wiki/Q1",
+        }
+        tmdb.return_value = {
+            "found": True, "title": "Example", "countries": ["United States"],
+            "year": "1926", "provider_url": "https://www.themoviedb.org/movie/1",
+        }
+        result = resolve_recap_metadata("Example")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["provider"], "TMDB + Wikidata")
+        tmdb.assert_called_once_with("Example")
+        anime.assert_not_called()
+
+    @patch("recap_metadata_resolver.research_anime_sources")
+    @patch("recap_metadata_resolver.fetch_tmdb_movie")
+    @patch("recap_metadata_resolver.fetch_wikidata_metadata")
     def test_same_title_movie_and_anime_catalogue_collision_is_rejected(self, wikidata, tmdb, anime):
         wikidata.return_value = {"found": False, "status": "ambiguous"}
         tmdb.return_value = {
