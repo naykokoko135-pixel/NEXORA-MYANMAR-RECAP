@@ -39,31 +39,63 @@ def resolve_recap_metadata(title):
         return {"found": False, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
 
     wikidata = fetch_wikidata_metadata(clean)
-    if wikidata.get("found"):
-        return {**wikidata, "provider": "Wikidata"}
 
-    # TMDB is used only when its private read token is configured. It applies
-    # exact title and optional year matching and excludes adult results.
+    # TMDB is optional and returns immediately when its private token is absent.
+    # Querying it here lets us cross-check Wikidata instead of bypassing it.
     tmdb = fetch_tmdb_movie(clean)
     if tmdb.get("found"):
         countries = tmdb.get("countries") or []
-        if _is_indian(countries):
+        wikidata_countries = wikidata.get("countries") or [] if wikidata.get("found") else []
+        tmdb_year = str(tmdb.get("year") or "").strip()
+        wikidata_year = str(wikidata.get("year") or "").strip() if wikidata.get("found") else ""
+        # If two independent catalogues both identify the work, reject material
+        # conflicts instead of silently preferring one provider.
+        if tmdb_year and wikidata_year and tmdb_year != wikidata_year:
+            return {
+                "found": False,
+                "status": (
+                    f"TMDB နှစ် ({tmdb_year}) နဲ့ Wikidata နှစ် ({wikidata_year}) "
+                    "မကိုက်ညီပါ။ ရင်းမြစ်ကို လူကိုယ်တိုင် ပြန်စစ်ရန်လိုပါတယ်။"
+                ),
+            }
+        if _is_indian(countries) or _is_indian(wikidata_countries):
             return {"found": False, "status": "အိန္ဒိယမူရင်း/ပူးတွဲထုတ်လုပ်မှု ဖြစ်ကြောင်း TMDB တွင်တွေ့ရှိသဖြင့် ပယ်ချထားသည်။"}
         if not countries:
             return {"found": False, "status": "TMDB မှတ်တမ်းရှိသော်လည်း မူရင်းနိုင်ငံ မရရှိပါ။ မခန့်မှန်းထားပါ။"}
+        if wikidata_countries:
+            tmdb_set = {x.strip().casefold() for x in countries if x.strip()}
+            wikidata_set = {x.strip().casefold() for x in wikidata_countries if x.strip()}
+            if tmdb_set.isdisjoint(wikidata_set):
+                return {
+                    "found": False,
+                    "status": "TMDB နဲ့ Wikidata တို့၏ ထုတ်လုပ်/မူရင်းနိုင်ငံ အချက်အလက် မတူညီပါ။ လူကိုယ်တိုင် ပြန်စစ်ရန်လိုပါတယ်။",
+                }
         return {
             "found": True,
-            "provider": "TMDB",
+            "provider": "TMDB + Wikidata" if wikidata.get("found") else "TMDB",
+            "metadata_source": "TMDB",
+            "metadata_confidence": "cross_checked" if wikidata.get("found") else "single_catalogue_exact_match",
+            "source_urls": [u for u in (tmdb.get("provider_url"), wikidata.get("source")) if u],
             "title": tmdb.get("title") or clean,
             "title_my": tmdb.get("title") or clean,
             "description": "movie",
             "countries": countries,
             "year": tmdb.get("year") or None,
             "source": tmdb.get("provider_url") or "",
+            "wikidata_crosscheck": bool(wikidata.get("found")),
             "enwiki_title": "",
             "mywiki_title": "",
             "tmdb_overview": tmdb.get("overview") or "",
             "imdb_id": tmdb.get("imdb_id") or "",
+        }
+
+    if wikidata.get("found"):
+        return {
+            **wikidata,
+            "provider": "Wikidata",
+            "metadata_source": "Wikidata",
+            "metadata_confidence": "exact_title_match",
+            "source_urls": [wikidata.get("source")] if wikidata.get("source") else [],
         }
 
     # AniList/Tenrai are no-key catalogue sources for animation. Accept only
@@ -107,6 +139,9 @@ def resolve_recap_metadata(title):
         return {
             "found": True,
             "provider": selected.get("provider") or "AniList/Tenrai",
+            "metadata_source": selected.get("provider") or "AniList/Tenrai",
+            "metadata_confidence": "exact_catalogue_match_with_country_check",
+            "source_urls": [u for u in (selected.get("provider_url"), (wd.get("source") if wd.get("found") else "")) if u],
             "title": selected.get("title") or clean,
             "title_my": "",
             "description": selected.get("format") or "anime",
