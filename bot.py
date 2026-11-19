@@ -54,7 +54,7 @@ from recap_video_pack import parse_recap_video_request, validate_non_indian_wiki
 from original_visual_recap import build_original_visual_cards
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
-from openai_script_provider import generate_burmese_recap_script, openai_script_status, AIScriptError
+from openai_script_provider import generate_burmese_recap_script, openai_script_status, AIScriptError\nfrom gemini_script_provider import gemini_script_status
 from error_reporter import report_error_to_github
 from comment_autoreply import build_reply, platform_comment_capabilities, run_comment_autoreply_cycle
 from web_console import CONSOLE_HTML, create_console_session, verify_console_session
@@ -148,6 +148,12 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ai_line = f"OpenAI Script API: ချိတ်ထားသည် ({ai_status['model']})"
         else:
             ai_line = "OpenAI Script API: မချိတ်ရသေးပါ (Render တွင် OPENAI_API_KEY လိုအပ်သည်)"
+        gemini_status = gemini_script_status()
+        gemini_line = (
+            f"Gemini Fallback: ချိတ်ထားသည် ({gemini_status['model']})"
+            if gemini_status["configured"]
+            else "Gemini Fallback: မချိတ်ရသေးပါ (OpenAI Quota ပြည့်လျှင် GEMINI_API_KEY လိုအပ်သည်)"
+        )
         await update.message.reply_text(
             "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
             f"{ai_line}\n"
