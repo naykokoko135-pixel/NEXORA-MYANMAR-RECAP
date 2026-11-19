@@ -57,6 +57,7 @@ paths:
                     - autonarrateclip
                     - autofactsclip
                     - multisourceresearch
+                    - moviemultisourceresearch
                 argument:
                   type: string
                   maxLength: 3500
