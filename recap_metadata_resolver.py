@@ -32,6 +32,20 @@ def _is_indian(countries):
     )
 
 
+def _wikidata_describes_film(metadata):
+    """Only cross-check a Wikidata film item against TMDB's movie catalogue."""
+    description = str((metadata or {}).get("description") or "").casefold()
+    return "film" in description or "movie" in description
+
+
+def _has_exact_anime_record(report):
+    report = report or {}
+    return any(
+        (report.get(key) or {}).get("found")
+        for key in ("anilist", "tenrai")
+    )
+
+
 def resolve_recap_metadata(title):
     """Return one exact-match metadata record, preferring Wikidata then alternatives."""
     clean = " ".join(str(title or "").split()).strip()
@@ -39,10 +53,29 @@ def resolve_recap_metadata(title):
         return {"found": False, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
 
     wikidata = fetch_wikidata_metadata(clean)
+    anime = None
 
-    # TMDB is optional and returns immediately when its private token is absent.
-    # Querying it here lets us cross-check Wikidata instead of bypassing it.
-    tmdb = fetch_tmdb_movie(clean)
+    # TMDB's /search/movie endpoint is a movie-only catalogue. Do not let a
+    # same-named film result overwrite a Wikidata-identified TV/anime series.
+    # When Wikidata has no exact record, check anime catalogues too before
+    # accepting a TMDB movie so cross-category title collisions fail closed.
+    should_query_tmdb = (
+        not wikidata.get("found") or _wikidata_describes_film(wikidata)
+    )
+    tmdb = fetch_tmdb_movie(clean) if should_query_tmdb else {
+        "found": False, "status": "Wikidata က ရုပ်ရှင်မဟုတ်သော screen work အဖြစ် ခွဲခြားထားသဖြင့် TMDB movie lookup ကို ကျော်ထားသည်။"
+    }
+    if tmdb.get("found") and _is_indian(tmdb.get("countries") or []):
+        return {"found": False, "status": "အိန္ဒိယမူရင်း/ပူးတွဲထုတ်လုပ်မှု ဖြစ်ကြောင်း TMDB တွင်တွေ့ရှိသဖြင့် ပယ်ချထားသည်။"}
+    if tmdb.get("found") and not wikidata.get("found"):
+        anime = research_anime_sources(clean)
+        if anime.get("india_excluded"):
+            return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယမူရင်းခေါင်းစဉ်များကို မထည့်ပါ။"}
+        if _has_exact_anime_record(anime):
+            return {
+                "found": False,
+                "status": "ဒီခေါင်းစဉ်သည် TMDB ရုပ်ရှင်နှင့် Anime catalogue နှစ်ခုလုံးတွင် အတိအကျတွေ့ရသည်။ အမျိုးအစားမသေချာသဖြင့် မရွေးချယ်ထားပါ။ ခေါင်းစဉ်နှင့် ခုနှစ်/အမျိုးအစားကို ပြန်စစ်ပါ။",
+            }
     if tmdb.get("found"):
         countries = tmdb.get("countries") or []
         wikidata_countries = wikidata.get("countries") or [] if wikidata.get("found") else []
@@ -100,7 +133,8 @@ def resolve_recap_metadata(title):
 
     # AniList/Tenrai are no-key catalogue sources for animation. Accept only
     # exact catalogue matches with a recognized country code and reject India.
-    anime = research_anime_sources(clean)
+    if anime is None:
+        anime = research_anime_sources(clean)
     if anime.get("india_excluded"):
         return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယမူရင်းခေါင်းစဉ်များကို မထည့်ပါ။"}
     if anime.get("year_conflict"):
