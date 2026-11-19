@@ -17,7 +17,7 @@ MAX_TOPIC_CHARS = 180
 MAX_NOTES_CHARS = 6000
 MAX_OUTPUT_TOKENS = 10000
 MAX_SCRIPT_CHARS = 30000
-TIMEOUT_SECONDS = 120
+TIMEOUT_SECONDS = 240
 
 
 class AIScriptError(RuntimeError):
@@ -110,6 +110,12 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     script = "\n".join(output).strip()
     if not script:
         raise AIScriptError("OpenAI မှ Script စာသား မရရှိပါ။")
+    minimum_chars = {"youtube": 5000, "facebook": 3300, "tiktok": 250}[platform]
+    if len(script) < minimum_chars:
+        raise AIScriptError(
+            "ရရှိသော ဇာတ်လမ်းအချက်အလက်ဖြင့် သတ်မှတ်ထားသော ကြာချိန်ပြည့် Script မရနိုင်သေးပါ။ "
+            "ပိုမိုပြည့်စုံသော ဇာတ်လမ်းရင်းမြစ် လိုအပ်ပါတယ်။ အချက်အလက်မရှိဘဲ စာသားဖြည့်မထုတ်ထားပါ။"
+        )
     if len(script) > MAX_SCRIPT_CHARS:
         raise AIScriptError("ထုတ်ပေးသော Script သည် စာလုံး 30,000 ထက် ကျော်နေပါတယ်။")
     return script
