@@ -50,7 +50,7 @@ from english_plot_recap import generate_burmese_recap_from_english_plot
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
 from recap_voice_pack import parse_recap_voice_request
-from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message
+from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message, format_original_visual_fallback_notice
 from original_visual_recap import build_original_visual_cards
 
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
@@ -593,6 +593,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             " ".join(str(title).split()) for title in search_titles
             if str(title).strip()
         ))
+        source_search_failed = False
         try:
             sources = await asyncio.to_thread(
                 search_licensed_video, query, 10, search_titles
@@ -600,6 +601,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ClipSourceError:
             # Original visuals are a valid fallback when Commons is unavailable.
             sources = []
+            source_search_failed = True
         source = choose_matching_source(query, sources, search_titles)
         max_duration = {"tiktok": 180, "facebook": 900, "youtube": 1200}[platform]
         await update.message.reply_text("မြန်မာ Narration + အချိန်ကိုက် SRT ပြင်ဆင်နေပါတယ်...")
@@ -608,11 +610,10 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             raise ValueError(f"ဒီ Platform အတွက် Narration သည် {max_duration} စက္ကန့်ထက် မကျော်ရပါ။ Script ကို အတိုချုံ့ပါ။")
         import tempfile
         if not source:
-            await update.message.reply_text(
-                format_no_licensed_footage_message(metadata.get("title", query))
-                + "\n\nCommons footage မရှိသော်လည်း NEXORA ကိုယ်တိုင်ဖန်တီးသော "
-                "မူရင်း Abstract Visuals ဖြင့် MP4 ဆက်ထုတ်နေပါတယ်။ ဒီပုံများသည် မူရင်းဇာတ်ဝင်ခန်း မဟုတ်ပါ။"
+            fallback_notice = format_original_visual_fallback_notice(
+                metadata.get("title", query), search_failed=source_search_failed
             )
+            await update.message.reply_text(fallback_notice)
             with tempfile.TemporaryDirectory(prefix="nexora_original_recap_") as temp:
                 output = os.path.join(temp, "nexora_recap_original_visuals.mp4")
                 cards = await asyncio.to_thread(build_original_visual_cards, metadata.get("title", query), 8)

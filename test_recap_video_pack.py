@@ -1,5 +1,5 @@
 import unittest
-from recap_video_pack import MAX_RECAP_SCRIPT_CHARS, parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message
+from recap_video_pack import MAX_RECAP_SCRIPT_CHARS, parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message, format_original_visual_fallback_notice
 from licensed_narrated_clip import _subtitle_duration_seconds, LicensedClipError, build_licensed_attribution_note
 PRESETS = {"narrator", "hero", "female"}
 
@@ -76,6 +76,17 @@ class RecapVideoPackTests(unittest.TestCase):
         self.assertIn("Wikimedia Commons", message)
         self.assertIn("မသက်ဆိုင်သော footage", message)
         self.assertIn("MP4 မထုတ်ထားပါ", message)
+
+
+    def test_original_visual_fallback_notice_does_not_claim_mp4_was_not_created(self):
+        notice = format_original_visual_fallback_notice("Frieren")
+        self.assertIn("MP4 ဆက်ထုတ်နေပါတယ်", notice)
+        self.assertNotIn("MP4 မထုတ်ထားပါ", notice)
+
+    def test_original_visual_fallback_notice_handles_commons_search_failure(self):
+        notice = format_original_visual_fallback_notice("Frieren", search_failed=True)
+        self.assertIn("စစ်ဆေးမရပါ", notice)
+        self.assertIn("Original Abstract Visuals", notice)
 
     def test_requires_known_non_indian_country(self):
         self.assertEqual(validate_non_indian_wikidata_metadata({"found": True, "countries": ["Japan"]}), ["Japan"])
