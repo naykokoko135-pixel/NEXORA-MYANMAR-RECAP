@@ -90,10 +90,21 @@ def research_anime_sources(title):
     clean = " ".join(str(title or "").split()).strip()
     if not clean or len(clean) > 120:
         return {"title": clean, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
+    # Isolate provider failures: one unexpected exception must not discard
+    # successful results from the other independent catalogues.
+    def safe_fetch(fetcher, source_name):
+        try:
+            result = fetcher(clean)
+            if isinstance(result, dict):
+                return result
+            return {"found": False, "status": source_name + " မှ မမှန်ကန်သော တုံ့ပြန်မှု ရရှိပါသည်။"}
+        except Exception:
+            return {"found": False, "status": source_name + " ရင်းမြစ်ကို ယခုချိန်တွင် မရရှိနိုင်ပါ။"}
+
     with ThreadPoolExecutor(max_workers=3) as pool:
-        anilist_future = pool.submit(fetch_anilist_synopsis, clean)
-        tenrai_future = pool.submit(fetch_tenrai_synopsis, clean)
-        wikidata_future = pool.submit(fetch_wikidata_metadata, clean)
+        anilist_future = pool.submit(safe_fetch, fetch_anilist_synopsis, "AniList")
+        tenrai_future = pool.submit(safe_fetch, fetch_tenrai_synopsis, "Tenrai")
+        wikidata_future = pool.submit(safe_fetch, fetch_wikidata_metadata, "Wikidata")
         anilist = anilist_future.result()
         tenrai = tenrai_future.result()
         wikidata = wikidata_future.result()
