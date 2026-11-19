@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from web_console import (
     SESSION_TTL_SECONDS,
@@ -8,6 +9,13 @@ from web_console import (
 
 
 class WebConsoleSessionTests(unittest.TestCase):
+    def test_bot_module_compiles_and_console_routes_exist(self):
+        source = (Path(__file__).resolve().parent / "bot.py").read_text(encoding="utf-8")
+        compile(source, "bot.py", "exec")
+        self.assertIn('@web_app.get("/console")', source)
+        self.assertIn('@web_app.post("/console/command")', source)
+        self.assertIn('NEXORA_CONSOLE_PASSWORD', source)
+
     def test_valid_session(self):
         token = create_console_session("a-secure-console-password", now=1000)
         self.assertTrue(verify_console_session(token, "a-secure-console-password", now=1001))
