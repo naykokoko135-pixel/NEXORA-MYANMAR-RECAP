@@ -3,7 +3,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from tmdb_movie_research import fetch_tmdb_movie, format_movie_source_report
+from tmdb_movie_research import fetch_tmdb_movie, format_movie_source_report, research_movie_sources
 
 
 class TmdbMovieResearchTests(unittest.TestCase):
@@ -44,6 +44,33 @@ class TmdbMovieResearchTests(unittest.TestCase):
             result = fetch_tmdb_movie("Example Movie")
         self.assertFalse(result["found"])
         self.assertIn("Token", result["status"])
+
+    @patch("tmdb_movie_research.fetch_wikidata_metadata")
+    @patch("tmdb_movie_research.fetch_tmdb_movie")
+    def test_unexpected_tmdb_failure_preserves_wikidata_result(self, tmdb, wikidata):
+        tmdb.side_effect = RuntimeError("provider schema changed")
+        wikidata.return_value = {
+            "found": True, "countries": ["Japan"], "year": "2023",
+            "genres": ["anime"], "source": "https://www.wikidata.org/wiki/Q1",
+        }
+        report = research_movie_sources("Example")
+        self.assertFalse(report["tmdb"]["found"])
+        self.assertTrue(report["wikidata"]["found"])
+        self.assertIn("TMDB", report["tmdb"]["status"])
+
+    @patch("tmdb_movie_research.fetch_wikidata_metadata")
+    @patch("tmdb_movie_research.fetch_tmdb_movie")
+    def test_unexpected_wikidata_failure_preserves_tmdb_result(self, tmdb, wikidata):
+        wikidata.side_effect = RuntimeError("provider schema changed")
+        tmdb.return_value = {
+            "found": True, "countries": ["Japan"], "year": "2023",
+            "provider_url": "https://www.themoviedb.org/movie/1",
+            "title": "Example", "overview": "Overview", "imdb_id": "",
+        }
+        report = research_movie_sources("Example")
+        self.assertTrue(report["tmdb"]["found"])
+        self.assertFalse(report["wikidata"]["found"])
+        self.assertIn("Wikidata", report["wikidata"]["status"])
 
     def test_report_disclaims_commercial_use_and_imdb_scope(self):
         report = {
