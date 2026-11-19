@@ -69,6 +69,7 @@ def fetch_anilist_synopsis(title):
           episodes
           seasonYear
           countryOfOrigin
+          isAdult
         }
       }
     }
@@ -94,6 +95,8 @@ def fetch_anilist_synopsis(title):
             }
 
         item = exact[0]
+        if item.get("isAdult") is True:
+            return {"found": False, "status": "ဒီ Project တွင် အရွယ်ရောက်သူများအတွက် သတ်မှတ်ထားသော Anime ကို မထည့်ပါ။"}
         if str(item.get("countryOfOrigin") or "").upper() == "IN":
             return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယခေါင်းစဉ်များ မထည့်ထားပါ။"}
         description = _plain_text(item.get("description"))
