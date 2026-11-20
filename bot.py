@@ -2155,6 +2155,9 @@ async def ttssrt_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         document=InputFile(audio_file, filename=audio_file.name),
         caption="မြန်မာ Voice-over MP3 ဖိုင်ပါ။"
     )
+    if duration_report:
+        await update.message.reply_text(duration_report, disable_web_page_preview=True)
+
     subtitle_file = BytesIO(srt_text.encode("utf-8-sig"))
     subtitle_file.name = "nexora_burmese_aligned_subtitles.srt"
     await update.message.reply_document(
@@ -2188,13 +2191,43 @@ async def recapvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Recap အသံ/စာတန်း ဖန်တီးရာတွင် မမျှော်လင့်ထားသော အမှားရှိပါတယ်။")
         return
 
+    platform = context.user_data.get("platform", "youtube")
+    duration_report = ""
+    duration_caption = ""
+    if platform == "tiktok":
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(prefix="nexora-tiktok-recap-", suffix=".mp3", delete=False) as temp_file:
+                temp_path = temp_file.name
+                temp_file.write(audio)
+            metadata = await asyncio.to_thread(inspect_audio_file, temp_path)
+            evaluation = evaluate_audio_duration("tiktok", metadata["duration_seconds"])
+            duration_report = format_audio_qa_report("tiktok", metadata, evaluation)
+            duration_caption = (
+                " | DURATION PASS — လူကိုယ်တိုင်စစ်ရန်"
+                if evaluation["status"] == "DURATION PASS"
+                else " | DURATION FAIL — မထုတ်ဝေရသေး"
+            )
+        except Exception as exc:
+            log.warning("TikTok recap audio QA failed (%s)", type(exc).__name__)
+            await update.message.reply_text(
+                "TikTok Audio ကို FFmpeg ဖြင့် တိုင်းတာမရပါ။ QA မပြည့်စုံသဖြင့် MP3 ကို မထုတ်ပေးထားပါ။"
+            )
+            return
+        finally:
+            if temp_path:
+                try:
+                    os.unlink(temp_path)
+                except OSError:
+                    pass
+
     audio_file = BytesIO(audio)
     audio_file.name = "nexora_recap_voiceover.mp3"
     await update.message.reply_document(
         document=InputFile(audio_file, filename=audio_file.name),
         caption=(
             f"🎙️ Burmese Recap Voice-over — {VOICE_PRESETS[preset]['label']}\n"
-            "ကိုယ်တိုင်ရေးထားသော Script မှ ဖန်တီးထားသည်။ အသံထွက်နှင့် အမည်များကို ပြန်စစ်ပါ။"
+            "ကိုယ်တိုင်ရေးထားသော Script မှ ဖန်တီးထားသည်။ အသံထွက်နှင့် အမည်များကို ပြန်စစ်ပါ။" + duration_caption
         ),
         read_timeout=120,
         write_timeout=120,
