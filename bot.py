@@ -19,6 +19,7 @@ from subtitle_builder import build_burmese_srt
 from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
 from local_myanmar_tts import synthesize_local_burmese_speech
 from voxcpm_voice_design import VOICE_DESIGNS, synthesize_designed_burmese_voice
+from voxcpm_voice_clone import synthesize_cloned_burmese_voice
 from scene_tts import parse_scene_script, parse_voice_design_scene_script
 from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
 from voice_profile_storage import load_voice_profiles, save_voice_profiles
@@ -2099,6 +2100,50 @@ async def ttsdesign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+
+async def voiceclone_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Clone the current Telegram user's own saved reference voice."""
+    if not update.message or not update.message.text:
+        return
+    first_line, separator, script = update.message.text.partition("\n")
+    parts = first_line.split(maxsplit=1)
+    profile_name = parts[1].strip() if len(parts) > 1 else ""
+    if not separator or not script.strip() or not profile_name:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /voiceclone <voice_profile_name> ပြီးနောက် မြန်မာစာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
+            "အရင်ဆုံး /voiceprofile <name> ဖြင့် ကိုယ့်အသံဖိုင်ကို သိမ်းထားပါ။"
+        )
+        return
+    try:
+        profiles = load_voice_profiles(update.effective_user.id)
+        profile = profiles.get(normalize_profile_name(profile_name))
+    except (OSError, ValueError) as exc:
+        await update.message.reply_text(f"Voice Profile ကို ဖတ်မရပါ: {exc}")
+        return
+    if not profile:
+        await update.message.reply_text("ဒီအမည်နဲ့ သိမ်းထားသောအသံ မတွေ့ပါ။ /voiceprofile list ဖြင့် စစ်ပါ။")
+        return
+    await update.message.reply_text(
+        "သိမ်းထားသော ကိုယ်ပိုင် Reference အသံဖြင့် မြန်မာစာကို ဖန်တီးနေပါတယ်။ "
+        "ဒီလုပ်ဆောင်မှုမှာ compatible GPU host လိုအပ်ပြီး Render Free မှာ မရနိုင်ပါ..."
+    )
+    try:
+        audio = await synthesize_cloned_burmese_voice(
+            script.strip(), profile["filename"], profile["audio"]
+        )
+    except (ValueError, RuntimeError) as exc:
+        await update.message.reply_text(str(exc))
+        return
+    file_obj = BytesIO(audio)
+    file_obj.name = "nexora_creator_voice_clone.wav"
+    await update.message.reply_document(
+        document=InputFile(file_obj, filename=file_obj.name),
+        caption="ကိုယ်ပိုင် Reference အသံကို အသုံးပြုထားသော AI Voice Clone ဖြစ်သည်။ ထုတ်ဝေမီ အသံထွက်နှင့် အမည်များကို ပြန်စစ်ပါ။",
+        read_timeout=120,
+        write_timeout=120,
+    )
+
+
 async def ttslocal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate a WAV using the optional local MyanmarTTS model."""
     if not update.message or not update.message.text:
@@ -2747,6 +2792,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
     telegram_app.add_handler(CommandHandler("scenetts", scenetts_cmd))
     telegram_app.add_handler(CommandHandler("voiceprofile", voiceprofile_cmd))
+    telegram_app.add_handler(CommandHandler("voiceclone", voiceclone_cmd))
     telegram_app.add_handler(CommandHandler("voices", voices_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
