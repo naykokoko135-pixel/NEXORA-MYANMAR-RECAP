@@ -134,7 +134,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/tts_local - Local MyanmarTTS WAV ထုတ်ရန် (စမ်းသပ်ဆဲ၊ host enable လိုအပ်)\n"
             "/voices - အသံပုံစံအားလုံးကြည့်ရန်\n"
             "/voiceprofile <name> - ကိုယ်ပိုင်အသံဖိုင် သိမ်းရန်\n"
-            "/voiceclone <name> - သိမ်းထားသော ကိုယ်ပိုင်အသံဖြင့် မြန်မာစာ TTS ထုတ်ရန် (GPU host လိုအပ်)\\n"
+            "/voiceclone <name> - သိမ်းထားသော ကိုယ်ပိုင်အသံဖြင့် မြန်မာစာ TTS ထုတ်ရန် (GPU host လိုအပ်)\n"
             "/voiceprofile export|import - အသံ Profile Backup ထုတ်/ပြန်သွင်းရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
@@ -1088,7 +1088,7 @@ async def multisourceresearch_cmd(update: Update, context: ContextTypes.DEFAULT_
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်>\\n"
+            "အသုံးပြုပုံ: /multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်>\n"
             "Anime (AniList + Tenrai/MAL + Wikidata), Movie (TMDB + Wikidata + Gemini), "
             "TV Series (TVmaze) ကို တစ်ပြိုင်နက် သီးခြားစစ်ဆေးပေးပါမယ်။"
         )
@@ -1273,7 +1273,7 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
             provider = "Bangumi"
             if not result.get("found"):
                 await update.message.reply_text(
-                    "TVmaze၊ Kitsu နှင့် Bangumi တို့မှ အသုံးပြုနိုင်သော Episode အချက်အလက် မရရှိပါ။\\n"
+                    "TVmaze၊ Kitsu နှင့် Bangumi တို့မှ အသုံးပြုနိုင်သော Episode အချက်အလက် မရရှိပါ။\n"
                     + str(result.get("status") or "")
                 )
                 return
@@ -1312,7 +1312,7 @@ async def episodeplots_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /episodeplots <Anime/Cartoon/Donghua Series အမည်>\\n"
+            "အသုံးပြုပုံ: /episodeplots <Anime/Cartoon/Donghua Series အမည်>\n"
             "TVmaze၊ Kitsu နှင့် Bangumi တို့မှ ရရှိနိုင်သော Episode ဇာတ်ကွက်အကျဉ်းများကို "
             "ရင်းမြစ်တစ်ခုချင်းစီ သီးခြားစုစည်းပေးပါမယ်။"
         )
@@ -1347,7 +1347,7 @@ async def episodeverify_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /episodeverify <Anime/Cartoon/Donghua Series အမည်>\\n"
+            "အသုံးပြုပုံ: /episodeverify <Anime/Cartoon/Donghua Series အမည်>\n"
             "Episode နံပါတ်နှင့် ခေါင်းစဉ် ကိုက်ညီမှု၊ ရင်းမြစ်အလိုက် ကွာခြားမှုကို စစ်ပေးပါမယ်။"
         )
         return
@@ -2704,8 +2704,8 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/srtmy — မြန်မာစာသားမှ SRT\n"
         "/tts <preset> — MP3 အသံထုတ်ရန်\n"
         "/voicedemo <preset> — အသံနမူနာ\n"
-        "/voiceprofile <name> — ကိုယ်ပိုင် Reference အသံဖိုင် သိမ်းရန်\\n"
-        "/voiceclone <name> — ကိုယ်ပိုင်အသံဖြင့် မြန်မာစာ TTS WAV ထုတ်ရန် (GPU host လိုအပ်)\\n"
+        "/voiceprofile <name> — ကိုယ်ပိုင် Reference အသံဖိုင် သိမ်းရန်\n"
+        "/voiceclone <name> — ကိုယ်ပိုင်အသံဖြင့် မြန်မာစာ TTS WAV ထုတ်ရန် (GPU host လိုအပ်)\n"
         "/commentstatus — Comment Auto-Reply အခြေအနေ\n"
         "/commentdraft <platform> <comment> — Reply Draft\n"
         "/help — ဒီအကူအညီစာမျက်နှာ"
