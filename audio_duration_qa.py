@@ -191,3 +191,30 @@ def evaluate_audio_parts(platform, durations):
         "total_maximum_seconds": total_max,
         "issues": issues,
     }
+
+
+def format_audio_parts_qa_report(platform, evaluation):
+    """Format measured multi-part audio QA for generated final deliverables."""
+    lines = [
+        "🎧 NEXORA — THREE-PART MEASURED AUDIO QA",
+        "Platform: " + str(evaluation.get("platform") or platform),
+        "အခြေအနေ: " + str(evaluation.get("status") or "REVIEW"),
+    ]
+    for item in evaluation.get("parts") or []:
+        duration = item.get("duration_seconds")
+        value = "မတိုင်းတာနိုင်" if duration is None else _clock(duration)
+        lines.append(f"Part {item.get('part')}: {value}")
+    total = evaluation.get("total_duration_seconds")
+    if total is not None:
+        lines.append("စုစုပေါင်း: " + _clock(total))
+    lines.extend(["", "【စစ်ဆေးချက်】"])
+    lines.extend("• " + issue for issue in evaluation.get("issues") or [])
+    if not evaluation.get("issues"):
+        lines.append("• Part အရေအတွက်၊ တစ်ပိုင်းချင်းနှင့် စုစုပေါင်း Audio ကြာချိန် အားလုံးကိုက်ညီသည်။")
+    lines.extend([
+        "",
+        "မှတ်ချက်: FFmpeg ဖြင့် decode လုပ်၍ တိုင်းတာထားသော Audio ကြာချိန်သာဖြစ်သည်။ "
+        "အသံထွက်၊ Script အချက်အလက်၊ SRT အချိန်ကိုက်မှု၊ မူပိုင်ခွင့်နှင့် Platform စည်းမျဉ်းများကို "
+        "လူကိုယ်တိုင် ထပ်မံစစ်ဆေးရန် လိုအပ်သည်။",
+    ])
+    return "\n".join(lines)
