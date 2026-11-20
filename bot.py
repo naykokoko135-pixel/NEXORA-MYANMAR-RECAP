@@ -48,6 +48,7 @@ from tmdb_movie_research import research_movie_sources, format_movie_source_repo
 from tvmaze_synopsis import fetch_tvmaze_synopsis
 from tvmaze_synopsis import fetch_tvmaze_episode_summaries, fetch_tvmaze_top_rated_episodes
 from episode_plot_collection import collect_episode_plots, format_episode_plot_collection
+from episode_plot_verification import verify_episode_plot_sources, format_episode_plot_verification
 from animated_episode_pack import format_animated_episode_pack
 from episode_recap_outline import format_episode_recap_outline
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
@@ -107,6 +108,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/growthpack <category>|<title>|<summary optional> - Channel ထုတ်ဝေမှု Pack ထုတ်ရန်\n"
             "/topratedepisodes <အမည်> - TVmaze rating အမြင့်ဆုံး Animation Episode များ ရှာရန်\n"
             "/episodeplots <Series အမည်> - TVmaze/Kitsu/Bangumi Episode ဇာတ်ကွက်များကို သီးခြားစုရန်\n"
+            "/episodeverify <Series အမည်> - Catalogue ရင်းမြစ်များအကြား Episode ခေါင်းစဉ်/နံပါတ် ကိုက်ညီမှု စစ်ရန်\n"
             "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\n"
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/recapvoice [preset] - ကိုယ်ရေးထားသော Recap Script မှ MP3 + အသံနှင့်ကိုက်ညီသော SRT ထုတ်ရန်\n"
@@ -1330,6 +1332,36 @@ async def episodeplots_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Episode Plot Collection မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
 
 
+async def episodeverify_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Compare episode alignment across public catalogues; never claim factual verification."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /episodeverify <Anime/Cartoon/Donghua Series အမည်>\\n"
+            "Episode နံပါတ်နှင့် ခေါင်းစဉ် ကိုက်ညီမှု၊ ရင်းမြစ်အလိုက် ကွာခြားမှုကို စစ်ပေးပါမယ်။"
+        )
+        return
+    await update.message.reply_text("Episode Plot ရင်းမြစ်များကို စုဆောင်းပြီး တစ်ခုချင်းစီ တိုက်စစ်နေပါတယ်...")
+    try:
+        collection = await asyncio.to_thread(collect_episode_plots, query, 10)
+        verification = verify_episode_plot_sources(collection)
+        output = format_episode_plot_verification(verification)
+        if len(output) <= 3900:
+            await update.message.reply_text(output, disable_web_page_preview=True)
+        else:
+            file_obj = BytesIO(output.encode("utf-8-sig"))
+            file_obj.name = "nexora_episode_plot_verification.txt"
+            await update.message.reply_document(
+                document=InputFile(file_obj, filename=file_obj.name),
+                caption="Episode cross-source check — candidate match နှင့် discrepancy များကိုသာ ပြထားသည်။",
+            )
+    except Exception:
+        log.exception("Episode plot verification failed")
+        await update.message.reply_text("Episode Plot Cross-Source Check မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
+
+
 async def episodeoutline_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Create a creator-facing outline for the highest-rated verified episode."""
     if not update.message:
@@ -2465,6 +2497,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("seriesresearch", seriesresearch_cmd))
     telegram_app.add_handler(CommandHandler("animationepisodes", animationepisodes_cmd))
     telegram_app.add_handler(CommandHandler("episodeplots", episodeplots_cmd))
+    telegram_app.add_handler(CommandHandler("episodeverify", episodeverify_cmd))
     telegram_app.add_handler(CommandHandler("topratedepisodes", topratedepisodes_cmd))
     telegram_app.add_handler(CommandHandler("episodepack", episodepack_cmd))
     telegram_app.add_handler(CommandHandler("episodeoutline", episodeoutline_cmd))
