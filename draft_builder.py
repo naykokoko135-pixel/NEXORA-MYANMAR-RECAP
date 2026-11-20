@@ -87,7 +87,7 @@ Platform: {PLATFORM_NAMES[platform]}
 """
 
 
-def generate_three_part_draft_worksheets(topic: str, notes: str, duration: str = "30-45") -> str:
+def generate_three_part_draft_worksheets(topic: str, notes: str, duration: str = "46-60") -> str:
     """Create three distinct YouTube planning worksheets from creator-checked notes."""
     title, clean_notes = _clean_inputs(topic, notes)
     if duration not in PLATFORM_DURATIONS["youtube"]:
