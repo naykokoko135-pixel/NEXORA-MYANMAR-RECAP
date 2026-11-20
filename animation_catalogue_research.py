@@ -135,6 +135,7 @@ def research_animation_catalogues(title):
     countries = [str(value) for value in (wikidata.get("countries") or [])] if wikidata.get("found") else []
     country_text = " ".join(countries).casefold()
     china_origin = any(term in country_text for term in ("china", "people's republic of china", "တရုတ်"))
+    india_origin = any(term in country_text for term in ("india", "အိန္ဒိယ"))
 
     if bangumi.get("found") and china_origin:
         donghua = {
@@ -160,7 +161,13 @@ def research_animation_catalogues(title):
             "status": "Donghua အဖြစ် မသတ်မှတ်နိုင်သေးပါ။",
         }
 
-    if wikidata.get("found") and _description_matches(wikidata.get("description"), "cartoon"):
+    if india_origin:
+        cartoon = {
+            "found": False,
+            "status": "Wikidata တွင် အိန္ဒိယမူရင်းနိုင်ငံကို တွေ့ရှိသဖြင့် ဒီ Project အတွက် ပယ်ချထားပါသည်။",
+            "india_excluded": True,
+        }
+    elif wikidata.get("found") and _description_matches(wikidata.get("description"), "cartoon"):
         cartoon = {
             "found": True, "provider": "Wikidata CC0 structured open data",
             "title": wikidata.get("title"), "description": wikidata.get("description"),
@@ -175,7 +182,13 @@ def research_animation_catalogues(title):
             "wikidata": wikidata,
         }
 
-    if wikidata.get("found") and _description_matches(wikidata.get("description"), "3d_animation"):
+    if india_origin:
+        three_d = {
+            "found": False,
+            "status": "Wikidata တွင် အိန္ဒိယမူရင်းနိုင်ငံကို တွေ့ရှိသဖြင့် ဒီ Project အတွက် ပယ်ချထားပါသည်။",
+            "india_excluded": True,
+        }
+    elif wikidata.get("found") and _description_matches(wikidata.get("description"), "3d_animation"):
         three_d = {
             "found": True, "provider": "Wikidata CC0 structured open data",
             "title": wikidata.get("title"), "description": wikidata.get("description"),
