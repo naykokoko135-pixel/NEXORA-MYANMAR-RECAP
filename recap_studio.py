@@ -24,8 +24,8 @@ def build_original_recap_notes(movie_report: dict, recap_examples: list[dict]) -
         detail = "\n".join(diagnostics)
         raise ValueError(
             "TMDB/Wikidata/Gemini မှ အတည်ပြုနိုင်သော ရုပ်ရှင်အချက်အလက် မရရှိပါ။ "
-            "မခန့်မှန်းဘဲ ရပ်ထားသည်။\\n\\nရင်းမြစ်စစ်ဆေးချက်:\\n" + detail +
-            "\\n\\nGemini Search မရပါက Render Environment တွင် GEMINI_API_KEY နှင့် "
+            "မခန့်မှန်းဘဲ ရပ်ထားသည်။\n\nရင်းမြစ်စစ်ဆေးချက်:\n" + detail +
+            "\n\nGemini Search မရပါက Render Environment တွင် GEMINI_API_KEY နှင့် "
             "GEMINI_RESEARCH_MODEL ကို စစ်ဆေးပါ။ TMDB သည် optional ဖြစ်သည်။ "
             "Token တန်ဖိုးကို Chat ထဲ မပို့ပါနှင့်။"
         )
