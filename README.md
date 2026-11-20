@@ -538,3 +538,8 @@ The universal anime track now includes Kitsu's public read-only JSON:API alongsi
 ### Kitsu Episode Research fallback
 
 `/animationepisodes <Anime/Cartoon/Donghua title>` checks TVmaze first. If TVmaze has no usable result, it can use Kitsu's public episode relationship data only after an independent Anime/Wikidata country check confirms a known non-Indian origin. It returns at most five short episode synopsis excerpts and matches only episode IDs linked to the exact anime record. Missing country verification or missing episode summaries fails closed. These excerpts are research notes, not complete scripts or scene transcripts. See [Kitsu episode resource documentation](https://hummingbird-me.github.io/api-docs/) and the TVmaze source link in the report.
+
+
+## Free Colab VoxCPM2 voice cloning workflow
+
+Render Free has no CUDA GPU, so `/voiceclone` cannot synthesize audio on that host. Generate creator-consented Burmese narration in Google Colab using the optional free GPU runtime, then import the resulting MP3 into `/render timeline` for MP4 rendering. See [the step-by-step Colab workflow](docs/VOXCPM2_COLAB_FREE_WORKFLOW.md). Colab Free GPU availability is not guaranteed. The Bot accepts uploaded WAV/MP3/M4A/OGG documents during an active render session; each audio file must be under 20 MB. This import workflow uses already-generated narration and does not create word-aligned SRT automatically.
