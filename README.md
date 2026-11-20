@@ -285,7 +285,7 @@ NEXORA can create a GitHub Issue automatically when a Telegram update handler ra
 
 To enable it:
 1. Create a fine-grained GitHub personal access token restricted to this repository, with **Issues: Read and write** permission only.
-2. In Render, open the NEXORA web service's **Environment** settings and add `GITHUB_ERROR_REPORT_TOKEN` with that token as its value.
+2. In Render, open the NEXORA web service's **Environment** settings and add `ERROR_REPORT_TOKEN` with that token as its value. Do not use the `GITHUB_` prefix; GitHub reserves it for its own variables.
 3. Add `GITHUB_REPOSITORY` with value `naykokoko135-pixel/NEXORA-MYANMAR-RECAP` (optional for this repository).
 4. Save changes and let Render redeploy.
 
