@@ -84,26 +84,59 @@ class DailyAutoTests(unittest.TestCase):
 
 
 
-    def test_daily_platform_selection_uses_three_distinct_categories(self):
-        selected = select_daily_platform_titles(date(2026, 11, 20))
+    def test_daily_platform_selection_uses_three_distinct_rotating_categories(self):
+        today = date(2026, 11, 20)
+        selected = select_daily_platform_titles(today)
         self.assertEqual(set(selected), {"youtube", "facebook", "tiktok"})
+        self.assertEqual(
+            [selected[p]["category"] for p in ("youtube", "facebook", "tiktok")],
+            ["Anime", "3D Animation", "International Movies"],
+        )
         self.assertEqual(len({item["category"] for item in selected.values()}), 3)
         self.assertEqual(len({item["title"] for item in selected.values()}), 3)
 
-    def test_daily_platform_selection_ranks_by_recent_pageviews(self):
+    def test_each_platform_changes_category_and_title_on_the_next_day(self):
+        today = date(2026, 11, 20)
+        tomorrow = date(2026, 11, 21)
+        first = select_daily_platform_titles(today)
+        second = select_daily_platform_titles(tomorrow)
+        for platform in ("youtube", "facebook", "tiktok"):
+            self.assertNotEqual(first[platform]["category"], second[platform]["category"])
+            self.assertNotEqual(first[platform]["title"], second[platform]["title"])
+        self.assertEqual(len({item["category"] for item in second.values()}), 3)
+        self.assertEqual(len({item["title"] for item in second.values()}), 3)
+
+    def test_pageviews_rank_titles_only_inside_the_rotating_category(self):
         pageviews = {
             "categories": {
-                "Anime": [{"title": "Frieren: Beyond Journey's End", "recent_views": 1000}],
-                "3D Animation": [{"title": "Ne Zha", "recent_views": 900}],
+                "Anime": [
+                    {"title": "Frieren: Beyond Journey's End", "recent_views": 1000},
+                    {"title": "One Piece", "recent_views": 800},
+                ],
+                "3D Animation": [
+                    {"title": "Ne Zha", "recent_views": 900},
+                    {"title": "WALL-E", "recent_views": 700},
+                ],
                 "Cartoon": [{"title": "Gravity Falls", "recent_views": 800}],
                 "Donghua": [{"title": "Link Click", "recent_views": 700}],
-                "International Movies": [{"title": "Train to Busan", "recent_views": 600}],
+                "International Movies": [
+                    {"title": "Train to Busan", "recent_views": 600},
+                    {"title": "Parasite", "recent_views": 500},
+                ],
             }
         }
         selected = select_daily_platform_titles(date(2026, 11, 20), pageviews)
         self.assertEqual(selected["youtube"]["title"], "Frieren: Beyond Journey's End")
         self.assertEqual(selected["facebook"]["title"], "Ne Zha")
-        self.assertEqual(selected["tiktok"]["title"], "Gravity Falls")
+        self.assertEqual(selected["tiktok"]["title"], "Train to Busan")
+
+    def test_single_pageview_sample_uses_catalogue_to_avoid_repeating_it(self):
+        pageviews = {"categories": {
+            "Anime": [{"title": "One Piece", "recent_views": 1000}],
+        }}
+        selected = select_daily_platform_titles(date(2026, 11, 20), pageviews)
+        self.assertNotEqual(selected["youtube"]["title"], "One Piece")
+        self.assertIsNone(selected["youtube"]["recent_wikipedia_views"])
 
     def test_tiktok_daily_pack_has_cross_platform_follow_cta(self):
         import os
