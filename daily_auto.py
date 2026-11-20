@@ -1,5 +1,6 @@
 """Daily free NEXORA animation recap research delivery, invoked by GitHub Actions."""
 import json
+import logging
 import os
 from datetime import date, datetime
 from urllib.error import HTTPError, URLError
@@ -17,6 +18,18 @@ from tvmaze_series import fetch_series_episode_guide, format_series_episode_guid
 from anilist_series import fetch_anilist_episode_guide, format_anilist_episode_guide
 from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
+
+log = logging.getLogger("nexora.daily_auto")
+
+
+def _source_or_fallback(label, callback, fallback):
+    """Keep one unavailable public source from cancelling the entire daily brief."""
+    try:
+        return callback()
+    except Exception as exc:
+        log.warning("%s source unavailable; using fallback (%s)", label, type(exc).__name__)
+        return fallback
+
 
 # Four animation categories with titles from multiple countries/regions.
 # This curated rotation is not a live popularity or view-count ranking.
@@ -403,7 +416,11 @@ def main() -> None:
     local_today = datetime.now(ZoneInfo("Asia/Bangkok")).date()
     # Compare public attention signals across the five editorial categories.
     # Wikipedia pageviews are a proxy only, never represented as social-video views.
-    pageview_result = fetch_category_pageviews(TITLE_CATEGORIES)
+    pageview_result = _source_or_fallback(
+        "Wikimedia pageviews",
+        lambda: fetch_category_pageviews(TITLE_CATEGORIES),
+        {},
+    ) or {}
     selected = select_daily_platform_titles(local_today, pageview_result)
     messages = [
         "🌅 NEXORA — နေ့စဉ် Platform သုံးခုအတွက် သီးခြား Trend Research",
@@ -414,9 +431,21 @@ def main() -> None:
     for platform in ("youtube", "facebook", "tiktok"):
         item = selected[platform]
         title = item["title"]
-        research = search_movie_sources(title)
-        metadata = fetch_wikidata_metadata(title, expected_media_type=format_for_title(title))
-        metadata_report = format_wikidata_metadata(metadata)
+        research = _source_or_fallback(
+            f"{title} catalogue research",
+            lambda: search_movie_sources(title),
+            "⚠️ အလိုအလျောက် Catalogue Research မရရှိပါ။ ရင်းမြစ်ကို ကိုယ်တိုင်စစ်ဆေးပါ။",
+        )
+        metadata = _source_or_fallback(
+            f"{title} Wikidata metadata",
+            lambda: fetch_wikidata_metadata(title, expected_media_type=format_for_title(title)),
+            {},
+        ) or {}
+        metadata_report = (
+            format_wikidata_metadata(metadata)
+            if metadata.get("found")
+            else "⚠️ Wikidata Metadata မရရှိပါ။ အမည်/မီဒီယာပုံစံကို Official Source ဖြင့် အတည်ပြုပါ။"
+        )
 
         # Add an actual Plot/Synopsis section only from the exact Wikidata
         # sitelink. Intro snippets and related list pages remain research leads,
@@ -457,11 +486,19 @@ def main() -> None:
 
         series_report = ""
         if format_for_title(title) == "Animated Series":
-            tvmaze_result = fetch_series_episode_guide(title)
+            tvmaze_result = _source_or_fallback(
+                f"{title} TVmaze episode guide",
+                lambda: fetch_series_episode_guide(title),
+                {},
+            ) or {}
             if tvmaze_result.get("found"):
                 series_report = format_series_episode_guide(tvmaze_result)
             elif category_for_title(title) == "Anime":
-                anilist_result = fetch_anilist_episode_guide(title)
+                anilist_result = _source_or_fallback(
+                    f"{title} AniList episode guide",
+                    lambda: fetch_anilist_episode_guide(title),
+                    {},
+                ) or {}
                 if anilist_result.get("found"):
                     series_report = format_anilist_episode_guide(anilist_result)
                 else:
@@ -471,7 +508,8 @@ def main() -> None:
         messages.extend(["", "━━━━━━━━━━━━━━━━━━", build_platform_daily_message(
             platform, item, research, metadata_report, series_report
         )])
-    trend_report = format_anime_trends(fetch_anime_trends())
+    trend_data = _source_or_fallback("anime trend", fetch_anime_trends, {})
+    trend_report = format_anime_trends(trend_data)
     pageview_report = format_category_pageviews(pageview_result)
     messages.extend(["", "━━━━━━━━━━━━━━━━━━", trend_report, "", pageview_report])
     send_telegram_message(token, chat_id, "\n".join(messages))
