@@ -49,3 +49,68 @@ def test_requires_verified_catalogue_facts():
         assert "အတည်ပြု" in str(exc)
     else:
         assert False
+
+
+def test_recapstudio_command_runs_research_then_original_script(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+    import bot
+
+    report = {
+        "title": "Example Film",
+        "tmdb": {
+            "found": True, "title": "Example Film", "year": "2020",
+            "overview": "A verified short catalogue overview.",
+            "provider_url": "https://www.themoviedb.org/movie/1",
+            "countries": ["South Korea"],
+        },
+        "wikidata": {"found": False},
+        "india_excluded": False,
+    }
+    calls = []
+    monkeypatch.setattr(bot, "research_movie_sources", lambda title: (calls.append(("research", title)) or report))
+    monkeypatch.setattr(bot, "search_youtube_movie_recaps", lambda title, limit: (calls.append(("market", title, limit)) or []))
+    monkeypatch.setattr(bot, "generate_burmese_recap_script", lambda title, notes, platform, duration: (calls.append(("script", title, platform, duration, "VERIFIED CATALOGUE FACTS" in notes)) or "မူရင်းစမ်းသပ် Script"))
+
+    sent = []
+
+    async def reply_text(message):
+        sent.append(message)
+
+    update = SimpleNamespace(message=SimpleNamespace(reply_text=reply_text))
+    context = SimpleNamespace(args=["Example", "Film"], user_data={"platform": "youtube", "duration": "46-60"})
+    asyncio.run(bot.recapstudio_cmd(update, context))
+
+    assert calls[0] == ("research", "Example Film")
+    assert calls[1] == ("market", "Example Film", 8)
+    assert calls[2] == ("script", "Example Film", "youtube", "46-60", True)
+    assert any("မူရင်းစမ်းသပ် Script" in message for message in sent)
+
+
+def test_recapstudio_command_stops_on_indian_production(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+    import bot
+
+    report = {
+        "title": "Excluded Film",
+        "tmdb": {"found": True, "title": "Excluded Film", "countries": ["India"]},
+        "wikidata": {"found": False},
+        "india_excluded": True,
+    }
+    monkeypatch.setattr(bot, "research_movie_sources", lambda title: report)
+    monkeypatch.setattr(bot, "search_youtube_movie_recaps", lambda title, limit: [])
+    script_calls = []
+    monkeypatch.setattr(bot, "generate_burmese_recap_script", lambda *args: script_calls.append(args) or "should not run")
+
+    sent = []
+
+    async def reply_text(message):
+        sent.append(message)
+
+    update = SimpleNamespace(message=SimpleNamespace(reply_text=reply_text))
+    context = SimpleNamespace(args=["Excluded", "Film"], user_data={})
+    asyncio.run(bot.recapstudio_cmd(update, context))
+
+    assert not script_calls
+    assert any("အိန္ဒိယ" in message for message in sent)
