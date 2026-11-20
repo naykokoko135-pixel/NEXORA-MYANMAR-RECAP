@@ -30,6 +30,13 @@ class TitleClassificationTests(unittest.TestCase):
         self.assertIn("South Korea", plan)
         self.assertNotIn("Anime / 3D Animation / Cartoon / Donghua", plan)
 
+    def test_youtube_plan_is_three_parts_of_10_to_15_minutes(self):
+        plan = generate_all_platform_plan("Pororo")
+        self.assertIn("၃ ပိုင်း | တစ်ပိုင်းလျှင် ၁၀–၁၅ မိနစ် | စုစုပေါင်း ၃၀–၄၅ မိနစ်", plan)
+        self.assertIn("Part 1 (၁၀–၁၅ မိနစ်)", plan)
+        self.assertIn("Part 2 (၁၀–၁၅ မိနစ်)", plan)
+        self.assertIn("Part 3 (၁၀–၁၅ မိနစ်)", plan)
+
 
 if __name__ == "__main__":
     unittest.main()
