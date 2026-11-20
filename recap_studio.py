@@ -23,10 +23,10 @@ def build_original_recap_notes(movie_report: dict, recap_examples: list[dict]) -
             diagnostics.append(f"{provider}: {status}")
         detail = "\n".join(diagnostics)
         raise ValueError(
-            "TMDB/Wikidata မှ အတည်ပြုနိုင်သော ရုပ်ရှင်အချက်အလက် မရရှိပါ။ "
+            "TMDB/Wikidata/Gemini မှ အတည်ပြုနိုင်သော ရုပ်ရှင်အချက်အလက် မရရှိပါ။ "
             "မခန့်မှန်းဘဲ ရပ်ထားသည်။\n\nရင်းမြစ်စစ်ဆေးချက်:\n" + detail +
             "\n\nTMDB Token မချိတ်ထားပါက Render Environment တွင် "
-            "TMDB_API_READ_ACCESS_TOKEN ကို စစ်ဆေးပါ။ Token တန်ဖိုးကို Chat ထဲ မပို့ပါနှင့်။"
+            ""
         )
     lines = [
         "NEXORA ORIGINAL RECAP PRODUCTION BRIEF",
