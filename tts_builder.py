@@ -32,7 +32,7 @@ def get_tts_preset(preset: str) -> dict:
     if selected not in VOICE_PRESETS:
         raise ValueError("အသံ Preset မမှန်ပါ။ /voices ကိုကြည့်ပြီး ရွေးပါ။")
     return dict(VOICE_PRESETS[selected])
-MAX_TEXT_CHARS = 30000
+MAX_TEXT_CHARS = 80000
 MAX_AUDIO_BYTES = 45 * 1024 * 1024
 SYNTHESIS_TIMEOUT_SECONDS = 120
 TTS_CHUNK_CHARS = 3000
@@ -74,7 +74,7 @@ def validate_tts_request(text: str, voice: str) -> str:
     if not cleaned:
         raise ValueError("မြန်မာ Voice-over စာသား ထည့်ပါ။")
     if len(cleaned) > MAX_TEXT_CHARS:
-        raise ValueError("Voice-over စာသားသည် စာလုံး ၃၀,၀၀၀ ထက် မကျော်ရပါ။")
+        raise ValueError("Voice-over စာသားသည် စာလုံး ၈၀,၀၀၀ ထက် မကျော်ရပါ။")
     selected = (voice or "").strip().lower()
     if selected not in VOICE_PRESETS:
         raise ValueError("အသံ Preset မမှန်ပါ။ /voices ကိုကြည့်ပြီး ရွေးပါ။")
