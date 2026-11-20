@@ -30,7 +30,7 @@ def _plain_text(value):
 
 def _norm(value):
     value = re.sub(r"\([^)]*\)", " ", str(value or "").casefold())
-    value = re.sub(r"\\bthe\\s+movie\\b|\\bmovie\\b", " ", value)
+    value = re.sub(r"\bthe\s+movie\b|\bmovie\b", " ", value)
     return " ".join(re.findall(r"[a-z0-9]+", value))
 
 
@@ -77,7 +77,7 @@ def fetch_anilist_synopsis(title):
     """
     try:
         search_terms = [requested]
-        compact = re.sub(r"(?i)\\bthe\\s+movie\\b", " ", requested)
+        compact = re.sub(r"(?i)\bthe\s+movie\b", " ", requested)
         compact = re.sub(r"[:：–—-]+", " ", compact)
         compact = " ".join(compact.split()).strip()
         if compact and compact.casefold() != requested.casefold():
