@@ -14,7 +14,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/platform youtube|tiktok|facebook` — select the publishing platform
 - `/duration <minutes>` — choose a duration valid for the selected platform
 - `/settings` — show the current user's selections
-- `/mode free|ai` — choose a mode label; AI provider is not connected
+- `/mode free|ai` — choose the free worksheet or configured AI-script mode
 - `/srt` — convert timestamped subtitle lines into an SRT file\n- `/srtmy` — split a supplied Burmese narration script into estimated-time Burmese SRT captions\n- `/tts <preset>` — create a Burmese MP3 using a selected delivery-style preset
 - `/voices` — list Burmese voice identities and delivery-style presets
 - `/tts-local` followed by Burmese text on the next line — experimental local MyanmarTTS WAV (requires optional dependencies and explicit host enablement)
@@ -29,7 +29,7 @@ The optional `/aiscript <title>` command drafts Burmese narration from creator-s
 
 To enable it, the account owner/parent must create and manage an OpenAI API project/key and set `OPENAI_API_KEY` in Render Environment. Never paste the key into Telegram, GitHub, or ChatGPT. `OPENAI_MODEL` defaults to `gpt-4.1-mini`. The request is bounded to 1,800 output tokens, has no automatic retry, and reports quota/auth errors without exposing provider response bodies. API usage may incur charges; configure a low project spending limit and monitor usage before enabling. Removing the Render variable disables the feature. `/create` remains the free worksheet builder.
 
-Gemini is not configured as a fallback provider. Provider fallback must only be added when the provider's current eligibility and service terms permit use in this application. A quota error stops the OpenAI request; the bot does not silently switch to another paid provider.
+When `GEMINI_API_KEY` is configured in Render, Gemini is used as a fallback only when the OpenAI request returns a quota/limit error. Other OpenAI errors do not trigger fallback, and the bot does not retry a failed request. `/status` reports whether each provider is configured without exposing keys. Keep both keys private. API usage may incur charges; review each provider's current terms and billing controls before enabling.
 
 TMDB movie research uses the existing `TMDB_API_READ_ACCESS_TOKEN` Render variable. The token must be created by the account owner in TMDB API settings and stored only in Render Environment. TMDB attribution is required; see https://developer.themoviedb.org/docs/faq.
 
@@ -197,15 +197,20 @@ This remains a deterministic free formatter, not an AI writer, translator, or fa
 
 For three separate downloads, use `/voiceover3 Avatar` as the first line and put checked facts on new lines in story order. Do not paste the complete `/auto` result as if it were a script: search headings, related results, and source links are not plot facts, and short Wikipedia excerpts alone will be rejected if fewer than six usable fact lines remain.
 
-## Animation categories and three-platform recap plan\n\nThe daily title rotation includes Anime, 3D Animation, Cartoon, and Donghua candidates. Use `/allplatforms <title>` to print the recommended split: YouTube 3 × 8–10 minutes (24–30 minutes total), Facebook 3 × 3–5 minutes (9–15 minutes total), and TikTok 3 × 1–3 minutes (3–9 minutes total). Part 1 covers the hook, world, characters, and setup; Part 2 covers the central conflict and turning points; Part 3 covers the climax/resolution within the stated film/season/arc and original commentary. Create separate edits for each platform.\n\nThe daily list is a curated catalogue, not a live popularity ranking. Check recent views, upload dates, search interest, and audience response before calling a title trending. The bot does not yet automatically measure live trends.\n\n## Daily automatic research (5:00 AM Thailand time)
-The `.github/workflows/daily-auto.yml` workflow runs daily at 22:00 UTC (05:00 Asia/Bangkok on the following local date). It chooses one title per day from a built-in rotation across Anime, 3D Animation, Cartoon, and Donghua, runs the free Wikipedia source lookup, and sends research leads plus explicit YouTube/Facebook/TikTok part durations to the configured Telegram chat. The titles are curated candidates, not a live popularity ranking.
+## Animation categories and three-platform recap plan\n\nThe daily title rotation includes Anime, 3D Animation, Cartoon, and Donghua candidates. Use `/allplatforms <title>` to print the recommended split: YouTube 3 × 8–10 minutes (24–30 minutes total), Facebook 3 × 3–5 minutes (9–15 minutes total), and TikTok 3 × 1–3 minutes (3–9 minutes total). Part 1 covers the hook, world, characters, and setup; Part 2 covers the central conflict and turning points; Part 3 covers the climax/resolution within the stated film/season/arc and original commentary. Create separate edits for each platform.\n\nThe daily list is a curated catalogue, not a live popularity ranking. Check recent views, upload dates, search interest, and audience response before calling a title trending. The bot does not yet automatically measure live trends.\n\n## Daily automatic platform research (5:00 AM Thailand time)
+The `.github/workflows/daily-auto.yml` workflow runs daily at 22:00 UTC (05:00 Asia/Bangkok on the following local date). It selects three different editorial categories and three different titles for YouTube, Facebook, and TikTok from five categories: Anime, 3D Animation, Cartoon, Donghua, and International Movies (live-action only). When English Wikipedia pageview samples are available, it uses them as a popularity proxy among the curated candidate titles; otherwise it falls back to a deterministic daily category rotation. Wikipedia pageviews are not YouTube/Facebook/TikTok views and this is not a comprehensive live-trending search.
 
-To enable delivery:
-1. In Telegram, open your NEXORA bot and send `/chatid`. Copy the numeric chat ID shown.
-2. In GitHub, open **Settings > Secrets and variables > Actions > New repository secret**.
-3. Add `TELEGRAM_BOT_TOKEN` (the current bot token) and `TELEGRAM_CHAT_ID` (the chat ID from `/chatid`).
-4. In **Actions**, enable workflows if GitHub asks, then use **Daily NEXORA Auto Research > Run workflow** once to test. The scheduled run is daily at 05:00 Thailand time.
-5. Do not paste tokens into chat, code, commits, or screenshots. If a token was exposed, revoke it in BotFather and update both Render and GitHub secrets.
+The Telegram report contains a separate production brief for each platform: YouTube 15–20 minutes, Facebook 10–15 minutes, and TikTok 1–3 minutes. TikTok's CTA invites viewers to subscribe to YouTube and follow the Facebook Page. YouTube and Facebook briefs cross-promote the other channel where applicable. The configured channel URLs are read from GitHub Actions repository variables:
+- `YOUTUBE_CHANNEL_URL` — the YouTube channel URL.
+- `FACEBOOK_PAGE_URL` — the Facebook Page URL.
+
+To enable daily delivery:
+1. Add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` under **Settings > Secrets and variables > Actions > Repository secrets**.
+2. Add `YOUTUBE_CHANNEL_URL` and `FACEBOOK_PAGE_URL` under **Settings > Secrets and variables > Actions > Repository variables**.
+3. In **Actions**, enable workflows if GitHub asks, then run **Daily NEXORA Auto Research** manually once to test. Scheduled runs follow the 05:00 Thailand-time schedule.
+4. Never paste tokens or private keys into chat, code, commits, or screenshots. If a token is exposed, revoke it with its provider and replace it in the relevant secret store.
+
+Important: this workflow sends research and production briefs to Telegram. It does not generate finished MP4 files or automatically upload/publish videos to YouTube, Facebook, or TikTok. Social publishing requires separate official platform API integration, permissions, and credentials; TikTok publishing also requires the appropriate developer approval.
 
 GitHub's scheduled workflow can start a little later than the exact minute. The bot's Render Free web service does not need to stay awake for the GitHub Actions job.
 
@@ -246,10 +251,10 @@ This is not automatic text-to-speech, movie-footage generation, AI scene selecti
 
 ## Important limitations
 - `/auto` automates initial public-source discovery only; it does not create a complete verified plot summary or finished recap script.
-- This is not a connection to the ChatGPT conversation or an AI writing provider.
+- This bot is not automatically connected to the ordinary ChatGPT conversation. The optional OpenAI/Gemini script providers require their own Render environment keys and may incur API charges.
 - SRT export does not translate. `/srtmy` can draft Burmese captions from Burmese text, but its estimated timestamps must be synchronized manually to the final narration.
-- Burmese MP3 synthesis is available through the optional online Edge TTS command; it requires internet access and sends the submitted script to the remote speech service. It is not offline or guaranteed.\n- No AI scene selection, scheduled video queue, or automatic social publishing.
-- The AI mode does not call an AI service and does not trigger paid fallback.
+- Burmese MP3 synthesis is available through the optional online Edge TTS command; it requires internet access and sends the submitted script to the remote speech service. It is not offline or guaranteed.\n- The daily GitHub Actions workflow schedules research briefs only; it does not create a finished scheduled video queue or auto-publish to social platforms.
+- AI script generation is optional and provider-key dependent; Gemini fallback is limited to OpenAI quota/limit errors when the Gemini key is configured.
 - Free hosting may sleep or restart; per-user session selections are not permanent storage.
 
 ## Deploy
