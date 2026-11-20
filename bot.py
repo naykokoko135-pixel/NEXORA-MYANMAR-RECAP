@@ -739,7 +739,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             sources = []
             source_search_failed = True
         source = choose_matching_source(query, sources, search_titles)
-        max_duration = {"tiktok": 180, "facebook": 900, "youtube": 1200}[platform]
+        max_duration = {"tiktok": 180, "facebook": 900, "youtube": 2700}[platform]
         await update.message.reply_text("မြန်မာ Narration + အချိန်ကိုက် SRT ပြင်ဆင်နေပါတယ်...")
         audio, srt_text = await synthesize_burmese_speech_with_srt(script, voice)
         if _subtitle_duration_seconds(srt_text) > max_duration:

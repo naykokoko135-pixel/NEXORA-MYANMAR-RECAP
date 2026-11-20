@@ -82,7 +82,7 @@ def parse_scene_script(script: str) -> list[dict]:
         raise ValueError(f"ဇာတ်ဝင်ခန်း အများဆုံး {MAX_SCENES} ခန်းသာ ခွင့်ပြုပါတယ်။")
     for index, scene in enumerate(scenes, start=1):
         if len(scene["text"]) > MAX_TEXT_CHARS:
-            raise ValueError(f"အခန်း {index} စာသားသည် စာလုံး ၆,၀၀၀ ထက် ကျော်နေပါတယ်။")
+            raise ValueError(f"အခန်း {index} စာသားသည် စာလုံး ၈၀,၀၀၀ ထက် ကျော်နေပါတယ်။")
     return scenes
 
 

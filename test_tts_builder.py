@@ -103,9 +103,12 @@ class BurmeseTtsValidationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_scene_script(script)
 
-    def test_text_limit_enforced(self):
+    def test_text_limit_supports_45_minute_narration(self):
+        from tts_builder import MAX_TEXT_CHARS
+        self.assertEqual(MAX_TEXT_CHARS, 80000)
+        self.assertEqual(validate_tts_request("က" * 50000, "female"), VOICE_MAP["female"])
         with self.assertRaises(ValueError):
-            validate_tts_request("က" * 30001, "female")
+            validate_tts_request("က" * (MAX_TEXT_CHARS + 1), "female")
 
     def test_long_tts_text_is_split_at_safe_boundaries(self):
         chunks = split_tts_text(("ပထမစာကြောင်း။ " * 300))
