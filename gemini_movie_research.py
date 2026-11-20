@@ -21,8 +21,8 @@ TIMEOUT_SECONDS = 45
 
 def _normalize(value: str) -> str:
     value = unicodedata.normalize("NFKC", str(value or "")).casefold().strip()
-    value = re.sub(r"\\s+\\(\\d{4}\\)$", "", value)
-    return " ".join(re.findall(r"[^\\W_]+", value, flags=re.UNICODE))
+    value = re.sub(r"\s+\(\d{4}\)$", "", value)
+    return " ".join(re.findall(r"[^\W_]+", value, flags=re.UNICODE))
 
 
 def _safe_status(message: str) -> dict:
@@ -88,7 +88,7 @@ def fetch_gemini_movie_metadata(title: str) -> dict:
         return _safe_status("Gemini Search မှ အဖြေမရရှိပါ။")
     candidate = candidates[0]
     parts = (candidate.get("content") or {}).get("parts") or []
-    text = "\\n".join(str(part.get("text") or "") for part in parts if isinstance(part, dict)).strip()
+    text = "\n".join(str(part.get("text") or "") for part in parts if isinstance(part, dict)).strip()
     grounding = candidate.get("groundingMetadata") or {}
     chunks = grounding.get("groundingChunks") or []
     sources = []
@@ -106,7 +106,7 @@ def fetch_gemini_movie_metadata(title: str) -> dict:
         return _safe_status("Gemini အဖြေတွင် လွတ်လပ်သော web source domain အနည်းဆုံး ၂ ခု မရရှိပါ။")
 
     try:
-        cleaned = re.sub(r"^\\s*```(?:json)?\\s*|\\s*```\\s*$", "", text, flags=re.I)
+        cleaned = re.sub(r"^\s*```(?:json)?\s*|\s*```\s*$", "", text, flags=re.I)
         data = json.loads(cleaned)
     except (ValueError, TypeError):
         return _safe_status("Gemini grounded အဖြေသည် သတ်မှတ်ထားသော JSON ပုံစံမဟုတ်ပါ။")
@@ -124,12 +124,12 @@ def fetch_gemini_movie_metadata(title: str) -> dict:
         if isinstance(item, str) and item.strip()
     ))
     year = str(data.get("release_year") or "").strip()
-    if not re.fullmatch(r"\\d{4}", year):
+    if not re.fullmatch(r"\d{4}", year):
         year = ""
     if not countries or not year:
         return _safe_status("Gemini source များမှ ထုတ်လုပ်သည့်နိုင်ငံနှင့် ထွက်ရှိသည့်နှစ် နှစ်ခုလုံးကို မအတည်ပြုနိုင်ပါ။")
 
-    overview = re.sub(r"\\s+", " ", str(data.get("overview") or "")).strip()[:2500]
+    overview = re.sub(r"\s+", " ", str(data.get("overview") or "")).strip()[:2500]
     if len(overview) < 60:
         overview = ""
     return {
