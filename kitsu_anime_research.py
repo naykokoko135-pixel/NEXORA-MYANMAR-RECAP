@@ -12,8 +12,8 @@ USER_AGENT = "NEXORA-Myanmar-Recap/2.1 (free catalogue research)"
 
 def _norm(value):
     value = unicodedata.normalize("NFKC", str(value or "")).casefold()
-    value = re.sub(r"\\([^)]*\\)", " ", value)
-    value = re.sub(r"[^\\w]+", " ", value, flags=re.UNICODE)
+    value = re.sub(r"\([^)]*\)", " ", value)
+    value = re.sub(r"[^\w]+", " ", value, flags=re.UNICODE)
     return " ".join(value.split())
 
 
@@ -52,7 +52,7 @@ def fetch_kitsu_anime(title):
         age = str(attrs.get("ageRating") or "").upper()
         if age in {"R18", "R"}:
             return {"found": False, "status": "Kitsu မှ အရွယ်ရောက်သူများအတွက် သတ်မှတ်ထားသော Anime ကို ပယ်ချထားသည်။"}
-        synopsis = re.sub(r"\\s+", " ", str(attrs.get("synopsis") or "")).strip()
+        synopsis = re.sub(r"\s+", " ", str(attrs.get("synopsis") or "")).strip()
         if len(synopsis) < 60:
             return {"found": False, "status": "Kitsu မှာ အသုံးပြုနိုင်သော synopsis မလုံလောက်ပါ။"}
         start_date = str(attrs.get("startDate") or "")
