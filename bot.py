@@ -47,6 +47,7 @@ from multi_source_research import research_anime_sources, format_anime_source_re
 from tmdb_movie_research import research_movie_sources, format_movie_source_report
 from tvmaze_synopsis import fetch_tvmaze_synopsis
 from tvmaze_synopsis import fetch_tvmaze_episode_summaries, fetch_tvmaze_top_rated_episodes
+from episode_plot_collection import collect_episode_plots, format_episode_plot_collection
 from animated_episode_pack import format_animated_episode_pack
 from episode_recap_outline import format_episode_recap_outline
 from english_plot_research import fetch_english_plot_section, EnglishPlotError
@@ -105,6 +106,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/autofactsclip <အမည်> - Wikidata အချက်အလက်မှ မြန်မာအသံ + Licensed footage Preview အလိုအလျောက်ထုတ်ရန်\n"
             "/growthpack <category>|<title>|<summary optional> - Channel ထုတ်ဝေမှု Pack ထုတ်ရန်\n"
             "/topratedepisodes <အမည်> - TVmaze rating အမြင့်ဆုံး Animation Episode များ ရှာရန်\n"
+            "/episodeplots <Series အမည်> - TVmaze/Kitsu/Bangumi Episode ဇာတ်ကွက်များကို သီးခြားစုရန်\n"
             "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\n"
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/recapvoice [preset] - ကိုယ်ရေးထားသော Recap Script မှ MP3 + အသံနှင့်ကိုက်ညီသော SRT ထုတ်ရန်\n"
@@ -1293,6 +1295,41 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
     await update.message.reply_text("\n".join(lines), disable_web_page_preview=True)
 
 
+async def episodeplots_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Collect episode-level plot leads from free catalogues without merging sources."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /episodeplots <Anime/Cartoon/Donghua Series အမည်>\\n"
+            "TVmaze၊ Kitsu နှင့် Bangumi တို့မှ ရရှိနိုင်သော Episode ဇာတ်ကွက်အကျဉ်းများကို "
+            "ရင်းမြစ်တစ်ခုချင်းစီ သီးခြားစုစည်းပေးပါမယ်။"
+        )
+        return
+    await update.message.reply_text(
+        "Episode-level Plot များကို အခမဲ့ Catalogue သုံးခုမှ စုဆောင်းပြီး မူရင်းနိုင်ငံနှင့် ရင်းမြစ်ကို စစ်နေပါတယ်..."
+    )
+    try:
+        report = await asyncio.to_thread(collect_episode_plots, query, 10)
+        output = format_episode_plot_collection(report)
+        if len(output) <= 3900:
+            await update.message.reply_text(output, disable_web_page_preview=True)
+        else:
+            file_obj = BytesIO(output.encode("utf-8-sig"))
+            file_obj.name = "nexora_episode_plot_collection.txt"
+            await update.message.reply_document(
+                document=InputFile(file_obj, filename=file_obj.name),
+                caption=(
+                    "Episode Plot Collection — ရင်းမြစ်တစ်ခုချင်းစီ သီးခြားစုထားသည်။ "
+                    "ဇာတ်ကွက်မရှိသောအပိုင်းကို မခန့်မှန်းထားပါ။"
+                ),
+            )
+    except Exception:
+        log.exception("Episode plot collection failed")
+        await update.message.reply_text("Episode Plot Collection မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
+
+
 async def episodeoutline_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Create a creator-facing outline for the highest-rated verified episode."""
     if not update.message:
@@ -2427,6 +2464,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("multisourceresearch", multisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("seriesresearch", seriesresearch_cmd))
     telegram_app.add_handler(CommandHandler("animationepisodes", animationepisodes_cmd))
+    telegram_app.add_handler(CommandHandler("episodeplots", episodeplots_cmd))
     telegram_app.add_handler(CommandHandler("topratedepisodes", topratedepisodes_cmd))
     telegram_app.add_handler(CommandHandler("episodepack", episodepack_cmd))
     telegram_app.add_handler(CommandHandler("episodeoutline", episodeoutline_cmd))
