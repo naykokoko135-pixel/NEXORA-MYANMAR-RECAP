@@ -117,9 +117,13 @@ def fetch_kitsu_episode_summaries(title, limit=5):
         if len(exact) != 1:
             return {"found": False, "status": "Kitsu တွင် အမည်တိတိကျကျ ကိုက်ညီသော Anime တစ်ခုတည်းကို မသတ်မှတ်နိုင်ပါ။"}
         selected = exact[0]
-        age = str((selected.get("attributes") or {}).get("ageRating") or "").upper()
+        selected_attrs = selected.get("attributes") or {}
+        age = str(selected_attrs.get("ageRating") or "").upper()
         if age in {"R18", "R"}:
             return {"found": False, "status": "Kitsu မှ အရွယ်ရောက်သူများအတွက် သတ်မှတ်ထားသော Anime ကို ပယ်ချထားသည်။"}
+        media_format = str(selected_attrs.get("subtype") or selected_attrs.get("showType") or "").upper()
+        if media_format not in {"TV", "TV_SHORT", "ONA", "OVA"}:
+            return {"found": False, "status": "Kitsu မှတ်တမ်းသည် TV/Animation Series မဟုတ်သဖြင့် Episode research အဖြစ် မသုံးထားပါ။"}
         relation = ((selected.get("relationships") or {}).get("episodes") or {}).get("data") or []
         allowed_ids = {str(item.get("id")) for item in relation if item.get("id") is not None}
         included = payload.get("included") or []
