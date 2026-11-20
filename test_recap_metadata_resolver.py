@@ -243,5 +243,35 @@ class RecapMetadataResolverTests(unittest.TestCase):
         self.assertIn("နှစ်/အမျိုးအစား", result["status"])
 
 
+
+    @patch("recap_metadata_resolver.research_anime_sources")
+    @patch("recap_metadata_resolver.fetch_tmdb_movie")
+    @patch("recap_metadata_resolver.fetch_wikidata_metadata")
+    def test_exact_query_synopsis_survives_other_catalogue_year_conflict_and_title_alias(self, wikidata, tmdb, anime):
+        wikidata.return_value = {
+            "found": True, "title": "Haikyu!!", "countries": ["Japan"],
+            "year": "2014", "description": "Japanese anime television series",
+            "source": "https://www.wikidata.org/wiki/Q1",
+            "enwiki_title": "", "mywiki_title": "",
+        }
+        anime.return_value = {
+            "title": "Haikyu!!",
+            "india_excluded": False,
+            "year_conflict": True,
+            "anilist": {
+                "found": True, "provider": "AniList", "title": "Haikyuu!!",
+                "country": "JP", "year": 2014,
+                "synopsis": "A sufficiently detailed series synopsis for a safe short preview, with enough verified descriptive detail to support a brief introduction without inventing any episode events.",
+                "provider_url": "https://anilist.co/anime/1",
+            },
+            "tenrai": {"found": True, "provider": "Tenrai", "title": "Haikyu!!", "year": 2013},
+        }
+        result = resolve_recap_metadata("Haikyu!!")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["anime_synopsis_provider"], "AniList")
+        self.assertEqual(result["anime_synopsis_source"], "https://anilist.co/anime/1")
+        tmdb.assert_not_called()
+        anime.assert_called_once_with("Haikyu!!")
+
 if __name__ == "__main__":
     unittest.main()
