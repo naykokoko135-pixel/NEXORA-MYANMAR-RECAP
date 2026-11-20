@@ -9,7 +9,7 @@ from html.parser import HTMLParser
 from urllib.request import Request, urlopen
 import json
 
-from animation_title_aliases import animation_title_match_names, animation_title_variants
+from animation_title_aliases import animation_title_match_names, animation_title_variants, normalize_animation_title
 
 API_URL = "https://graphql.anilist.co"
 USER_AGENT = "NEXORA-Myanmar-Recap/1.0"
@@ -100,7 +100,7 @@ def fetch_anilist_synopsis(title):
         for item in candidates:
             titles = item.get("title") or {}
             names = list(titles.values()) + list(item.get("synonyms") or [])
-            if any(_norm(name) in allowed_names for name in names if name):
+            if any(normalize_animation_title(name) in allowed_names for name in names if name):
                 exact.append(item)
         if len(exact) != 1:
             return {
