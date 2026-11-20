@@ -58,7 +58,8 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
         raise GeminiScriptError("Platform မမှန်ကန်ပါ။")
     model = os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     longform_instruction = (
-        + longform_instruction
+        "YouTube 30-45 မိနစ်အတွက် PART 1, PART 2, PART 3 ဟု အတိအကျ သုံးပိုင်းသာ ခွဲပါ။ "
+        "Part တစ်ခုစီကို ၁၀–၁၅ မိနစ်စာ အသေးစိတ် narration ရေးပြီး အစ၊ အကြောင်းအရာနှင့် ဆက်စပ်ချက် ပါစေ။ "
         if platform == "youtube" and duration == "30-45" else ""
     )
     prompt = (
@@ -70,8 +71,7 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
         "မူရင်း dialogue မကူးပါနှင့်။ သဘာဝကျသော မြန်မာစကားဖြင့် Hook, context, "
         "ဖြစ်ရပ်အစဉ်လိုက် narration, transition, ကိုယ်ပိုင်သုံးသပ်ချက်နှင့် closing ရေးပါ။ "
         "ဇာတ်လမ်းအချက်အလက် မလုံလောက်လျှင် စာသားထပ်ဖြည့်မည့်အစား အချက်အလက်လိုအပ်ကြောင်း ဖော်ပြပါ။ "
-        "YouTube 30-45 မိနစ်အတွက် PART 1, PART 2, PART 3 ဟု အတိအကျ သုံးပိုင်းသာ ခွဲပါ။ "
-        "Part တစ်ခုစီကို ၁၀–၁၅ မိနစ်စာ အသေးစိတ် narration ရေးပြီး အစ၊ အကြောင်းအရာနှင့် ဆက်စပ်ချက် ပါစေ။ "
+        + longform_instruction
         "အချက်အလက်မရှိလျှင် အရှည်ပြည့်စေရန် မတီထွင်ပါနှင့်။ ရည်မှန်းကြာချိန်နှင့် ကိုက်ညီအောင် ပြည့်စုံစွာရေးပါ။\\n\\n"
         f"ခေါင်းစဉ်: {topic}\\nPlatform: {platform}\\nရည်မှန်းကြာချိန်: {duration} မိနစ်\\n"
         f"Verified research notes:\\n{notes}"
