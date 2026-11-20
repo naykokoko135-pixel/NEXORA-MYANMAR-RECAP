@@ -10,6 +10,8 @@ services:
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
+      - key: ERROR_REPORT_TOKEN
+        sync: false
       - key: TELEGRAM_WEBHOOK_SECRET
         generateValue: true
       - key: CHATGPT_BRIDGE_API_KEY
