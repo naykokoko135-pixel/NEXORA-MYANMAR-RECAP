@@ -56,6 +56,7 @@ from english_plot_recap import generate_burmese_recap_from_english_plot
 from synopsis_preview import generate_burmese_synopsis_preview
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
+from production_qa import analyze_production_package, format_production_qa_report, parse_production_package
 from recap_voice_pack import parse_recap_voice_request
 from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message, format_original_visual_fallback_notice
 from original_visual_recap import build_original_visual_cards
@@ -111,6 +112,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/episodeverify <Series အမည်> - Catalogue ရင်းမြစ်များအကြား Episode ခေါင်းစဉ်/နံပါတ် ကိုက်ညီမှု စစ်ရန်\n"
             "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\n"
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
+            "/productionqa <Category>|<Title>|<Platform> - Script အပိုင်း၊ ကြာချိန်နှင့် SRT စစ်ရန်\n"
             "/recapvoice [preset] - ကိုယ်ရေးထားသော Recap Script မှ MP3 + အသံနှင့်ကိုက်ညီသော SRT ထုတ်ရန်\n"
             "/recapvideo <title> - အလိုအလျောက် narration + Licensed Footage (မရှိပါက Original Visuals) + SRT ပါ MP4 ထုတ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
@@ -2406,6 +2408,41 @@ async def recapqa_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     output = format_recap_qa_report(report)
     await update.message.reply_text(output[:3900])
 
+async def productionqa_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Check platform script parts, estimated duration, and supplied SRT structure."""
+    if not update.message or not update.message.text:
+        return
+    message_parts = update.message.text.split("\\n", 1)
+    header = message_parts[0].split(maxsplit=1)
+    if len(header) < 2 or len(message_parts) < 2:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ:\\n/productionqa Anime|Demon Slayer|youtube\\n"
+            "[PART 1]\\nScript အပိုင်း ၁\\n[PART 2]\\nScript အပိုင်း ၂\\n[PART 3]\\nScript အပိုင်း ၃\\n[SRT]\\nSRT စာသား\\n"
+            "TikTok အတွက် [PART 1] တစ်ခုတည်း ထည့်ပါ။"
+        )
+        return
+    fields = [item.strip() for item in header[1].split("|")]
+    if len(fields) != 3:
+        await update.message.reply_text("Category|Title|Platform ပုံစံသုံးပါ။ ဥပမာ: Anime|Demon Slayer|youtube")
+        return
+    category, title, platform = fields
+    package_text = message_parts[1]
+    parsed_parts, _ = parse_production_package(package_text)
+    combined_script = "\\n\\n".join(parsed_parts.get(number, "") for number in sorted(parsed_parts))
+    editorial = analyze_recap_script(category, title, combined_script)
+    production = analyze_production_package(platform, package_text)
+    output = format_recap_qa_report(editorial) + "\\n\\n" + format_production_qa_report(production)
+    if len(output) <= 3900:
+        await update.message.reply_text(output, disable_web_page_preview=True)
+    else:
+        file_obj = BytesIO(output.encode("utf-8-sig"))
+        file_obj.name = "nexora_production_qa.txt"
+        await update.message.reply_document(
+            document=InputFile(file_obj, filename=file_obj.name),
+            caption="NEXORA Script / Duration / Subtitle QA — Human review မဖြစ်မနေ လုပ်ပါ။",
+        )
+
+
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(
@@ -2436,6 +2473,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/growthpack <category>|<title>|<summary optional> သည် title၊ description၊ thumbnail၊ Hook နှင့် retention checklist ပြင်ဆင်ပေးသည်။ Live views/trends ကို မခန့်မှန်းပါ။\n"
             "/topratedepisodes <title> သည် TVmaze community rating အမြင့်ဆုံး Animation Episode များကိုပြသည်။ View count မဟုတ်ပါ။\n"
             "/episodeoutline <title> သည် အမြင့်ဆုံး rating ရှိ Episode တစ်ခုအတွက် Recap Script Worksheet ပြင်ဆင်ပေးသည်။\n"
+            "/productionqa <Category>|<Title>|<Platform> သည် Part duration နှင့် SRT structure ကို စစ်ပေးသည်။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
@@ -2507,6 +2545,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
     telegram_app.add_handler(CommandHandler("recapqa", recapqa_cmd))
+    telegram_app.add_handler(CommandHandler("productionqa", productionqa_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
     telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))
