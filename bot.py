@@ -58,8 +58,8 @@ from synopsis_preview import generate_burmese_synopsis_preview
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
 from production_qa import analyze_production_package, format_production_qa_report, parse_production_package
-from audio_duration_qa import inspect_audio_file, evaluate_audio_duration, format_audio_qa_report, MAX_AUDIO_BYTES
-from recap_voice_pack import parse_recap_voice_request
+from audio_duration_qa import inspect_audio_file, evaluate_audio_duration, evaluate_audio_parts, format_audio_qa_report, format_audio_parts_qa_report, MAX_AUDIO_BYTES
+from recap_voice_pack import parse_recap_voice_request, parse_recap_voice_parts_request
 from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message, format_original_visual_fallback_notice
 from original_visual_recap import build_original_visual_cards
 
@@ -2206,6 +2206,85 @@ async def recapvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def recapvoice3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generate three separate narration MP3/SRT pairs and gate them by measured duration."""
+    if not update.message or not update.message.text:
+        return
+    platform = context.user_data.get("platform", "youtube")
+    if platform not in {"youtube", "facebook"}:
+        await update.message.reply_text(
+            "/recapvoice3 သည် YouTube/Facebook အတွက်သာ ဖြစ်သည်။ "
+            "TikTok အတွက် /recapvoice ကိုသုံးပြီး တစ်ဖိုင်တည်း ၄–၇ မိနစ် ထုတ်ပါ။"
+        )
+        return
+    try:
+        preset, parts = parse_recap_voice_parts_request(update.message.text, VOICE_PRESETS)
+        for script in parts.values():
+            validate_tts_request(script, preset)
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+
+    await update.message.reply_text(
+        f"{platform.upper()} အတွက် narration ၃ ပိုင်းကို {VOICE_PRESETS[preset]['label']} preset ဖြင့် "
+        "MP3/SRT သီးခြားဖန်တီးပြီး FFmpeg ဖြင့် တကယ့်ကြာချိန်ကို စစ်ဆေးနေပါတယ်..."
+    )
+    generated = []
+    durations = []
+    try:
+        for index in (1, 2, 3):
+            audio, srt_text = await synthesize_burmese_speech_with_srt(parts[index], preset)
+            with tempfile.NamedTemporaryFile(prefix="nexora-recap-part-", suffix=".mp3", delete=False) as temp_file:
+                temp_path = temp_file.name
+                temp_file.write(audio)
+            try:
+                metadata = await asyncio.to_thread(inspect_audio_file, temp_path)
+            finally:
+                try:
+                    os.unlink(temp_path)
+                except OSError:
+                    pass
+            durations.append(metadata["duration_seconds"])
+            generated.append((index, audio, srt_text))
+    except (ValueError, RuntimeError) as exc:
+        await update.message.reply_text(
+            "Part MP3 ထုတ်လုပ်ခြင်း သို့မဟုတ် FFmpeg တိုင်းတာခြင်း မအောင်မြင်ပါ။ "
+            "QA မပြည့်စုံသဖြင့် ဖိုင်များကို အပြီးသတ်အဖြစ် မထုတ်ပေးထားပါ။\n" + str(exc)
+        )
+        return
+    except Exception as exc:
+        log.warning("Three-part recap voice generation failed (%s)", type(exc).__name__)
+        await update.message.reply_text(
+            "သုံးပိုင်း MP3 ဖန်တီးမှု မအောင်မြင်ပါ။ အပိုင်းအားလုံးကို ပြန်စစ်ပြီးမှ ထပ်လုပ်ပါ။"
+        )
+        return
+
+    evaluation = evaluate_audio_parts(platform, durations)
+    await update.message.reply_text(format_audio_parts_qa_report(platform, evaluation))
+    ready_label = (
+        "DURATION PASS — လူကိုယ်တိုင် နောက်ဆုံးစစ်ဆေးရန်"
+        if evaluation["status"] == "DURATION PASS"
+        else "DURATION FAIL — မထုတ်ဝေရသေး၊ Script ကို ပြင်ဆင်ရန်"
+    )
+    for index, audio, srt_text in generated:
+        audio_name = f"nexora_recap_{platform}_part_{index}.mp3"
+        audio_file = BytesIO(audio)
+        audio_file.name = audio_name
+        await update.message.reply_document(
+            document=InputFile(audio_file, filename=audio_name),
+            caption=f"🎙️ {platform.upper()} Part {index}/3 — {ready_label}",
+            read_timeout=120,
+            write_timeout=120,
+        )
+        subtitle_name = f"nexora_recap_{platform}_part_{index}.srt"
+        subtitle_file = BytesIO(srt_text.encode("utf-8-sig"))
+        subtitle_file.name = subtitle_name
+        await update.message.reply_document(
+            document=InputFile(subtitle_file, filename=subtitle_name),
+            caption=f"Part {index} အတွက် WordBoundary အချိန်မှတ်တမ်းဖြင့် ချိန်ညှိထားသော SRT။ လူကိုယ်တိုင် ပြန်စစ်ပါ။",
+        )
+
+
 async def scenetts_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate separate MP3 and aligned SRT files for each tagged scene."""
     if not update.message or not update.message.text:
@@ -2590,7 +2669,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("topratedepisodes", topratedepisodes_cmd))
     telegram_app.add_handler(CommandHandler("episodepack", episodepack_cmd))
     telegram_app.add_handler(CommandHandler("episodeoutline", episodeoutline_cmd))
-    telegram_app.add_handler(CommandHandler("recapvoice", recapvoice_cmd))
+    telegram_app.add_handler(CommandHandler("recapvoice", recapvoice_cmd))\n    telegram_app.add_handler(CommandHandler("recapvoice3", recapvoice3_cmd))
     telegram_app.add_handler(CommandHandler("recapvideo", recapvideo_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
