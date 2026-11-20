@@ -3,7 +3,7 @@ from datetime import date
 
 from daily_auto import (
     MOVIE_ROTATION, TITLE_CATEGORIES, build_daily_message, category_for_title,
-    region_for_title, format_for_title, select_daily_movie, split_telegram_text,
+    region_for_title, format_for_title, select_daily_movie, split_telegram_text,\n    select_daily_platform_titles, build_platform_daily_message,
 )
 
 
@@ -81,6 +81,51 @@ class DailyAutoTests(unittest.TestCase):
         self.assertEqual("".join(chunks), "x" * 8000)
         self.assertTrue(all(len(chunk) <= 3900 for chunk in chunks))
 
+
+
+    def test_daily_platform_selection_uses_three_distinct_categories(self):
+        selected = select_daily_platform_titles(date(2026, 11, 20))
+        self.assertEqual(set(selected), {"youtube", "facebook", "tiktok"})
+        self.assertEqual(len({item["category"] for item in selected.values()}), 3)
+        self.assertEqual(len({item["title"] for item in selected.values()}), 3)
+
+    def test_daily_platform_selection_ranks_by_recent_pageviews(self):
+        pageviews = {
+            "categories": {
+                "Anime": [{"title": "Frieren: Beyond Journey's End", "recent_views": 1000}],
+                "3D Animation": [{"title": "Ne Zha", "recent_views": 900}],
+                "Cartoon": [{"title": "Gravity Falls", "recent_views": 800}],
+                "Donghua": [{"title": "Link Click", "recent_views": 700}],
+                "International Movies": [{"title": "Train to Busan", "recent_views": 600}],
+            }
+        }
+        selected = select_daily_platform_titles(date(2026, 11, 20), pageviews)
+        self.assertEqual(selected["youtube"]["title"], "Frieren: Beyond Journey's End")
+        self.assertEqual(selected["facebook"]["title"], "Ne Zha")
+        self.assertEqual(selected["tiktok"]["title"], "Gravity Falls")
+
+    def test_tiktok_daily_pack_has_cross_platform_follow_cta(self):
+        import os
+        from unittest.mock import patch
+        item = {"title": "Link Click", "category": "Donghua", "recent_wikipedia_views": 100}
+        with patch.dict(os.environ, {
+            "YOUTUBE_CHANNEL_URL": "https://youtube.com/@nexora",
+            "FACEBOOK_PAGE_URL": "https://facebook.com/nexora",
+        }):
+            result = build_platform_daily_message("tiktok", item, "Verified research")
+        self.assertIn("YouTube ကို Subscribe", result)
+        self.assertIn("Facebook Page ကို Follow", result)
+        self.assertIn("https://youtube.com/@nexora", result)
+        self.assertIn("https://facebook.com/nexora", result)
+
+    def test_platform_daily_packs_have_different_format_and_duration(self):
+        item = {"title": "Train to Busan", "category": "International Movies"}
+        youtube = build_platform_daily_message("youtube", item, "Research")
+        facebook = build_platform_daily_message("facebook", item, "Research")
+        tiktok = build_platform_daily_message("tiktok", item, "Research")
+        self.assertIn("၁၅–၂၀ မိနစ်", youtube)
+        self.assertIn("၁၀–၁၅ မိနစ်", facebook)
+        self.assertIn("၁–၃ မိနစ်", tiktok)
 
 if __name__ == "__main__":
     unittest.main()
