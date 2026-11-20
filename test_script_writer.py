@@ -44,6 +44,7 @@ class TitleClassificationTests(unittest.TestCase):
         self.assertIn("Extended Long-form", outline)
         self.assertEqual(DEFAULT_DURATIONS["facebook"], "46-60")
         self.assertEqual(DEFAULT_DURATIONS["tiktok"], "4-7")
+        plan = generate_all_platform_plan("Pororo")
         self.assertIn("တစ်ပိုင်းလျှင် ၄–၇ မိနစ်", plan)
 
 
