@@ -3,7 +3,8 @@ from unittest.mock import patch, Mock
 
 from audio_duration_qa import (
     evaluate_audio_duration,
-    evaluate_audio_parts,\n    format_audio_parts_qa_report,
+    evaluate_audio_parts,
+    format_audio_parts_qa_report,
     format_audio_qa_report,
     parse_ffmpeg_audio_metadata,
 )
