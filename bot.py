@@ -2304,7 +2304,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "Commands:\n/start\n/status\n/create <topic>\n/mode free|ai\n/srt\n/srtmy\n/tts female|male\n/platform youtube|tiktok|facebook\n/duration <minutes>\n/settings\n/help\n\n"
             "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 46-60\nTikTok: 1-3, 3-5, 4-7\nFacebook: 3-5, 5-7, 8-10, 10-15, 46-60\n"
-            "TikTok: 1-3, 3-5\nFacebook: 3-5, 5-7, 8-10, 10-15\n\n"
+            "\n"
             "/auto သည် Wikipedia မှ source lead များရှာပေးသည်၊ အချက်အလက်ကို ကိုယ်တိုင်ပြန်စစ်ပါ။\n"
             "/multisourceresearch <Anime အမည်> သည် AniList + Tenrai/MAL + Wikidata metadata ကို တစ်ပြိုင်နက်စစ်ပေးသည်။\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> သည် TMDB + Wikidata metadata ကို စစ်ပေးသည်။\n"
