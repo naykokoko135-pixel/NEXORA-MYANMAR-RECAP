@@ -12,6 +12,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from wikidata_metadata import fetch_wikidata_metadata
+from bcdb_cartoon_catalogue import fetch_bcdb_popular_cartoon
+from blender_open_movies_catalogue import fetch_blender_open_movie
 
 BANGUMI_SEARCH_URL = "https://api.bgm.tv/v0/search/subjects"
 USER_AGENT = "NEXORA-Myanmar-Recap/2.0 (free animation catalogue research)"
@@ -126,16 +128,20 @@ def research_animation_catalogues(title):
             "3d_animation": invalid,
         }
 
-    with ThreadPoolExecutor(max_workers=2) as pool:
+    with ThreadPoolExecutor(max_workers=3) as pool:
         bangumi_future = pool.submit(fetch_bangumi_animation, clean)
+        bcdb_future = pool.submit(fetch_bcdb_popular_cartoon, clean)
         wikidata_future = pool.submit(_safe_wikidata, clean)
         bangumi = bangumi_future.result()
+        bcdb = bcdb_future.result()
         wikidata = wikidata_future.result()
+    blender = fetch_blender_open_movie(clean)
 
     countries = [str(value) for value in (wikidata.get("countries") or [])] if wikidata.get("found") else []
     country_text = " ".join(countries).casefold()
     china_origin = any(term in country_text for term in ("china", "people's republic of china", "တရုတ်"))
     india_origin = any(term in country_text for term in ("india", "အိန္ဒိယ"))
+    japan_origin = any(term in country_text for term in ("japan", "ဂျပန်"))
 
     if bangumi.get("found") and china_origin:
         donghua = {
@@ -166,6 +172,22 @@ def research_animation_catalogues(title):
             "found": False,
             "status": "Wikidata တွင် အိန္ဒိယမူရင်းနိုင်ငံကို တွေ့ရှိသဖြင့် ဒီ Project အတွက် ပယ်ချထားပါသည်။",
             "india_excluded": True,
+            "bcdb": bcdb,
+        }
+    elif japan_origin or china_origin:
+        cartoon = {
+            "found": False,
+            "status": "Wikidata မူရင်းနိုင်ငံအရ Japan/China ဖြစ်နေသဖြင့် Cartoon အဖြစ် မခွဲထားပါ။ Anime/Donghua track ကို စစ်ဆေးပါ။",
+            "bcdb": bcdb,
+        }
+    elif bcdb.get("found"):
+        cartoon = {
+            "found": True, "provider": "The Big Cartoon DataBase (BCDB)",
+            "title": bcdb.get("title"), "source": bcdb.get("provider_url"),
+            "catalogue_url": bcdb.get("catalogue_url"),
+            "countries": countries, "year": wikidata.get("year") if wikidata.get("found") else None,
+            "origin_verified": bool(countries),
+            "notice": "BCDB facts/compilation CC BY 4.0; credit BCDB. BCDB page-view ranking is not platform trend data. Country must be verified before production.",
         }
     elif wikidata.get("found") and _description_matches(wikidata.get("description"), "cartoon"):
         cartoon = {
@@ -173,13 +195,14 @@ def research_animation_catalogues(title):
             "title": wikidata.get("title"), "description": wikidata.get("description"),
             "countries": countries, "year": wikidata.get("year"),
             "source": wikidata.get("source"),
+            "origin_verified": bool(countries),
             "notice": "Cartoon/animated-work discovery lead; Wikidata description is community-edited.",
         }
     else:
         cartoon = {
             "found": False,
-            "status": "Wikidata တွင် Cartoon/Animated work ဟု တိတိကျကျဖော်ပြထားသော မှတ်တမ်း မတွေ့ပါ။",
-            "wikidata": wikidata,
+            "status": "BCDB Popular စာရင်းနှင့် Wikidata တွင် Cartoon/Animated work ဟု အတည်ပြုနိုင်သော မှတ်တမ်း မတွေ့ပါ။",
+            "bcdb": bcdb, "wikidata": wikidata,
         }
 
     if india_origin:
@@ -187,6 +210,14 @@ def research_animation_catalogues(title):
             "found": False,
             "status": "Wikidata တွင် အိန္ဒိယမူရင်းနိုင်ငံကို တွေ့ရှိသဖြင့် ဒီ Project အတွက် ပယ်ချထားပါသည်။",
             "india_excluded": True,
+        }
+    elif blender.get("found"):
+        three_d = {
+            "found": True, "provider": blender.get("provider"),
+            "title": blender.get("title"), "year": blender.get("year"),
+            "source": blender.get("source"), "catalogue_url": blender.get("catalogue"),
+            "wikidata": wikidata,
+            "notice": "Blender Studio official open-movie curated 3D subset. This is not a full 3D catalogue; verify title-specific rights before using footage.",
         }
     elif wikidata.get("found") and _description_matches(wikidata.get("description"), "3d_animation"):
         three_d = {
@@ -209,6 +240,8 @@ def research_animation_catalogues(title):
         "cartoon": cartoon,
         "3d_animation": three_d,
         "bangumi": bangumi,
+        "bcdb": bcdb,
+        "blender_open_movie": blender,
         "wikidata": wikidata,
     }
 
@@ -234,24 +267,32 @@ def format_animation_catalogue_report(report):
     else:
         lines.append(str(donghua.get("status") or "အတည်မပြုနိုင်ပါ။"))
 
-    lines.extend(["", "【CARTOON — Wikidata open catalogue lead】"])
+    lines.extend(["", "【CARTOON — BCDB + Wikidata open catalogue】"])
     cartoon = report.get("cartoon") or {}
     if cartoon.get("found"):
         lines.extend([
             "အမည်: " + str(cartoon.get("title") or "မရရှိပါ"),
-            "ဖော်ပြချက်: " + str(cartoon.get("description") or "မရရှိပါ"),
+            "ဖော်ပြချက်: " + str(cartoon.get("description") or "Cartoon catalogue record"),
             "Source: " + str(cartoon.get("source") or ""),
+            "နိုင်ငံအတည်ပြုချက်: " + ("ရရှိ" if cartoon.get("origin_verified") else "မရရှိသေး — production မစတင်ရ"),
         ])
+        if cartoon.get("provider") == "The Big Cartoon DataBase (BCDB)":
+            lines.extend([
+                "BCDB Catalogue: " + str(cartoon.get("catalogue_url") or ""),
+                "Attribution: The Big Cartoon DataBase (bcdb.com), CC BY 4.0",
+                "သတိပြုရန်: BCDB Popular စာရင်း၏ page views သည် social-platform trend data မဟုတ်ပါ။",
+            ])
     else:
         lines.append(str(cartoon.get("status") or "ရင်းမြစ် မရရှိပါ။"))
 
-    lines.extend(["", "【3D ANIMATION — Wikidata open catalogue lead】"])
+    lines.extend(["", "【3D ANIMATION — Blender Open Movies + Wikidata】"])
     three_d = report.get("3d_animation") or {}
     if three_d.get("found"):
         lines.extend([
             "အမည်: " + str(three_d.get("title") or "မရရှိပါ"),
-            "ဖော်ပြချက်: " + str(three_d.get("description") or "မရရှိပါ"),
+            "ဖော်ပြချက်: " + str(three_d.get("description") or "3D Open Movie catalogue record"),
             "Source: " + str(three_d.get("source") or ""),
+            "Catalogue: " + str(three_d.get("catalogue_url") or ""),
         ])
     else:
         lines.append(str(three_d.get("status") or "ရင်းမြစ် မရရှိပါ။"))
@@ -259,6 +300,8 @@ def format_animation_catalogue_report(report):
     lines.extend([
         "",
         "ရင်းမြစ်အမျိုးအစား: Bangumi သည် အရှေ့အာရှ Animation catalogue ဖြစ်ပြီး Donghua သီးသန့် catalogue မဟုတ်ပါ။",
+        "BCDB သည် Cartoon catalogue ဖြစ်ပြီး /most-popular စာရင်းကိုသာ ဖတ်သည်။ /search ကို robots.txt က ပိတ်ထားသဖြင့် မသုံးပါ။",
+        "Blender Studio သည် 3D Open Movies ၏ curated subset သာဖြစ်ပြီး 3D Animation ကမ္ဘာလုံးဆိုင်ရာ catalogue မဟုတ်ပါ။",
         "Wikidata သည် CC0 Open Data ဖြစ်သော်လည်း Cartoon/3D ဖော်ပြချက်များ မပြည့်စုံနိုင်ပါ။",
         "ဒီအချက်အလက်များသည် discovery lead သာဖြစ်ပြီး ဇာတ်ကွက်အတည်ပြုချက် သို့မဟုတ် footage/license ခွင့်ပြုချက် မဟုတ်ပါ။",
     ])
