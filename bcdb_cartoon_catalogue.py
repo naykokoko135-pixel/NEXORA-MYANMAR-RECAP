@@ -24,8 +24,8 @@ _LOCK = threading.Lock()
 
 
 def _norm(value):
-    value = re.sub(r"\\s*\\(\\d{4}\\)\\s*$", "", str(value or "").casefold())
-    return " ".join(re.findall(r"[^\\W_]+", value, flags=re.UNICODE))
+    value = re.sub(r"\s*\(\d{4}\)\s*$", "", str(value or "").casefold())
+    return " ".join(re.findall(r"[^\W_]+", value, flags=re.UNICODE))
 
 
 class _PopularPageParser(HTMLParser):
@@ -44,7 +44,7 @@ class _PopularPageParser(HTMLParser):
             self.heading = []
         elif tag == "a":
             href = str(attrs.get("href") or "")
-            match = re.match(r"^/cartoon/(\\d+)(?:-[^/?#]+)?/?$", href)
+            match = re.match(r"^/cartoon/(\d+)(?:-[^/?#]+)?/?$", href)
             if match:
                 self.current = {
                     "id": match.group(1),
