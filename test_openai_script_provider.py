@@ -11,9 +11,16 @@ class OpenAIScriptProviderTests(unittest.TestCase):
             self.assertFalse(provider.openai_script_status()["configured"])
 
     def test_requires_verified_notes(self):
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key", "NEXORA_ALLOW_PAID_AI": "1"}):
             with self.assertRaises(provider.AIScriptError):
                 provider.generate_burmese_recap_script("Example", "too short")
+
+    def test_paid_api_disabled_by_default_even_when_key_exists(self):
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
+            self.assertFalse(provider.openai_script_status()["configured"])
+            self.assertTrue(provider.openai_script_status()["key_present"])
+            with self.assertRaisesRegex(provider.AIScriptError, "Free-only mode"):
+                provider.generate_burmese_recap_script("Example", "A" * 100)
 
     def test_missing_key_fails_closed(self):
         with patch.dict(os.environ, {}, clear=True):
