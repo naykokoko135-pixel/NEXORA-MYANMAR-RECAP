@@ -51,7 +51,7 @@ class AudioDurationQATests(unittest.TestCase):
         self.assertEqual(evaluate_audio_parts("tiktok", [300, 300])["status"], "NOT READY")
 
     def test_each_longform_part_and_total_are_checked(self):
-        result = evaluate_audio_parts("youtube", [14 * 60, 16 * 60, 16 * 60])
+        result = evaluate_audio_parts("youtube", [14 * 60, 15 * 60, 15 * 60])
         self.assertEqual(result["status"], "DURATION FAIL")
         self.assertTrue(any("Part 1" in issue for issue in result["issues"]))
         self.assertTrue(any("စုစုပေါင်း" in issue for issue in result["issues"]))
