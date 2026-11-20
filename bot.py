@@ -33,6 +33,7 @@ from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
 from youtube_cc_finder import search_youtube_cc_videos, YouTubeCCSearchError
 from youtube_movie_recap_research import search_youtube_movie_recaps, format_youtube_movie_recaps, YouTubeRecapResearchError
+from recap_studio import build_original_recap_notes
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
 from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note, _subtitle_duration_seconds
 from wikidata_metadata import fetch_wikidata_metadata
@@ -434,6 +435,61 @@ async def voiceover_notes_message(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_document(document=InputFile(file_obj, filename=file_obj.name), caption=f"🎙️ {title} — Part {index}/3")
     context.user_data.pop("pending_voiceover", None)
 
+
+
+async def recapstudio_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Create an original Burmese recap draft informed by metadata-only competitor research."""
+    if not update.message:
+        return
+    title = " ".join(context.args).strip()
+    if not title:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /recapstudio <နိုင်ငံခြားရုပ်ရှင်အမည်>\n"
+            "ဥပမာ: /recapstudio Parasite\n"
+            "TMDB/Wikidata အချက်အလက်နှင့် နိုင်ငံခြား Recap Channel metadata ကို လေ့လာပြီး "
+            "ကိုယ်ပိုင်မြန်မာ Recap Draft တည်ဆောက်ပေးပါမယ်။"
+        )
+        return
+    platform = context.user_data.get("platform", "youtube")
+    duration = context.user_data.get("duration", DEFAULT_DURATIONS.get(platform, "8-10"))
+    await update.message.reply_text(
+        "🎬 ရုပ်ရှင်အချက်အလက်၊ နိုင်ငံခြား Recap Channel trend metadata နှင့် "
+        "မူရင်းမြန်မာဇာတ်ညွှန်းကို ပြင်ဆင်နေပါတယ်..."
+    )
+    try:
+        movie_report = await asyncio.to_thread(research_movie_sources, title)
+        examples = []
+        try:
+            examples = await asyncio.to_thread(search_youtube_movie_recaps, title, 8)
+        except YouTubeRecapResearchError as exc:
+            log.info("Optional foreign recap research unavailable: %s", exc)
+        notes = build_original_recap_notes(movie_report, examples)
+        script = await asyncio.to_thread(
+            generate_burmese_recap_script, title, notes, platform, duration
+        )
+    except ValueError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    except AIScriptError as exc:
+        await update.message.reply_text(
+            "Research Notes ပြင်ဆင်ပြီးပါပြီ၊ သို့သော် AI Script မထုတ်နိုင်ပါ။\n" + str(exc)
+        )
+        return
+    except Exception:
+        log.exception("Original recap studio failed")
+        await update.message.reply_text("Original Recap Studio မအောင်မြင်ပါ။")
+        return
+    output = (
+        "🎬 NEXORA ORIGINAL MYANMAR RECAP DRAFT — " + title + "\\n"
+        + "Platform: " + platform + " | Duration: " + str(duration) + " minutes\\n"
+        + "နိုင်ငံခြား Channel များမှ metadata သာလေ့လာထားပြီး Script/အသံ/Footage ကို မကူးယူထားပါ။\\n\\n"
+        + script
+        + "\\n\\nသတိ: ရရှိသော catalogue synopsis ထက်ကျော်လွန်သည့် scene/ending များကို "
+        "မူရင်း plot source ဖြင့် ထပ်မံစစ်ဆေးပါ။ ထုတ်ဝေမီ footage အသုံးပြုခွင့်နှင့် "
+        "Attribution ကို စစ်ဆေးပါ။"
+    )
+    for start_at in range(0, len(output), 3900):
+        await update.message.reply_text(output[start_at:start_at + 3900])
 
 
 async def recapchannels_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2324,6 +2380,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("voiceover3", voiceover3_cmd))
     telegram_app.add_handler(CommandHandler("clipsource", clipsource_cmd))
     telegram_app.add_handler(CommandHandler("recapchannels", recapchannels_cmd))
+    telegram_app.add_handler(CommandHandler("recapstudio", recapstudio_cmd))
     telegram_app.add_handler(CommandHandler("autoclip", autoclip_cmd))
     telegram_app.add_handler(CommandHandler("autonarrateclip", autonarrateclip_cmd))
     telegram_app.add_handler(CommandHandler("autofactsclip", autofactsclip_cmd))
