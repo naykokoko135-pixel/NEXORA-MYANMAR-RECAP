@@ -3,7 +3,8 @@ from datetime import date
 
 from daily_auto import (
     MOVIE_ROTATION, TITLE_CATEGORIES, build_daily_message, category_for_title,
-    region_for_title, format_for_title, select_daily_movie, split_telegram_text,\n    select_daily_platform_titles, build_platform_daily_message,
+    region_for_title, format_for_title, select_daily_movie, split_telegram_text,
+    select_daily_platform_titles, build_platform_daily_message,
 )
 
 
