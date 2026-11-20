@@ -110,7 +110,7 @@ def fetch_bangumi_episode_summaries(title, limit=5):
             float(ep.get("number")) if str(ep.get("number") or "").replace(".", "", 1).isdigit() else 999999,
             ep.get("title", ""),
         ))
-        episodes = episodes[:max(1, min(int(limit), 10))]
+        episodes = episodes[:max(1, min(int(limit), 20))]
         if not episodes:
             return {"found": False, "status": "Bangumi မှ အသုံးပြုနိုင်သော Main Story Episode မတွေ့ပါ။"}
         return {

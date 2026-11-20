@@ -105,7 +105,7 @@ def fetch_tvmaze_episode_summaries(title, limit=5):
         count = int(limit)
     except (TypeError, ValueError):
         count = 5
-    count = max(1, min(count, 5))
+    count = max(1, min(count, 20))
     if not requested or len(requested) > 120:
         return {"found": False, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
     try:
