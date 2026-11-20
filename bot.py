@@ -31,6 +31,7 @@ from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_
 from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError
 from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
+from youtube_cc_finder import search_youtube_cc_videos, YouTubeCCSearchError
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
 from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note, _subtitle_duration_seconds
 from wikidata_metadata import fetch_wikidata_metadata
@@ -442,10 +443,10 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not query:
         await update.message.reply_text(
             "အသုံးပြုပုံ: /clipsource <Anime/ရုပ်ရှင်/Scene အမည်>\n"
-            "Wikimedia Commons နှင့် Europeana မှ CC0/CC BY/CC BY-SA/Public Domain Video မှတ်တမ်းများကို ရှာပေးမည်။"
+            "Wikimedia Commons၊ Europeana နှင့် YouTube CC BY မှတ်တမ်းများကို ရှာပေးမည်။ YouTube ရှာရန် YOUTUBE_DATA_API_KEY လိုအပ်သည်။"
         )
         return
-    await update.message.reply_text("Commons နှင့် Europeana မှ လိုင်စင် metadata ပါသော Video မှတ်တမ်းများကို ရှာနေပါတယ်...")
+    await update.message.reply_text("Commons၊ Europeana နှင့် (API key ရှိပါက) YouTube CC BY မှတ်တမ်းများကို ရှာနေပါတယ်...")
     results = []
     errors = []
     try:
@@ -478,6 +479,11 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             results.extend(europeana)
         except EuropeanaSearchError as exc:
             errors.append("Europeana: " + str(exc))
+    try:
+        youtube_sources = await asyncio.to_thread(search_youtube_cc_videos, query, 5)
+        results.extend(youtube_sources)
+    except YouTubeCCSearchError as exc:
+        errors.append("YouTube CC: " + str(exc))
     if not results:
         detail = ("\n" + "\n".join(errors)) if errors else ""
         await update.message.reply_text(
@@ -488,11 +494,16 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for item in results[:10]:
         title = str(item.get("title", "Untitled")).replace("File:", "")
         source_name = item.get("source", "Wikimedia Commons")
-        download_note = (
-            "Europeana မှတ်တမ်းသာဖြစ်သည်။ မီဒီယာကို အလိုအလျောက် ဒေါင်းလုဒ်မလုပ်ပါ။ Provider စာမျက်နှာရှိ ခွင့်ပြုချက်ကို ပြန်စစ်ပါ။"
-            if item.get("download_enabled") is False else
-            "ထုတ်ဝေမီ လိုင်စင်နှင့် Attribution စည်းကမ်းကို ပြန်စစ်ပါ။"
-        )
+        if source_name == "YouTube":
+            download_note = (
+                "YouTube CC BY metadata တွေ့ရှိသည်။ Uploader က footage/audio အားလုံး၏ အခွင့်အရေးပိုင်ရှင်ဖြစ်ကြောင်း "
+                "နှင့် CC BY သက်ဆိုင်မှုကို လူကိုယ်တိုင်စစ်ပါ။ NEXORA သည် YouTube stream ကို download/extract မလုပ်ပါ။ "
+                "Creator ထံမှ ခွင့်ပြုထားသော မူရင်းဖိုင်ရရှိမှသာ ထုတ်လုပ်မှုတွင် ထည့်သုံးပါ။"
+            )
+        elif item.get("download_enabled") is False:
+            download_note = "Europeana မှတ်တမ်းသာဖြစ်သည်။ မီဒီယာကို အလိုအလျောက် ဒေါင်းလုဒ်မလုပ်ပါ။ Provider စာမျက်နှာရှိ ခွင့်ပြုချက်ကို ပြန်စစ်ပါ။"
+        else:
+            download_note = "ထုတ်ဝေမီ လိုင်စင်နှင့် Attribution စည်းကမ်းကို ပြန်စစ်ပါ။"
         await update.message.reply_text(
             f"🎞 [{source_name}] {title}\nလိုင်စင်: {item.get('license', 'မသိရှိ')}\n"
             f"ဖန်တီးသူ: {str(item.get('artist', 'Unknown'))[:250]}\n"
