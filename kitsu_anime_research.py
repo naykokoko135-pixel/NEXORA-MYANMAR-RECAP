@@ -117,7 +117,7 @@ def fetch_kitsu_episode_summaries(title, limit=5):
             if item.get("type") != "episodes" or str(item.get("id")) not in allowed_ids:
                 continue
             attrs = item.get("attributes") or {}
-            synopsis = re.sub(r"\\s+", " ", str(attrs.get("synopsis") or attrs.get("description") or "")).strip()
+            synopsis = re.sub(r"\s+", " ", str(attrs.get("synopsis") or attrs.get("description") or "")).strip()
             if len(synopsis) < 35:
                 continue
             episodes.append({
