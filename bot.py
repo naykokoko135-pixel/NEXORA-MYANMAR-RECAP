@@ -480,11 +480,11 @@ async def recapstudio_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Original Recap Studio မအောင်မြင်ပါ။")
         return
     output = (
-        "🎬 NEXORA ORIGINAL MYANMAR RECAP DRAFT — " + title + "\\n"
-        + "Platform: " + platform + " | Duration: " + str(duration) + " minutes\\n"
-        + "နိုင်ငံခြား Channel များမှ metadata သာလေ့လာထားပြီး Script/အသံ/Footage ကို မကူးယူထားပါ။\\n\\n"
+        "🎬 NEXORA ORIGINAL MYANMAR RECAP DRAFT — " + title + "\n"
+        + "Platform: " + platform + " | Duration: " + str(duration) + " minutes\n"
+        + "နိုင်ငံခြား Channel များမှ metadata သာလေ့လာထားပြီး Script/အသံ/Footage ကို မကူးယူထားပါ။\n\n"
         + script
-        + "\\n\\nသတိ: ရရှိသော catalogue synopsis ထက်ကျော်လွန်သည့် scene/ending များကို "
+        + "\n\nသတိ: ရရှိသော catalogue synopsis ထက်ကျော်လွန်သည့် scene/ending များကို "
         "မူရင်း plot source ဖြင့် ထပ်မံစစ်ဆေးပါ။ ထုတ်ဝေမီ footage အသုံးပြုခွင့်နှင့် "
         "Attribution ကို စစ်ဆေးပါ။"
     )
