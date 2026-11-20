@@ -110,7 +110,7 @@ Jikan's public API was discontinued on 1 October 2026, so NEXORA does not depend
 
 The universal `/multisourceresearch <title>` report now includes a separate Cartoon / Donghua / 3D Animation catalogue section.
 
-- **Bangumi public API**: an East-Asian animation catalogue searched by exact title and animation subject type. It is a discovery source, not a Donghua-only database. A Bangumi match is labelled as a Donghua candidate only when Wikidata independently reports China as a production country. Bangumi's current v0 search API is experimental and may change; no access token is configured or required by this integration's optional-auth read request.
+- **Bangumi public API**: an East-Asian animation catalogue searched by exact title and animation subject type. It is a discovery source, not a Donghua-only database. A Bangumi match is labelled as a Donghua candidate only when Wikidata independently reports China as a production country. Bangumi's current v0 search API is experimental and may change; this integration uses its optional-auth, read-only search endpoint without a private token or write scopes.
 - **Wikidata**: public CC0 structured open data provides country and descriptive cross-checks. Cartoon classification requires an explicit animated/cartoon description. 3D classification requires an explicit 3D/computer-animation description; the bot does not infer 3D from the generic Animation genre.
 - **TVmaze**: remains a free, general TV-series catalogue with Animation genre and episode data, not a dedicated Cartoon or Donghua catalogue.
 
