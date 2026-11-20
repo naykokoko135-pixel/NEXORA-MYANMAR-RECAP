@@ -79,7 +79,7 @@ def _candidate_matches_media_type(item, expected_media_type):
     if media_type == "animated series":
         return any(term in description for term in (
             "anime television series", "animated television series",
-            "animated series", "television anime",
+            "animated series", "anime series", "television anime",
         ))
     if media_type == "animated film":
         return any(term in description for term in (
