@@ -82,6 +82,10 @@ Use `/research <movie title>` to record release details, plot checkpoints, uncer
 ## Automatic source discovery
 Use `/auto Avatar` to search English Wikipedia for up to three article summaries and source links. The lookup prioritizes a page whose title matches the requested movie name, then labels other matches as related results. The lookup uses the public MediaWiki API and requires no API key or paid AI service. Wikipedia is community-edited, results may be incomplete or unrelated, and this feature does not verify facts against the movie or official sources. Treat results as research leads and cross-check them before writing.
 
+## Daily platform category and title rotation
+
+The Daily Auto selector rotates each platform through the five editorial categories (Anime, 3D Animation, Cartoon, Donghua, International Movies) every Thailand-local day. YouTube, Facebook and TikTok use separate cycle offsets, so their categories and titles are distinct on the same day and each platform changes category on the next day. Wikipedia pageviews rank sampled titles only inside the category already assigned to that platform; they cannot override the rotation. When a category has fewer than two valid sampled titles, the curated title catalogue is used to avoid repeating a single sampled title on each return to that category. This is a deterministic rotation and does not claim to measure YouTube, Facebook or TikTok views.
+
 ## Anime synopsis research with AniList
 
 Use `/animesynopsis <Anime title>` to look up an exact-title Anime entry through the public AniList GraphQL API. NEXORA returns the title, format, year, episode count (when available), source link, and a short synopsis. No API key or paid AI provider is required.
