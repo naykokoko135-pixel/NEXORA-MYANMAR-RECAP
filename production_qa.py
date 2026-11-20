@@ -12,7 +12,7 @@ PLATFORM_TARGETS = {
     "tiktok": {"parts": 1, "part_min": 4 * 60, "part_max": 7 * 60, "total_min": 4 * 60, "total_max": 7 * 60},
 }
 PLATFORM_ALIASES = {"yt": "youtube", "fb": "facebook", "tt": "tiktok"}
-PART_MARKER = re.compile(r"^\s*\[PART\s*([1-3])\]\s*$", re.IGNORECASE)
+PART_MARKER = re.compile(r"^\s*\[PART\s*(\d+)\]\s*$", re.IGNORECASE)
 SRT_MARKER = re.compile(r"^\s*\[SRT\]\s*$", re.IGNORECASE)
 TIME_LINE = re.compile(
     r"^(\d{2,}:\d{2}:\d{2},\d{3})\s+-->\s+(\d{2,}:\d{2}:\d{2},\d{3})$"
