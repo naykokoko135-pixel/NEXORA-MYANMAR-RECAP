@@ -189,6 +189,7 @@ class VideoRendererValidationTests(unittest.TestCase):
             )
 
 
+
 class AutomaticRenderSubtitleQATests(unittest.TestCase):
     def test_valid_srt_passes_when_timing_matches_measured_audio(self):
         srt = "1\\n00:00:00,000 --> 00:00:10,000\\nမြန်မာစာတန်း\\n"
@@ -207,6 +208,7 @@ class AutomaticRenderSubtitleQATests(unittest.TestCase):
             validate_render_subtitles("not an SRT", 10.0)
 
     def test_render_pipeline_runs_automatic_srt_qa(self):
+        from contextlib import ExitStack
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "out.mp4"
 
@@ -216,10 +218,11 @@ class AutomaticRenderSubtitleQATests(unittest.TestCase):
 
             fake_ffmpeg = SimpleNamespace(get_ffmpeg_exe=lambda: "ffmpeg")
             srt = "1\\n00:00:00,000 --> 00:00:02,000\\nမြန်မာစာတန်း\\n"
-            with patch.dict(sys.modules, {"imageio_ffmpeg": fake_ffmpeg}), \\
-                 patch("video_renderer._duration_seconds", return_value=2.0), \\
-                 patch("video_renderer.validate_render_subtitles", wraps=validate_render_subtitles) as qa, \\
-                 patch("subprocess.run", side_effect=fake_render):
+            with ExitStack() as stack:
+                stack.enter_context(patch.dict(sys.modules, {"imageio_ffmpeg": fake_ffmpeg}))
+                stack.enter_context(patch("video_renderer._duration_seconds", return_value=2.0))
+                qa = stack.enter_context(patch("video_renderer.validate_render_subtitles", wraps=validate_render_subtitles))
+                stack.enter_context(patch("subprocess.run", side_effect=fake_render))
                 render_slideshow(
                     [("cover.jpg", b"image")],
                     ("voice.mp3", b"audio"),
