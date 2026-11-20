@@ -10,6 +10,7 @@ import time
 from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from urllib.parse import urljoin, urlparse
 
 BASE_URL = "https://www.bcdb.com"
 POPULAR_URL = BASE_URL + "/most-popular"
