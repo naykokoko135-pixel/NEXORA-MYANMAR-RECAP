@@ -124,7 +124,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/voiceprofile export|import - အသံ Profile Backup ထုတ်/ပြန်သွင်းရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
-            "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60 မိနစ်\n"
+            "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 46-60 မိနစ်\nFacebook: 46-60 မိနစ်\nTikTok: 4-7 မိနစ်\n"
             "/settings - လက်ရှိရွေးချယ်မှုကြည့်ရန်\n"
             "/commentstatus - Comment Auto-Reply အခြေအနေ\n"
             "/commentdraft <platform> <comment> - Reply Draft ထုတ်ရန်\n"
@@ -739,7 +739,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             sources = []
             source_search_failed = True
         source = choose_matching_source(query, sources, search_titles)
-        max_duration = {"tiktok": 180, "facebook": 900, "youtube": 2700}[platform]
+        max_duration = {"tiktok": 420, "facebook": 3600, "youtube": 3600}[platform]
         await update.message.reply_text("မြန်မာ Narration + အချိန်ကိုက် SRT ပြင်ဆင်နေပါတယ်...")
         audio, srt_text = await synthesize_burmese_speech_with_srt(script, voice)
         if _subtitle_duration_seconds(srt_text) > max_duration:
@@ -2303,7 +2303,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(
             "Commands:\n/start\n/status\n/create <topic>\n/mode free|ai\n/srt\n/srtmy\n/tts female|male\n/platform youtube|tiktok|facebook\n/duration <minutes>\n/settings\n/help\n\n"
-            "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 45-60\n"
+            "YouTube: 8-10, 12-15, 15-20, 20-30, 30-45, 46-60\nTikTok: 1-3, 3-5, 4-7\nFacebook: 3-5, 5-7, 8-10, 10-15, 46-60\n"
             "TikTok: 1-3, 3-5\nFacebook: 3-5, 5-7, 8-10, 10-15\n\n"
             "/auto သည် Wikipedia မှ source lead များရှာပေးသည်၊ အချက်အလက်ကို ကိုယ်တိုင်ပြန်စစ်ပါ။\n"
             "/multisourceresearch <Anime အမည်> သည် AniList + Tenrai/MAL + Wikidata metadata ကို တစ်ပြိုင်နက်စစ်ပေးသည်။\n"
