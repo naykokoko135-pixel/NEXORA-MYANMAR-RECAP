@@ -63,6 +63,7 @@ from gemini_script_provider import gemini_script_status
 from error_reporter import report_error_to_github
 from comment_autoreply import build_reply, platform_comment_capabilities, run_comment_autoreply_cycle
 from web_console import CONSOLE_HTML, create_console_session, verify_console_session
+from cost_controls import paid_ai_allowed
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -149,13 +150,17 @@ async def chatid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         ai_status = openai_script_status()
-        if ai_status["configured"]:
+        if not paid_ai_allowed():
+            ai_line = "OpenAI Script API: Free-only mode ကြောင့် ပိတ်ထားသည် (အခကြေးငွေရှိနိုင်သော API မခေါ်ပါ)"
+        elif ai_status["configured"]:
             ai_line = f"OpenAI Script API: ချိတ်ထားသည် ({ai_status['model']})"
         else:
             ai_line = "OpenAI Script API: မချိတ်ရသေးပါ (Render တွင် OPENAI_API_KEY လိုအပ်သည်)"
         gemini_status = gemini_script_status()
         gemini_line = (
-            f"Gemini Fallback: ချိတ်ထားသည် ({gemini_status['model']})"
+            "Gemini Fallback: Free-only mode ကြောင့် ပိတ်ထားသည်"
+            if not paid_ai_allowed()
+            else f"Gemini Fallback: ချိတ်ထားသည် ({gemini_status['model']})"
             if gemini_status["configured"]
             else "Gemini Fallback: မချိတ်ရသေးပါ (OpenAI Quota ပြည့်လျှင် GEMINI_API_KEY လိုအပ်သည်)"
         )

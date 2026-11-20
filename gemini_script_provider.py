@@ -10,6 +10,8 @@ import os
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from cost_controls import paid_ai_allowed
+
 # Gemini 2.5 generation is restricted for some newly created projects. Use the
 # current stable Flash model and its documented Interactions REST endpoint.
 DEFAULT_MODEL = "gemini-3.8-flash"
@@ -24,9 +26,13 @@ class GeminiScriptError(RuntimeError):
 
 
 def gemini_script_status() -> dict:
+    key_present = bool(os.getenv("GEMINI_API_KEY", "").strip())
+    allowed = paid_ai_allowed()
     return {
         "provider": "Gemini",
-        "configured": bool(os.getenv("GEMINI_API_KEY", "").strip()),
+        "key_present": key_present,
+        "paid_ai_allowed": allowed,
+        "configured": key_present and allowed,
         "model": os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL,
     }
 
@@ -45,6 +51,8 @@ def _extract_interaction_text(result: dict) -> str:
 
 def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtube",
                                  duration: str = "46-60") -> str:
+    if not paid_ai_allowed():
+        raise GeminiScriptError("Free-only mode ဖွင့်ထားသည်။ အခကြေးငွေရှိနိုင်သော Gemini API ကို ပိတ်ထားသည်။")
     key = os.getenv("GEMINI_API_KEY", "").strip()
     if not key:
         raise GeminiScriptError("Gemini API မချိတ်ရသေးပါ။ Render Environment တွင် GEMINI_API_KEY ထည့်ရန် လိုအပ်ပါတယ်။")
