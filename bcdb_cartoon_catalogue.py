@@ -44,8 +44,9 @@ class _PopularPageParser(HTMLParser):
             self.in_heading = True
             self.heading = []
         elif tag == "a":
-            href = str(attrs.get("href") or "")
-            match = re.match(r"^/cartoon/(\d+)(?:-[^/?#]+)?/?$", href)
+            href = urljoin(BASE_URL, str(attrs.get("href") or ""))
+            path = urlparse(href).path
+            match = re.match(r"^/cartoon/(\d+)(?:-[^/?#]+)?/?$", path)
             if match:
                 self.current = {
                     "id": match.group(1),
