@@ -14,7 +14,19 @@ def build_original_recap_notes(movie_report: dict, recap_examples: list[dict]) -
     if movie_report.get("india_excluded"):
         raise ValueError("အိန္ဒိယမူရင်း/ထုတ်လုပ်မှုပါဝင်သည့် ရုပ်ရှင်ကို NEXORA စည်းမျဉ်းအရ ပယ်ချထားသည်။")
     if not tmdb.get("found") and not wikidata.get("found"):
-        raise ValueError("TMDB/Wikidata မှ အတည်ပြုနိုင်သော ရုပ်ရှင်အချက်အလက် မရရှိပါ။ မခန့်မှန်းဘဲ ရပ်ထားသည်။")
+        # Show safe provider statuses so operators can distinguish missing
+        # credentials from exact-match or upstream network failures.
+        diagnostics = []
+        for provider, result in (("TMDB", tmdb), ("Wikidata", wikidata)):
+            status = str(result.get("status") or "အကြောင်းရင်း မသိရှိပါ။").strip()
+            diagnostics.append(f"{provider}: {status}")
+        detail = "\\n".join(diagnostics)
+        raise ValueError(
+            "TMDB/Wikidata မှ အတည်ပြုနိုင်သော ရုပ်ရှင်အချက်အလက် မရရှိပါ။ "
+            "မခန့်မှန်းဘဲ ရပ်ထားသည်။\\n\\nရင်းမြစ်စစ်ဆေးချက်:\\n" + detail +
+            "\\n\\nTMDB Token မချိတ်ထားပါက Render Environment တွင် "
+            "TMDB_API_READ_ACCESS_TOKEN ကို စစ်ဆေးပါ။ Token တန်ဖိုးကို Chat ထဲ မပို့ပါနှင့်။"
+        )
     lines = [
         "NEXORA ORIGINAL RECAP PRODUCTION BRIEF",
         "Movie: " + title,
