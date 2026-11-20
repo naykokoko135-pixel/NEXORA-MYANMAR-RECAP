@@ -15,6 +15,7 @@ from anilist_synopsis import fetch_anilist_synopsis
 from wikidata_metadata import fetch_wikidata_metadata
 from free_catalogue_research import search_free_catalogue
 from kitsu_anime_research import fetch_kitsu_anime
+from animation_catalogue_research import research_animation_catalogues, format_animation_catalogue_report
 
 TENRAI_API = "https://api.tenrai.org/v1/anime"
 USER_AGENT = "NEXORA-Myanmar-Recap/1.0"
@@ -206,13 +207,15 @@ def research_all_media_sources(title):
         except Exception:
             return {"found": False, "status": "ရင်းမြစ်ကို ယခုချိန်တွင် မရရှိနိုင်ပါ။"}
 
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        animation_catalogues_f = pool.submit(safe, research_animation_catalogues, clean)
         anime_f = pool.submit(safe, research_anime_sources, clean)
         movie_f = pool.submit(safe, research_movie_sources, clean)
         series_f = pool.submit(safe, fetch_tvmaze_synopsis, clean)
         free_f = pool.submit(safe, search_free_catalogue, clean)
         anime, movie, series, free_catalogue = anime_f.result(), movie_f.result(), series_f.result(), free_f.result()
-    return {"title": clean, "anime": anime, "movie": movie, "series": series, "free_catalogue": free_catalogue}
+    animation_catalogues = animation_catalogues_f.result()
+    return {"title": clean, "anime": anime, "movie": movie, "series": series, "free_catalogue": free_catalogue, "animation_catalogues": animation_catalogues}
 
 
 def format_all_media_source_report(report):
@@ -228,6 +231,9 @@ def format_all_media_source_report(report):
         "",
         "━━━━━━━━【 ANIME / ANIMATION 】━━━━━━━━",
         format_anime_source_report(report.get("anime") or {}),
+        "",
+        "━━━━━━━━【 CARTOON / DONGHUA / 3D ANIMATION CATALOGUES 】━━━━━━━━",
+        format_animation_catalogue_report(report.get("animation_catalogues") or {}),
         "",
         "━━━━━━━━【 MOVIE / FILM 】━━━━━━━━",
         format_movie_source_report(report.get("movie") or {}),
