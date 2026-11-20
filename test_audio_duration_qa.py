@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, Mock
 
 from audio_duration_qa import (
-    evaluate_audio_duration,
+    evaluate_audio_duration,\n    evaluate_audio_parts,
     format_audio_qa_report,
     parse_ffmpeg_audio_metadata,
 )
@@ -37,6 +37,30 @@ class AudioDurationQATests(unittest.TestCase):
         self.assertEqual(evaluate_audio_duration("tiktok", 4 * 60)["status"], "DURATION PASS")
         self.assertEqual(evaluate_audio_duration("tt", 7 * 60)["status"], "DURATION PASS")
         self.assertEqual(evaluate_audio_duration("tiktok", 239)["status"], "TOO SHORT")
+
+    def test_measured_three_part_audio_passes_for_youtube_and_facebook(self):
+        durations = [15 * 60, 16 * 60, 15 * 60]
+        for platform in ("youtube", "facebook"):
+            with self.subTest(platform=platform):
+                result = evaluate_audio_parts(platform, durations)
+                self.assertEqual(result["status"], "DURATION PASS")
+                self.assertEqual(result["total_duration_seconds"], 46 * 60)
+
+    def test_measured_part_count_must_be_exact(self):
+        self.assertEqual(evaluate_audio_parts("youtube", [900])["status"], "NOT READY")
+        self.assertEqual(evaluate_audio_parts("tiktok", [300, 300])["status"], "NOT READY")
+
+    def test_each_longform_part_and_total_are_checked(self):
+        result = evaluate_audio_parts("youtube", [14 * 60, 16 * 60, 16 * 60])
+        self.assertEqual(result["status"], "DURATION FAIL")
+        self.assertTrue(any("Part 1" in issue for issue in result["issues"]))
+        self.assertTrue(any("စုစုပေါင်း" in issue for issue in result["issues"]))
+
+    def test_measured_tiktok_single_part_passes(self):
+        self.assertEqual(evaluate_audio_parts("tiktok", [4 * 60])["status"], "DURATION PASS")
+
+    def test_invalid_measured_duration_fails_closed(self):
+        self.assertEqual(evaluate_audio_parts("youtube", [900, float("nan"), 900])["status"], "DURATION FAIL")
 
     def test_unknown_platform_rejected(self):
         self.assertEqual(evaluate_audio_duration("instagram", 300)["status"], "NOT READY")
