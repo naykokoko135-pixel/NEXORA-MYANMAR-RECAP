@@ -9,6 +9,8 @@ from html.parser import HTMLParser
 from urllib.request import Request, urlopen
 import json
 
+from animation_title_aliases import animation_title_match_names, animation_title_variants, normalize_animation_title
+
 API_URL = "https://graphql.anilist.co"
 USER_AGENT = "NEXORA-Myanmar-Recap/1.0"
 
@@ -76,12 +78,13 @@ def fetch_anilist_synopsis(title):
     }
     """
     try:
-        search_terms = [requested]
+        search_terms = animation_title_variants(requested)
         compact = re.sub(r"(?i)\bthe\s+movie\b", " ", requested)
         compact = re.sub(r"[:：–—-]+", " ", compact)
         compact = " ".join(compact.split()).strip()
         if compact and compact.casefold() != requested.casefold():
             search_terms.append(compact)
+        allowed_names = animation_title_match_names(requested)
         candidates_by_id = {}
         for term in search_terms:
             payload = _graphql(query, {"search": term})
@@ -97,7 +100,7 @@ def fetch_anilist_synopsis(title):
         for item in candidates:
             titles = item.get("title") or {}
             names = list(titles.values()) + list(item.get("synonyms") or [])
-            if any(_norm(name) == normalized for name in names if name):
+            if any(normalize_animation_title(name) in allowed_names for name in names if name):
                 exact.append(item)
         if len(exact) != 1:
             return {

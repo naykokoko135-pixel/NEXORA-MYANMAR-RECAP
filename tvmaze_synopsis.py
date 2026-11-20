@@ -10,6 +10,8 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 import json
 
+from animation_title_aliases import animation_title_match_names, animation_title_variants
+
 API_URL = "https://api.tvmaze.com"
 USER_AGENT = "NEXORA-Myanmar-Recap/1.0"
 
@@ -46,13 +48,16 @@ def fetch_tvmaze_synopsis(title):
     if not requested or len(requested) > 120:
         return {"found": False, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
     try:
-        payload = _get_json(API_URL + "/search/shows?q=" + quote(requested))
-        exact = []
-        target = _norm(requested)
-        for result in payload if isinstance(payload, list) else []:
-            show = result.get("show") or {}
-            if _norm(show.get("name")) == target:
-                exact.append(show)
+        allowed_names = animation_title_match_names(requested)
+        shows_by_id = {}
+        for term in animation_title_variants(requested):
+            payload = _get_json(API_URL + "/search/shows?q=" + quote(term))
+            for result in payload if isinstance(payload, list) else []:
+                show = result.get("show") or {}
+                if show.get("id") is not None:
+                    shows_by_id[str(show["id"])] = show
+        exact = [show for show in shows_by_id.values()
+                 if _norm(show.get("name")) in allowed_names]
         if len(exact) != 1:
             return {
                 "found": False,
@@ -104,13 +109,16 @@ def fetch_tvmaze_episode_summaries(title, limit=5):
     if not requested or len(requested) > 120:
         return {"found": False, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
     try:
-        payload = _get_json(API_URL + "/search/shows?q=" + quote(requested))
-        target = _norm(requested)
-        exact = [
-            (item.get("show") or {})
-            for item in payload if isinstance(payload, list)
-            if _norm((item.get("show") or {}).get("name")) == target
-        ]
+        allowed_names = animation_title_match_names(requested)
+        shows_by_id = {}
+        for term in animation_title_variants(requested):
+            payload = _get_json(API_URL + "/search/shows?q=" + quote(term))
+            for item in payload if isinstance(payload, list) else []:
+                show = item.get("show") or {}
+                if show.get("id") is not None:
+                    shows_by_id[str(show["id"])] = show
+        exact = [show for show in shows_by_id.values()
+                 if _norm(show.get("name")) in allowed_names]
         if len(exact) != 1:
             return {"found": False, "status": "TVmaze တွင် အမည်တိတိကျကျ ကိုက်ညီသော Series တစ်ခုတည်းကို မသတ်မှတ်နိုင်ပါ။"}
         show = exact[0]

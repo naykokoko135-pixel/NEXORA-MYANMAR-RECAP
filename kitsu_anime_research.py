@@ -6,6 +6,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from animation_title_aliases import animation_title_match_names, animation_title_variants
+
 API_URL = "https://kitsu.io/api/edge/anime"
 USER_AGENT = "NEXORA-Myanmar-Recap/2.1 (free catalogue research)"
 
@@ -33,18 +35,21 @@ def fetch_kitsu_anime(title):
     if not target or len(requested) > 120:
         return {"found": False, "status": "Anime ခေါင်းစဉ် မမှန်ကန်ပါ။"}
     try:
-        params = urlencode({"filter[text]": requested, "page[limit]": 20})
-        payload = _get_json(API_URL + "?" + params)
-        records = payload.get("data", []) if isinstance(payload, dict) else []
+        allowed_names = animation_title_match_names(requested)
+        records_by_id = {}
+        for term in animation_title_variants(requested):
+            params = urlencode({"filter[text]": term, "page[limit]": 20})
+            payload = _get_json(API_URL + "?" + params)
+            records = payload.get("data", []) if isinstance(payload, dict) else []
+            for record in records if isinstance(records, list) else []:
+                if record.get("id") is not None:
+                    records_by_id[str(record["id"])] = record
         exact = []
-        for record in records if isinstance(records, list) else []:
+        for record in records_by_id.values():
             attrs = record.get("attributes") or {}
-            names = [
-                attrs.get("canonicalTitle"),
-                *(attrs.get("titles") or {}).values(),
-                attrs.get("slug", "").replace("-", " "),
-            ]
-            if any(_norm(name) == target for name in names if name):
+            names = [attrs.get("canonicalTitle"), *(attrs.get("titles") or {}).values(),
+                     str(attrs.get("slug") or "").replace("-", " ")]
+            if any(_norm(name) in allowed_names for name in names if name):
                 exact.append((record, attrs))
         if len(exact) != 1:
             return {"found": False, "status": "Kitsu တွင် အမည်တိတိကျကျ ကိုက်ညီသော Anime တစ်ခုတည်းကို မသတ်မှတ်နိုင်ပါ။"}
@@ -89,26 +94,36 @@ def fetch_kitsu_episode_summaries(title, limit=5):
     if not target or len(requested) > 120:
         return {"found": False, "status": "Anime ခေါင်းစဉ် မမှန်ကန်ပါ။"}
     try:
-        params = urlencode({
-            "filter[text]": requested,
-            "include": "episodes",
-            "page[limit]": 20,
-        })
-        payload = _get_json(API_URL + "?" + params)
-        records = payload.get("data", []) if isinstance(payload, dict) else []
+        allowed_names = animation_title_match_names(requested)
+        records_by_id = {}
+        for term in animation_title_variants(requested):
+            params = urlencode({
+                "filter[text]": term,
+                "include": "episodes",
+                "page[limit]": 20,
+            })
+            payload = _get_json(API_URL + "?" + params)
+            records = payload.get("data", []) if isinstance(payload, dict) else []
+            for record in records if isinstance(records, list) else []:
+                if record.get("id") is not None:
+                    records_by_id[str(record["id"])] = record
         exact = []
-        for record in records if isinstance(records, list) else []:
+        for record in records_by_id.values():
             attrs = record.get("attributes") or {}
             names = [attrs.get("canonicalTitle"), *(attrs.get("titles") or {}).values(),
                      str(attrs.get("slug") or "").replace("-", " ")]
-            if any(_norm(name) == target for name in names if name):
+            if any(_norm(name) in allowed_names for name in names if name):
                 exact.append(record)
         if len(exact) != 1:
             return {"found": False, "status": "Kitsu တွင် အမည်တိတိကျကျ ကိုက်ညီသော Anime တစ်ခုတည်းကို မသတ်မှတ်နိုင်ပါ။"}
         selected = exact[0]
-        age = str((selected.get("attributes") or {}).get("ageRating") or "").upper()
+        selected_attrs = selected.get("attributes") or {}
+        age = str(selected_attrs.get("ageRating") or "").upper()
         if age in {"R18", "R"}:
             return {"found": False, "status": "Kitsu မှ အရွယ်ရောက်သူများအတွက် သတ်မှတ်ထားသော Anime ကို ပယ်ချထားသည်။"}
+        media_format = str(selected_attrs.get("subtype") or selected_attrs.get("showType") or "").upper()
+        if media_format not in {"TV", "TV_SHORT", "ONA", "OVA"}:
+            return {"found": False, "status": "Kitsu မှတ်တမ်းသည် TV/Animation Series မဟုတ်သဖြင့် Episode research အဖြစ် မသုံးထားပါ။"}
         relation = ((selected.get("relationships") or {}).get("episodes") or {}).get("data") or []
         allowed_ids = {str(item.get("id")) for item in relation if item.get("id") is not None}
         included = payload.get("included") or []
