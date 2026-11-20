@@ -390,8 +390,11 @@ class WikidataMetadataTests(unittest.TestCase):
              "description": "Japanese manga series"},
         ]}
         entity = {"entities": {"Q1001": {"claims": {}}}}
+        empty_search = {"search": []}
         mock_urlopen.side_effect = [
             Response(json.dumps(search).encode()),
+            Response(json.dumps(empty_search).encode()),
+            Response(json.dumps(empty_search).encode()),
             Response(json.dumps(entity).encode()),
         ]
 
@@ -399,7 +402,7 @@ class WikidataMetadataTests(unittest.TestCase):
 
         self.assertTrue(result["found"])
         self.assertEqual(result["entity_id"], "Q1001")
-        self.assertEqual(mock_urlopen.call_count, 2)
+        self.assertEqual(mock_urlopen.call_count, 4)
 
     @patch("wikidata_metadata.urlopen")
     def test_expected_media_type_rejects_wrong_kind_of_work(self, mock_urlopen):
@@ -407,13 +410,18 @@ class WikidataMetadataTests(unittest.TestCase):
             "id": "Q1003", "label": "One Piece",
             "description": "Japanese manga series",
         }]}
-        mock_urlopen.return_value = Response(json.dumps(search).encode())
+        empty_search = {"search": []}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search).encode()),
+            Response(json.dumps(empty_search).encode()),
+            Response(json.dumps(empty_search).encode()),
+        ]
 
         result = fetch_wikidata_metadata("One Piece", expected_media_type="Animated Series")
 
         self.assertFalse(result["found"])
         self.assertIn("မျှော်မှန်းထားသော Animated Series", result["status"])
-        self.assertEqual(mock_urlopen.call_count, 1)
+        self.assertEqual(mock_urlopen.call_count, 3)
 
     @patch("wikidata_metadata.urlopen")
     def test_multiple_primary_screen_work_matches_remain_ambiguous(self, mock_urlopen):
