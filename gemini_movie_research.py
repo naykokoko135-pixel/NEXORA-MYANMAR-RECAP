@@ -14,6 +14,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from cost_controls import paid_ai_allowed
+
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 DEFAULT_MODEL = "gemini-3.8-flash"
 RETIRED_MODEL_ALIASES = {"gemini-2.5-flash": DEFAULT_MODEL}
@@ -88,6 +90,8 @@ def fetch_gemini_movie_metadata(title: str) -> dict:
     clean = " ".join(str(title or "").split()).strip()
     if not clean or len(clean) > 120:
         return _safe_status("ရုပ်ရှင်ခေါင်းစဉ် မမှန်ကန်ပါ။")
+    if not paid_ai_allowed():
+        return _safe_status("Free-only mode ဖွင့်ထားသည်။ အခကြေးငွေရှိနိုင်သော Gemini Search API ကို ပိတ်ထားသည်။")
     key = os.getenv("GEMINI_API_KEY", "").strip()
     if not key:
         return _safe_status("GEMINI_API_KEY မချိတ်ထားပါ။ Render Environment ကို စစ်ဆေးပါ။")
