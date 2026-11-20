@@ -40,7 +40,9 @@ class AniListSynopsisTests(unittest.TestCase):
         }, synonyms=["Demon Slayer: Kimetsu no Yaiba Infinity Castle"], format="MOVIE", episodes=1)
         mock_graphql.side_effect = [
             {"data": {"Page": {"media": []}}},
-            {"data": {"Page": {"media": [item]}}},
+        ] + [
+            {"data": {"Page": {"media": [item]}}}
+            for _ in range(8)
         ]
         result = fetch_anilist_synopsis("Demon Slayer: Kimetsu no Yaiba – The Movie: Infinity Castle")
         self.assertTrue(result["found"])
