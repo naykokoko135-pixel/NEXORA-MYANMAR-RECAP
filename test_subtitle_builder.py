@@ -21,6 +21,10 @@ class BurmeseSubtitleTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_burmese_srt("   ")
 
+    def test_long_form_script_subtitles_support_45_minute_narration(self):
+        result = build_burmese_srt("ဇာတ်လမ်းအကြောင်း " * 4000)
+        self.assertIn("-->", result)
+
     def test_invalid_reading_speed_rejected(self):
         with self.assertRaises(ValueError):
             build_burmese_srt("စမ်းသပ်စာသား", chars_per_second=30)
