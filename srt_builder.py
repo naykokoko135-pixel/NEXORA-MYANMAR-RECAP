@@ -29,4 +29,8 @@ def build_srt(source: str) -> str:
 def _to_ms(timestamp: str) -> int:
     hours, minutes, remainder = timestamp.split(":")
     seconds, millis = remainder.split(",")
-    return (((int(hours) * 60 + int(minutes)) * 60) + int(seconds)) * 1000 + int(millis)
+    hours_i, minutes_i = int(hours), int(minutes)
+    seconds_i, millis_i = int(seconds), int(millis)
+    if minutes_i > 59 or seconds_i > 59 or millis_i > 999:
+        raise ValueError("အချိန်ပုံစံတွင် မိနစ်/စက္ကန့်သည် 00 မှ 59 အတွင်း ဖြစ်ရပါမည်။")
+    return (((hours_i * 60 + minutes_i) * 60) + seconds_i) * 1000 + millis_i
