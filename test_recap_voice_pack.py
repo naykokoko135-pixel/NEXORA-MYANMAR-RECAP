@@ -20,7 +20,10 @@ class RecapVoicePackTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_recap_voice_request("/recapvoice unknown\nစာသား", PRESETS)
 
-    def test_script_limit_enforced(self):
+    def test_script_limit_supports_long_form_narration(self):
+        self.assertEqual(MAX_RECAP_SCRIPT_CHARS, 80000)
+        script = "က" * 50000
+        self.assertEqual(len(parse_recap_voice_request("/recapvoice narrator\n" + script, PRESETS)[1]), 50000)
         with self.assertRaises(ValueError):
             parse_recap_voice_request("/recapvoice narrator\n" + ("က" * (MAX_RECAP_SCRIPT_CHARS + 1)), PRESETS)
 
