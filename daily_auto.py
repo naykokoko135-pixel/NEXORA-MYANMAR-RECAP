@@ -31,7 +31,7 @@ def _source_or_fallback(label, callback, fallback):
         return fallback
 
 
-# Four animation categories with titles from multiple countries/regions.
+# Five editorial categories with titles from multiple countries/regions.
 # This curated rotation is not a live popularity or view-count ranking.
 TITLE_CATEGORIES = {
     "Anime": [
@@ -229,14 +229,13 @@ def build_daily_message(movie_title: str, research_text: str, metadata_text: str
         f"နိုင်ငံ/ဒေသ: {region_for_title(movie_title)}\n"
         f"မီဒီယာပုံစံ: {format_for_title(movie_title)}\n"
         f"ခေါင်းစဉ်: {movie_title}\n\n"
-        "YOUTUBE — ၃ ပိုင်း၊ တစ်ပိုင်း ၈–၁၀ မိနစ် (စုစုပေါင်း ၂၄–၃၀ မိနစ်)\n"
+        "YOUTUBE — စုစုပေါင်း ၄၆–၆၀ မိနစ်၊ ၃ ပိုင်းတိတိ၊ တစ်ပိုင်း ၁၅–၂၀ မိနစ်။\n"
         "Part 1: မိတ်ဆက်၊ နောက်ခံ၊ ဇာတ်ကောင်များနှင့် အစပြုဖြစ်ရပ်။\n"
         "Part 2: အဓိကပြဿနာ၊ turning points နှင့် ဇာတ်ကောင်ဆုံးဖြတ်ချက်များ။\n"
         "Part 3: Climax၊ သတ်မှတ်ထားသော season/film အဆုံးသတ်နှင့် သုံးသပ်ချက်။\n\n"
-        "FACEBOOK — ၃ ပိုင်း၊ တစ်ပိုင်း ၃–၅ မိနစ် (စုစုပေါင်း ၉–၁၅ မိနစ်)\n"
+        "FACEBOOK — စုစုပေါင်း ၄၆–၆၀ မိနစ်၊ ၃ ပိုင်းတိတိ၊ တစ်ပိုင်း ၁၅–၂၀ မိနစ်။\n"
         "Part 1: Hook + နောက်ခံ။ Part 2: ပဋိပက္ခ + အလှည့်အပြောင်း။ Part 3: ရလဒ် + သုံးသပ်ချက်။\n\n"
-        "TIKTOK — ၃ ပိုင်း၊ တစ်ပိုင်း ၁–၃ မိနစ် (စုစုပေါင်း ၃–၉ မိနစ်)\n"
-        "Part 1: Hook + စတင်ဖြစ်ရပ်။ Part 2: အဓိကပြဿနာ။ Part 3: အကျိုးဆက် + အမြင်။\n\n"
+        "TIKTOK — စုစုပေါင်း ၄–၇ မိနစ်၊ ဗီဒီယိုတစ်ပုဒ်တည်း။ Hook → အတည်ပြုထားသော အချက်များ → CTA။\n\n"
         "မှတ်ချက်: ဤစာသည် research lead နှင့် planning worksheet သာဖြစ်ပြီး ဇာတ်ညွှန်းအပြည့် သို့မဟုတ် ဗီဒီယိုမဟုတ်ပါ။ "
         "နေ့စဉ်စာရင်းသည် Anime၊ 3D Animation၊ Cartoon၊ Donghua နှင့် International Movies အမျိုးအစား ၅ မျိုးပါ curated international title rotation ဖြစ်ပြီး live trending/view-count ranking မဟုတ်ပါ။ Live-action ဇာတ်ကားများကို 3D Animation နှင့် မရောပါ။ အိန္ဒိယခေါင်းစဉ်များကို မထည့်ထားပါ။ "
         "နိုင်ငံ/ဒေသအမည်သည် မူရင်းထုတ်လုပ်မှု သို့မဟုတ် ပူးတွဲထုတ်လုပ်မှုကို ဆိုလိုနိုင်သည်။ "
