@@ -1,4 +1,7 @@
-"""Tests for cross-format multi-source research."""
+"""Tests for cross-format multi-source research.
+
+Each media family is searched independently; provider misses are not global failures.
+"""
 import multi_source_research as research
 import tmdb_movie_research
 import tvmaze_synopsis
