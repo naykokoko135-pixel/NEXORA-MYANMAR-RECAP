@@ -116,7 +116,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/productionqa <Category>|<Title>|<Platform> - Script အပိုင်း၊ ကြာချိန်နှင့် SRT စစ်ရန်\n"
             "/audioqa <Platform> ကို Audio ဖိုင်အား reply လုပ်၍ တကယ့်ကြာချိန် စစ်ရန်\n"
-            "/recapvoice [preset] - ကိုယ်ရေးထားသော Recap Script မှ MP3 + အသံနှင့်ကိုက်ညီသော SRT ထုတ်ရန်\n"
+            "/recapvoice [preset] - တစ်ဖိုင်တည်း narration MP3 + SRT ထုတ်ရန်\n"
+            "/recapvoice3 [preset] - YouTube/Facebook Script ၃ ပိုင်းမှ MP3/SRT ၃ စုံထုတ်ပြီး Audio ကြာချိန် QA စစ်ရန်\n"
             "/recapvideo <title> - အလိုအလျောက် narration + Licensed Footage (မရှိပါက Original Visuals) + SRT ပါ MP4 ထုတ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
@@ -2669,7 +2670,8 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("topratedepisodes", topratedepisodes_cmd))
     telegram_app.add_handler(CommandHandler("episodepack", episodepack_cmd))
     telegram_app.add_handler(CommandHandler("episodeoutline", episodeoutline_cmd))
-    telegram_app.add_handler(CommandHandler("recapvoice", recapvoice_cmd))\n    telegram_app.add_handler(CommandHandler("recapvoice3", recapvoice3_cmd))
+    telegram_app.add_handler(CommandHandler("recapvoice", recapvoice_cmd))
+    telegram_app.add_handler(CommandHandler("recapvoice3", recapvoice3_cmd))
     telegram_app.add_handler(CommandHandler("recapvideo", recapvideo_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
