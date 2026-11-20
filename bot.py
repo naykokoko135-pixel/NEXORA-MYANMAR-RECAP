@@ -6,6 +6,7 @@ import hmac
 from io import BytesIO
 import logging
 import os
+import tempfile
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -57,6 +58,7 @@ from synopsis_preview import generate_burmese_synopsis_preview
 from channel_growth_pack import generate_growth_pack
 from recap_quality_gate import analyze_recap_script, format_recap_qa_report
 from production_qa import analyze_production_package, format_production_qa_report, parse_production_package
+from audio_duration_qa import inspect_audio_file, evaluate_audio_duration, format_audio_qa_report, MAX_AUDIO_BYTES
 from recap_voice_pack import parse_recap_voice_request
 from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message, format_original_visual_fallback_notice
 from original_visual_recap import build_original_visual_cards
@@ -113,6 +115,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/episodepack <Series အမည်> - Episode + Licensed Footage Production Pack ထုတ်ရန်\n"
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/productionqa <Category>|<Title>|<Platform> - Script အပိုင်း၊ ကြာချိန်နှင့် SRT စစ်ရန်\n"
+            "/audioqa <Platform> ကို Audio ဖိုင်အား reply လုပ်၍ တကယ့်ကြာချိန် စစ်ရန်\n"
             "/recapvoice [preset] - ကိုယ်ရေးထားသော Recap Script မှ MP3 + အသံနှင့်ကိုက်ညီသော SRT ထုတ်ရန်\n"
             "/recapvideo <title> - အလိုအလျောက် narration + Licensed Footage (မရှိပါက Original Visuals) + SRT ပါ MP4 ထုတ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
@@ -2443,6 +2446,53 @@ async def productionqa_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+async def audioqa_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Measure the actual duration of an audio file replied to by the user."""
+    if not update.message:
+        return
+    if len(context.args) != 1:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: Audio ဖိုင်ကို reply လုပ်ပြီး /audioqa youtube သို့မဟုတ် /audioqa facebook သို့မဟုတ် /audioqa tiktok ဟု ပို့ပါ။"
+        )
+        return
+    platform = context.args[0].strip().casefold()
+    if platform not in {"youtube", "facebook", "tiktok", "yt", "fb", "tt"}:
+        await update.message.reply_text("Platform သည် youtube၊ facebook သို့မဟုတ် tiktok ဖြစ်ရပါမည်။")
+        return
+    replied = update.message.reply_to_message
+    if not replied:
+        await update.message.reply_text("စစ်ဆေးလိုသော MP3/WAV/M4A/OGG Audio ဖိုင်ကို အရင်ပို့ပြီး ထိုဖိုင်ကို reply လုပ်ကာ /audioqa <platform> ဟု ပို့ပါ။")
+        return
+    media_file = replied.audio or replied.voice or replied.video or replied.document
+    if not media_file:
+        await update.message.reply_text("Reply လုပ်ထားသော message တွင် Audio ပါဝင်သည့် ဖိုင် မတွေ့ပါ။")
+        return
+    file_size = getattr(media_file, "file_size", None)
+    if file_size and file_size > MAX_AUDIO_BYTES:
+        await update.message.reply_text("Audio ဖိုင်သည် 20 MB ထက် ကျော်နေသည်။")
+        return
+    await update.message.reply_text("Audio ကို download လုပ်ပြီး FFmpeg ဖြင့် အမှန်တကယ်ကြာချိန်နှင့် decode ကို စစ်ဆေးနေပါတယ်...")
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(prefix="nexora-audioqa-", suffix=".bin", delete=False) as temp_file:
+            temp_path = temp_file.name
+        telegram_file = await media_file.get_file()
+        await telegram_file.download_to_drive(custom_path=temp_path)
+        metadata = await asyncio.to_thread(inspect_audio_file, temp_path)
+        evaluation = evaluate_audio_duration(platform, metadata["duration_seconds"])
+        report = format_audio_qa_report(platform, metadata, evaluation)
+        await update.message.reply_text(report, disable_web_page_preview=True)
+    except Exception as exc:
+        log.warning("Audio QA failed (%s)", type(exc).__name__)
+        await update.message.reply_text("Audio QA မအောင်မြင်ပါ။ ဖိုင် format၊ ဖိုင်အခြေအနေနှင့် 20 MB ကန့်သတ်ချက်ကို စစ်ပါ။")
+    finally:
+        if temp_path:
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
+
+
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(
@@ -2474,6 +2524,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/topratedepisodes <title> သည် TVmaze community rating အမြင့်ဆုံး Animation Episode များကိုပြသည်။ View count မဟုတ်ပါ။\n"
             "/episodeoutline <title> သည် အမြင့်ဆုံး rating ရှိ Episode တစ်ခုအတွက် Recap Script Worksheet ပြင်ဆင်ပေးသည်။\n"
             "/productionqa <Category>|<Title>|<Platform> သည် Part duration နှင့် SRT structure ကို စစ်ပေးသည်။\n"
+            "/audioqa youtube|facebook|tiktok သည် reply လုပ်ထားသော Audio file ကို FFmpeg ဖြင့် decode လုပ်ပြီး duration တိုင်းတာပေးသည်။\n"
             "/commentstatus ဖြင့် YouTube/Facebook Auto-Reply အခြေအနေကြည့်ပါ။ /commentdraft ဖြင့် Reply စာသားစမ်းနိုင်သည်။\n"
             "Free Mode သည် API မလိုပါ။ AI Mode သည် provider မချိတ်ရသေးပါ။ "
             "/srt ဖြင့် timestamp ပါသော စာတန်းမှ .srt ဖိုင်ထုတ်နိုင်သည်။ /srtmy ဖြင့် မြန်မာစာသားမှ ခန့်မှန်းအချိန် SRT ထုတ်နိုင်သည်။ /tts ဖြင့် မြန်မာ MP3 အသံဖန်တီးနိုင်သည်။ /voicedemo <preset> ဖြင့် အသံပုံစံနမူနာ နားထောင်နိုင်သည်။ /tts_design <voice_name> ဖြင့် VoxCPM2 AI စိတ်ကူးယဉ်အသံ WAV ဖန်တီးနိုင်သည် (GPU host + သီးခြား install + NEXORA_VOXCPM_ENABLED=1 လိုအပ်သည်)။ /tts_local ဖြင့် optional local MyanmarTTS WAV စမ်းနိုင်သည် (သီးခြား install + NEXORA_LOCAL_TTS_ENABLED=1 လိုအပ်သည်။)"
@@ -2546,6 +2597,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
     telegram_app.add_handler(CommandHandler("recapqa", recapqa_cmd))
     telegram_app.add_handler(CommandHandler("productionqa", productionqa_cmd))
+    telegram_app.add_handler(CommandHandler("audioqa", audioqa_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
     telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))
