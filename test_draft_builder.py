@@ -61,6 +61,11 @@ class DraftBuilderTests(unittest.TestCase):
         self.assertIn("အပိုင်းတစ်ခုလျှင် ၁၀–၁၅ မိနစ်ခန့်", result)
         self.assertEqual(result.count("ရည်မှန်းချိန်: အပိုင်းတစ်ခုလျှင်"), 3)
 
+    def test_default_youtube_draft_worksheet_uses_exactly_three_parts(self):
+        result = generate_draft_worksheet("Avatar", "Verified creator note.")
+        self.assertEqual(result.count("PART "), 3)
+        self.assertIn("ရည်မှန်းချိန်: ၃၀–၄၅ မိနစ်", result)
+
 
 if __name__ == "__main__":
     unittest.main()
