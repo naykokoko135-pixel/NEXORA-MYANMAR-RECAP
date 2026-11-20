@@ -36,6 +36,12 @@ class RecapVideoPackTests(unittest.TestCase):
             ("Example Show", "narrator", ""),
         )
     def test_script_limit_and_preset(self):
+        self.assertEqual(MAX_RECAP_SCRIPT_CHARS, 80000)
+        long_script = "က" * 50000
+        self.assertEqual(
+            len(parse_recap_video_request("/recapvideo Example\n" + long_script, PRESETS)[2]),
+            50000,
+        )
         with self.assertRaises(ValueError):
             parse_recap_video_request("/recapvideo Example\n" + ("က" * (MAX_RECAP_SCRIPT_CHARS + 1)), PRESETS)
         # An unrecognized first line is treated as narration, not silently as a voice preset.
