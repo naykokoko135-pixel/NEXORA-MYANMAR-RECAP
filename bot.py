@@ -23,6 +23,7 @@ from voxcpm_voice_clone import synthesize_cloned_burmese_voice
 from scene_tts import parse_scene_script, parse_voice_design_scene_script
 from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
 from voice_profile_storage import load_voice_profiles, save_voice_profiles
+from render_media import classify_render_document
 from voice_profile_backup import export_voice_profile_backup, import_voice_profile_backup, VoiceProfileBackupError, MAX_BACKUP_BYTES
 from research_builder import generate_research_worksheet
 from draft_builder import generate_draft_worksheet, generate_three_part_draft_worksheets
@@ -1777,9 +1778,12 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     elif message.voice:
         media_file = await message.voice.get_file()
         filename, kind = "narration.ogg", "audio"
-    if media_file is None and message.document and (message.document.file_name or "").lower().endswith(".srt"):
-        media_file = await message.document.get_file()
-        filename, kind = message.document.file_name or "captions.srt", "subtitle"
+    if media_file is None and message.document:
+        document_name = message.document.file_name or ""
+        document_kind = classify_render_document(document_name)
+        if document_kind:
+            media_file = await message.document.get_file()
+            filename, kind = document_name, document_kind
     if media_file is None:
         return
     size = getattr(media_file, "file_size", 0) or 0
