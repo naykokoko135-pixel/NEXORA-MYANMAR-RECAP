@@ -114,3 +114,28 @@ def test_recapstudio_command_stops_on_indian_production(monkeypatch):
 
     assert not script_calls
     assert any("အိန္ဒိယ" in message for message in sent)
+
+
+def test_missing_metadata_error_explains_each_provider_without_secrets():
+    report = {
+        "title": "Parasite",
+        "tmdb": {
+            "found": False,
+            "status": "TMDB API Read Access Token မချိတ်ရသေးပါ။",
+        },
+        "wikidata": {
+            "found": False,
+            "status": "Wikidata ရင်းမြစ်ကို ယခုချိန်တွင် မရရှိနိုင်ပါ။",
+        },
+        "india_excluded": False,
+    }
+    try:
+        build_original_recap_notes(report, [])
+    except ValueError as exc:
+        message = str(exc)
+        assert "TMDB:" in message
+        assert "Wikidata:" in message
+        assert "TMDB_API_READ_ACCESS_TOKEN" in message
+        assert "Token တန်ဖိုးကို Chat ထဲ မပို့ပါနှင့်" in message
+    else:
+        assert False, "Expected a safe provider diagnostic"
