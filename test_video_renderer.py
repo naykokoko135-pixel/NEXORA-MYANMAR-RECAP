@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-from video_renderer import VideoRenderError, render_slideshow
+from video_renderer import VideoRenderError, render_slideshow, validate_render_subtitles
 
 
 class VideoRendererValidationTests(unittest.TestCase):
@@ -187,6 +187,46 @@ class VideoRendererValidationTests(unittest.TestCase):
                 [{"title": "Only image", "image": ("one.jpg", b"image"), "audio": None}],
                 "out.mp4",
             )
+
+
+class AutomaticRenderSubtitleQATests(unittest.TestCase):
+    def test_valid_srt_passes_when_timing_matches_measured_audio(self):
+        srt = "1\\n00:00:00,000 --> 00:00:10,000\\nမြန်မာစာတန်း\\n"
+        result = validate_render_subtitles(srt, 10.0)
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["caption_count"], 1)
+
+    def test_large_timing_drift_is_flagged_for_review_not_blocked(self):
+        srt = "1\\n00:00:00,000 --> 00:00:10,000\\nမြန်မာစာတန်း\\n"
+        result = validate_render_subtitles(srt, 30.0)
+        self.assertEqual(result["status"], "REVIEW")
+        self.assertGreater(result["difference_seconds"], result["tolerance_seconds"])
+
+    def test_malformed_srt_is_rejected_before_render(self):
+        with self.assertRaises(VideoRenderError):
+            validate_render_subtitles("not an SRT", 10.0)
+
+    def test_render_pipeline_runs_automatic_srt_qa(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "out.mp4"
+
+            def fake_render(command, **kwargs):
+                output.write_bytes(b"mp4")
+                return type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+
+            fake_ffmpeg = SimpleNamespace(get_ffmpeg_exe=lambda: "ffmpeg")
+            srt = "1\\n00:00:00,000 --> 00:00:02,000\\nမြန်မာစာတန်း\\n"
+            with patch.dict(sys.modules, {"imageio_ffmpeg": fake_ffmpeg}), \\
+                 patch("video_renderer._duration_seconds", return_value=2.0), \\
+                 patch("video_renderer.validate_render_subtitles", wraps=validate_render_subtitles) as qa, \\
+                 patch("subprocess.run", side_effect=fake_render):
+                render_slideshow(
+                    [("cover.jpg", b"image")],
+                    ("voice.mp3", b"audio"),
+                    output,
+                    subtitle=("captions.srt", srt.encode("utf-8")),
+                )
+            qa.assert_called_once()
 
 
 if __name__ == "__main__":
