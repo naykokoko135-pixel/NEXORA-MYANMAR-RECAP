@@ -27,17 +27,17 @@ def _selected_preset(platform: str, duration: str) -> tuple[str, str]:
     return platform, duration
 
 
-def generate_draft_worksheet(topic: str, notes: str, platform: str = "youtube", duration: str = "30-45") -> str:
+def generate_draft_worksheet(topic: str, notes: str, platform: str = "youtube", duration: str = "46-60") -> str:
     title, clean_notes = _clean_inputs(topic, notes)
     platform, duration = _selected_preset(platform, duration)
 
-    if platform == "youtube" and duration in {"30-45", "45-60", "46-60"}:
+    if (platform == "youtube" and duration in {"30-45", "45-60", "46-60"}) or (platform == "facebook" and duration == "46-60"):
         chapters = [
             ("PART 1 — Hook၊ နောက်ခံနှင့် ဇာတ်ကောင်များ (၁၅–၂၀ မိနစ်)", "ဇာတ်လမ်းကမ္ဘာ၊ အချိန်/နေရာ၊ အဓိကဇာတ်ကောင်များ၊ ရည်ရွယ်ချက်နှင့် အစပြုဖြစ်ရပ်များကို source အလိုက် အသေးစိတ်တင်ပြပါ။"),
             ("PART 2 — အဓိကဖြစ်ရပ်များနှင့် ပဋိပက္ခ (၁၅–၂၀ မိနစ်)", "ဖြစ်ရပ်များ၏ အကြောင်းရင်း-အကျိုးဆက်၊ ဆုံးဖြတ်ချက်များ၊ ဆက်စပ်ဇာတ်ကောင်များနှင့် အလှည့်အပြောင်းများကို အစဉ်လိုက်ရှင်းပြပါ။"),
             ("PART 3 — Climax၊ အဆုံးသတ်နှင့် သုံးသပ်ချက် (၁၅–၂၀ မိနစ်)", "အတည်ပြုထားသော နောက်ဆုံးပဋိပက္ခ၊ ဖြေရှင်းပုံ၊ ဇာတ်ကောင်ပြောင်းလဲမှုနှင့် ကိုယ်ပိုင်သုံးသပ်ချက်ကို ပြည့်စုံစွာတင်ပြပါ။"),
         ]
-    elif platform == "youtube" or (platform == "facebook" and duration == "46-60"):
+    elif platform == "youtube":
         chapters = [
             ("အခန်း ၁ — Hook နှင့် ဇာတ်လမ်းနောက်ခံ", "ဇာတ်လမ်း၏ အဓိကမေးခွန်း၊ နေရာ/အချိန်နှင့် ဇာတ်ကောင်ရည်ရွယ်ချက်ကို မိတ်ဆက်ပါ။"),
             ("အခန်း ၂ — ပြဿနာ စတင်ပေါ်ပေါက်လာပုံ", "အစပြုဖြစ်ရပ်၊ အကြောင်းရင်းနှင့် ပထမဆုံးအကျိုးဆက်ကို ဆက်စပ်ရှင်းပြပါ။"),
