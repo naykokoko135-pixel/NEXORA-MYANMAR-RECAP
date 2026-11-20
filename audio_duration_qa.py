@@ -127,3 +127,67 @@ def format_audio_qa_report(platform, metadata, evaluation):
         "• Publish မလုပ်မီ အသံကို နားထောင်ပြီး SRT နှင့် ကိုက်ညီမှုကို လူကိုယ်တိုင် စစ်ပါ။",
     ])
     return "\n".join(lines)
+
+
+
+def evaluate_audio_parts(platform, durations):
+    """Validate measured, separate final-deliverable audio parts.
+
+    YouTube/Facebook require exactly three 15–20 minute parts and a
+    46–60 minute combined duration. TikTok requires one 4–7 minute part.
+    Durations must come from decoded audio measurements, not script estimates.
+    """
+    import math
+
+    key = ALIASES.get(str(platform or "").strip().casefold(), str(platform or "").strip().casefold())
+    if key not in PLATFORM_LIMITS:
+        return {"status": "NOT READY", "platform": key, "parts": [], "issues": ["youtube/facebook/tiktok ကို ရွေးပါ။"]}
+    expected_count = 1 if key == "tiktok" else 3
+    part_min, part_max = ((4 * 60, 7 * 60) if key == "tiktok" else (15 * 60, 20 * 60))
+    total_min, total_max = PLATFORM_LIMITS[key]
+    if not isinstance(durations, (list, tuple)) or len(durations) != expected_count:
+        actual = len(durations) if isinstance(durations, (list, tuple)) else 0
+        return {
+            "status": "NOT READY",
+            "platform": key,
+            "parts": [],
+            "issues": [f"{key} အတွက် Audio အပိုင်း {expected_count} ပိုင်းတိတိ လိုအပ်သည်။ ရရှိသည်: {actual} ပိုင်း။"],
+        }
+
+    measured = []
+    issues = []
+    for index, value in enumerate(durations, start=1):
+        if isinstance(value, bool):
+            number = float("nan")
+        else:
+            try:
+                number = float(value)
+            except (TypeError, ValueError):
+                number = float("nan")
+        if not math.isfinite(number) or number <= 0:
+            issues.append(f"Part {index}: တိုင်းတာထားသော Audio duration မမှန်ပါ။")
+            measured.append(None)
+            continue
+        measured.append(round(number, 3))
+        if not part_min <= number <= part_max:
+            issues.append(
+                f"Part {index}: {_clock(number)} — {_clock(part_min)} မှ {_clock(part_max)} အတွင်း ဖြစ်ရပါမည်။"
+            )
+
+    total = sum(value for value in measured if value is not None)
+    if any(value is None for value in measured):
+        issues.append("အပိုင်းအားလုံး၏ Audio ကြာချိန်ကို အောင်မြင်စွာ မတိုင်းတာနိုင်သေးပါ။")
+    elif not total_min <= total <= total_max:
+        issues.append(f"စုစုပေါင်း {_clock(total)} — {_clock(total_min)} မှ {_clock(total_max)} အတွင်း ဖြစ်ရပါမည်။")
+
+    return {
+        "status": "DURATION PASS" if not issues else "DURATION FAIL",
+        "platform": key,
+        "parts": [{"part": index, "duration_seconds": value} for index, value in enumerate(measured, start=1)],
+        "total_duration_seconds": round(total, 3),
+        "part_minimum_seconds": part_min,
+        "part_maximum_seconds": part_max,
+        "total_minimum_seconds": total_min,
+        "total_maximum_seconds": total_max,
+        "issues": issues,
+    }
