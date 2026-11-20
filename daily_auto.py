@@ -455,15 +455,17 @@ def main() -> None:
             mywiki_title = metadata.get("mywiki_title", "")
             enwiki_title = metadata.get("enwiki_title", "")
             if mywiki_title:
-                try:
-                    plot_result = fetch_burmese_plot_section(mywiki_title)
-                except PlotResearchError:
-                    plot_result = None
+                plot_result = _source_or_fallback(
+                    f"{title} Burmese plot section",
+                    lambda: fetch_burmese_plot_section(mywiki_title),
+                    None,
+                )
             if not plot_result and enwiki_title:
-                try:
-                    plot_result = fetch_english_plot_section(enwiki_title)
-                except EnglishPlotError:
-                    plot_result = None
+                plot_result = _source_or_fallback(
+                    f"{title} English plot section",
+                    lambda: fetch_english_plot_section(enwiki_title),
+                    None,
+                )
             if plot_result:
                 research += (
                     "\n\n📖 DETAILED PLOT RESEARCH (EXACT WIKIDATA SITELINK)\n"
