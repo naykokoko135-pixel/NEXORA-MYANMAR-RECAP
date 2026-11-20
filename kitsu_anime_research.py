@@ -88,7 +88,7 @@ def fetch_kitsu_episode_summaries(title, limit=5):
     requested = " ".join(str(title or "").split()).strip()
     target = _norm(requested)
     try:
-        count = max(1, min(int(limit), 5))
+        count = max(1, min(int(limit), 20))
     except (TypeError, ValueError):
         count = 5
     if not target or len(requested) > 120:
