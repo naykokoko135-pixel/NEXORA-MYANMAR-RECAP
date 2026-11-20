@@ -1,4 +1,11 @@
 import animation_catalogue_research as catalogues
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def prevent_live_catalogue_requests(monkeypatch):
+    monkeypatch.setattr(catalogues, "fetch_bcdb_popular_cartoon", lambda _title: {"found": False, "status": "not mocked"})
+    monkeypatch.setattr(catalogues, "fetch_blender_open_movie", lambda _title: {"found": False, "status": "not mocked"})
 
 
 def test_bangumi_requires_unique_exact_animation_title(monkeypatch):
@@ -118,3 +125,47 @@ def test_verified_indian_origin_is_excluded_from_cartoon_and_3d_tracks(monkeypat
     assert result["cartoon"]["india_excluded"] is True
     assert result["3d_animation"]["found"] is False
     assert result["3d_animation"]["india_excluded"] is True
+
+
+def test_bcdb_cartoon_match_requires_non_japanese_non_chinese_origin(monkeypatch):
+    monkeypatch.setattr(catalogues, "fetch_bcdb_popular_cartoon", lambda _title: {
+        "found": True, "title": "Example Cartoon", "provider_url": "https://www.bcdb.com/cartoon/3-example",
+        "catalogue_url": "https://www.bcdb.com/most-popular",
+    })
+    monkeypatch.setattr(catalogues, "_safe_wikidata", lambda _title: {
+        "found": True, "title": "Example Cartoon", "countries": ["United States"],
+        "description": "American animated television series", "year": "2024",
+        "source": "https://www.wikidata.org/wiki/Q11",
+    })
+    result = catalogues.research_animation_catalogues("Example Cartoon")
+    assert result["cartoon"]["found"] is True
+    assert result["cartoon"]["provider"] == "The Big Cartoon DataBase (BCDB)"
+    assert result["cartoon"]["origin_verified"] is True
+
+
+def test_bcdb_japanese_title_is_not_mislabelled_cartoon(monkeypatch):
+    monkeypatch.setattr(catalogues, "fetch_bcdb_popular_cartoon", lambda _title: {
+        "found": True, "title": "Example", "provider_url": "https://www.bcdb.com/cartoon/3-example",
+    })
+    monkeypatch.setattr(catalogues, "_safe_wikidata", lambda _title: {
+        "found": True, "title": "Example", "countries": ["Japan"],
+        "description": "Japanese animated film",
+    })
+    result = catalogues.research_animation_catalogues("Example")
+    assert result["cartoon"]["found"] is False
+
+
+def test_blender_open_movie_is_a_3d_catalogue_lead(monkeypatch):
+    monkeypatch.setattr(catalogues, "fetch_blender_open_movie", lambda _title: {
+        "found": True, "provider": "Blender Studio Open Movies (curated 3D subset)",
+        "title": "Big Buck Bunny", "year": 2008,
+        "source": "https://studio.blender.org/projects/big-buck-bunny/",
+        "catalogue": "https://studio.blender.org/films/",
+    })
+    monkeypatch.setattr(catalogues, "_safe_wikidata", lambda _title: {
+        "found": True, "title": "Big Buck Bunny", "countries": ["Netherlands"],
+        "description": "Computer animated short film",
+    })
+    result = catalogues.research_animation_catalogues("Big Buck Bunny")
+    assert result["3d_animation"]["found"] is True
+    assert result["3d_animation"]["provider"] == "Blender Studio Open Movies (curated 3D subset)"
