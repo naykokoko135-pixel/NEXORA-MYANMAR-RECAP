@@ -27,6 +27,7 @@ def test_kitsu_episode_lookup_uses_short_series_alias(monkeypatch):
             "titles": {"en": "Demon Slayer: Kimetsu no Yaiba"},
             "slug": "kimetsu-no-yaiba",
             "ageRating": "PG",
+            "subtype": "TV",
         },
         "relationships": {"episodes": {"data": [{"id": "ep-1", "type": "episodes"}]}},
     }
