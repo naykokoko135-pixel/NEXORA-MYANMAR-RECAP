@@ -190,7 +190,7 @@ class RecapMetadataResolverTests(unittest.TestCase):
             "anilist": {
                 "found": True, "provider": "AniList", "title": "Example",
                 "country": "JP", "year": 2024,
-                "synopsis": "A sufficiently detailed series synopsis for a safe short preview.",
+                "synopsis": "A sufficiently detailed series synopsis for a safe short preview, with enough verified descriptive detail to support a brief introduction without inventing any episode events.",
                 "provider_url": "https://anilist.co/anime/1",
             },
             "tenrai": {"found": False},
