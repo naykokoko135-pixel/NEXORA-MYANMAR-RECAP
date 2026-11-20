@@ -19,6 +19,7 @@ from subtitle_builder import build_burmese_srt
 from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_burmese_speech_with_srt, validate_tts_request
 from local_myanmar_tts import synthesize_local_burmese_speech
 from voxcpm_voice_design import VOICE_DESIGNS, synthesize_designed_burmese_voice
+from voxcpm_voice_clone import synthesize_cloned_burmese_voice
 from scene_tts import parse_scene_script, parse_voice_design_scene_script
 from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
 from voice_profile_storage import load_voice_profiles, save_voice_profiles
@@ -133,6 +134,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/tts_local - Local MyanmarTTS WAV ထုတ်ရန် (စမ်းသပ်ဆဲ၊ host enable လိုအပ်)\n"
             "/voices - အသံပုံစံအားလုံးကြည့်ရန်\n"
             "/voiceprofile <name> - ကိုယ်ပိုင်အသံဖိုင် သိမ်းရန်\n"
+            "/voiceclone <name> - သိမ်းထားသော ကိုယ်ပိုင်အသံဖြင့် မြန်မာစာ TTS ထုတ်ရန် (GPU host လိုအပ်)\n"
             "/voiceprofile export|import - အသံ Profile Backup ထုတ်/ပြန်သွင်းရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
@@ -1086,7 +1088,7 @@ async def multisourceresearch_cmd(update: Update, context: ContextTypes.DEFAULT_
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်>\\n"
+            "အသုံးပြုပုံ: /multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်>\n"
             "Anime (AniList + Tenrai/MAL + Wikidata), Movie (TMDB + Wikidata + Gemini), "
             "TV Series (TVmaze) ကို တစ်ပြိုင်နက် သီးခြားစစ်ဆေးပေးပါမယ်။"
         )
@@ -1271,7 +1273,7 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
             provider = "Bangumi"
             if not result.get("found"):
                 await update.message.reply_text(
-                    "TVmaze၊ Kitsu နှင့် Bangumi တို့မှ အသုံးပြုနိုင်သော Episode အချက်အလက် မရရှိပါ။\\n"
+                    "TVmaze၊ Kitsu နှင့် Bangumi တို့မှ အသုံးပြုနိုင်သော Episode အချက်အလက် မရရှိပါ။\n"
                     + str(result.get("status") or "")
                 )
                 return
@@ -1310,7 +1312,7 @@ async def episodeplots_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /episodeplots <Anime/Cartoon/Donghua Series အမည်>\\n"
+            "အသုံးပြုပုံ: /episodeplots <Anime/Cartoon/Donghua Series အမည်>\n"
             "TVmaze၊ Kitsu နှင့် Bangumi တို့မှ ရရှိနိုင်သော Episode ဇာတ်ကွက်အကျဉ်းများကို "
             "ရင်းမြစ်တစ်ခုချင်းစီ သီးခြားစုစည်းပေးပါမယ်။"
         )
@@ -1345,7 +1347,7 @@ async def episodeverify_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /episodeverify <Anime/Cartoon/Donghua Series အမည်>\\n"
+            "အသုံးပြုပုံ: /episodeverify <Anime/Cartoon/Donghua Series အမည်>\n"
             "Episode နံပါတ်နှင့် ခေါင်းစဉ် ကိုက်ညီမှု၊ ရင်းမြစ်အလိုက် ကွာခြားမှုကို စစ်ပေးပါမယ်။"
         )
         return
@@ -2099,6 +2101,50 @@ async def ttsdesign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+
+async def voiceclone_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Clone the current Telegram user's own saved reference voice."""
+    if not update.message or not update.message.text:
+        return
+    first_line, separator, script = update.message.text.partition("\n")
+    parts = first_line.split(maxsplit=1)
+    profile_name = parts[1].strip() if len(parts) > 1 else ""
+    if not separator or not script.strip() or not profile_name:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /voiceclone <voice_profile_name> ပြီးနောက် မြန်မာစာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
+            "အရင်ဆုံး /voiceprofile <name> ဖြင့် ကိုယ့်အသံဖိုင်ကို သိမ်းထားပါ။"
+        )
+        return
+    try:
+        profiles = load_voice_profiles(update.effective_user.id)
+        profile = profiles.get(normalize_profile_name(profile_name))
+    except (OSError, ValueError) as exc:
+        await update.message.reply_text(f"Voice Profile ကို ဖတ်မရပါ: {exc}")
+        return
+    if not profile:
+        await update.message.reply_text("ဒီအမည်နဲ့ သိမ်းထားသောအသံ မတွေ့ပါ။ /voiceprofile list ဖြင့် စစ်ပါ။")
+        return
+    await update.message.reply_text(
+        "သိမ်းထားသော ကိုယ်ပိုင် Reference အသံဖြင့် မြန်မာစာကို ဖန်တီးနေပါတယ်။ "
+        "ဒီလုပ်ဆောင်မှုမှာ compatible GPU host လိုအပ်ပြီး Render Free မှာ မရနိုင်ပါ..."
+    )
+    try:
+        audio = await synthesize_cloned_burmese_voice(
+            script.strip(), profile["filename"], profile["audio"]
+        )
+    except (ValueError, RuntimeError) as exc:
+        await update.message.reply_text(str(exc))
+        return
+    file_obj = BytesIO(audio)
+    file_obj.name = "nexora_creator_voice_clone.wav"
+    await update.message.reply_document(
+        document=InputFile(file_obj, filename=file_obj.name),
+        caption="ကိုယ်ပိုင် Reference အသံကို အသုံးပြုထားသော AI Voice Clone ဖြစ်သည်။ ထုတ်ဝေမီ အသံထွက်နှင့် အမည်များကို ပြန်စစ်ပါ။",
+        read_timeout=120,
+        write_timeout=120,
+    )
+
+
 async def ttslocal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate a WAV using the optional local MyanmarTTS model."""
     if not update.message or not update.message.text:
@@ -2658,6 +2704,8 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/srtmy — မြန်မာစာသားမှ SRT\n"
         "/tts <preset> — MP3 အသံထုတ်ရန်\n"
         "/voicedemo <preset> — အသံနမူနာ\n"
+        "/voiceprofile <name> — ကိုယ်ပိုင် Reference အသံဖိုင် သိမ်းရန်\n"
+        "/voiceclone <name> — ကိုယ်ပိုင်အသံဖြင့် မြန်မာစာ TTS WAV ထုတ်ရန် (GPU host လိုအပ်)\n"
         "/commentstatus — Comment Auto-Reply အခြေအနေ\n"
         "/commentdraft <platform> <comment> — Reply Draft\n"
         "/help — ဒီအကူအညီစာမျက်နှာ"
@@ -2747,6 +2795,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
     telegram_app.add_handler(CommandHandler("scenetts", scenetts_cmd))
     telegram_app.add_handler(CommandHandler("voiceprofile", voiceprofile_cmd))
+    telegram_app.add_handler(CommandHandler("voiceclone", voiceclone_cmd))
     telegram_app.add_handler(CommandHandler("voices", voices_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
