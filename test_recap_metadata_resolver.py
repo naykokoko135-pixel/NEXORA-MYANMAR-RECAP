@@ -199,7 +199,7 @@ class RecapMetadataResolverTests(unittest.TestCase):
         self.assertTrue(result["found"])
         self.assertEqual(result["provider"], "Wikidata")
         self.assertEqual(result["countries"], ["Japan"])
-        self.assertEqual(result["anime_synopsis"], "A sufficiently detailed series synopsis for a safe short preview.")
+        self.assertEqual(result["anime_synopsis"], "A sufficiently detailed series synopsis for a safe short preview, with enough verified descriptive detail to support a brief introduction without inventing any episode events.")
         self.assertEqual(result["anime_synopsis_source"], "https://anilist.co/anime/1")
         tmdb.assert_not_called()
         anime.assert_called_once_with("Example")
