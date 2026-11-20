@@ -105,3 +105,16 @@ def test_animation_catalogue_report_has_all_three_tracks():
     assert "CARTOON" in output
     assert "3D ANIMATION" in output
     assert "\\n" not in output
+
+
+def test_verified_indian_origin_is_excluded_from_cartoon_and_3d_tracks(monkeypatch):
+    monkeypatch.setattr(catalogues, "fetch_bangumi_animation", lambda _title: {"found": False})
+    monkeypatch.setattr(catalogues, "_safe_wikidata", lambda _title: {
+        "found": True, "title": "Example", "description": "Indian computer-animated film",
+        "countries": ["India"],
+    })
+    result = catalogues.research_animation_catalogues("Example")
+    assert result["cartoon"]["found"] is False
+    assert result["cartoon"]["india_excluded"] is True
+    assert result["3d_animation"]["found"] is False
+    assert result["3d_animation"]["india_excluded"] is True
