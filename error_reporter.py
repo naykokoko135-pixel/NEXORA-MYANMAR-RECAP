@@ -55,7 +55,8 @@ def _finish_report(key: str, success: bool) -> None:
 
 def report_error_to_github(exc: BaseException, *, update_kind: str = "telegram_update") -> bool:
     """Create a GitHub issue when configured. Returns False when disabled or failed."""
-    token = os.getenv("GITHUB_ERROR_REPORT_TOKEN", "").strip()
+    # GitHub reserves the GITHUB_ prefix for its own Actions variables.
+    token = os.getenv("ERROR_REPORT_TOKEN", "").strip()
     if not token:
         return False
 
