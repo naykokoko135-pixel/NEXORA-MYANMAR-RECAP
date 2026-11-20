@@ -85,6 +85,11 @@ def _candidate_matches_media_type(item, expected_media_type):
         return any(term in description for term in (
             "animated film", "anime film", "animated feature film",
         ))
+    if media_type in {"film", "feature film"}:
+        return (
+            any(term in description for term in ("film", "movie"))
+            and not any(term in description for term in ("television series", "tv series", "animated series", "anime series", "manga series"))
+        )
     if media_type in {"live-action film", "live action film"}:
         return (
             any(term in description for term in ("film", "movie"))
