@@ -148,12 +148,56 @@ def resolve_recap_metadata(title):
         }
 
     if wikidata.get("found"):
+        # Wikidata often identifies an anime correctly but has no usable
+        # Wikipedia Plot section. Supplement missing sitelinks with an exact
+        # AniList/Tenrai catalogue synopsis without replacing Wikidata identity
+        # or country metadata.
+        synopsis_fields = {}
+        if not wikidata.get("anime_synopsis"):
+            anime = safe_fetch(research_anime_sources, "Anime catalogue")
+            if anime.get("india_excluded"):
+                return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယမူရင်းခေါင်းစဉ်များကို မထည့်ပါ။"}
+            if not anime.get("year_conflict"):
+                anilist = anime.get("anilist") or {}
+                tenrai = anime.get("tenrai") or {}
+                wikidata_year = str(wikidata.get("year") or "").strip()
+                wikidata_title = " ".join(str(wikidata.get("title") or "").casefold().split())
+                # A synopsis may only be attached when both independent
+                # catalogues provide the same exact title and a matching,
+                # known year. Missing identity evidence is not a match.
+                for candidate in (anilist, tenrai):
+                    if not candidate.get("found"):
+                        continue
+                    anime_year = str(candidate.get("year") or "").strip()
+                    anime_title = " ".join(str(candidate.get("title") or "").casefold().split())
+                    if not wikidata_year or not anime_year or wikidata_year != anime_year:
+                        continue
+                    if not wikidata_title or not anime_title or wikidata_title != anime_title:
+                        continue
+                    country_code = str(candidate.get("country") or "").upper()
+                    if country_code == "IN" or _is_indian(wikidata.get("countries") or []):
+                        continue
+                    synopsis = str(candidate.get("synopsis") or "").strip()
+                    synopsis_url = str(candidate.get("provider_url") or "").strip()
+                    if len(synopsis) >= 100 and synopsis_url.startswith("https://"):
+                        synopsis_fields = {
+                            "anime_synopsis": synopsis[:3500],
+                            "anime_synopsis_source": synopsis_url,
+                            "anime_synopsis_provider": candidate.get("provider") or "AniList/Tenrai",
+                        }
+                        break
         return {
             **wikidata,
+            **synopsis_fields,
             "provider": "Wikidata",
             "metadata_source": "Wikidata",
             "metadata_confidence": "exact_title_match",
-            "source_urls": [wikidata.get("source")] if wikidata.get("source") else [],
+            "source_urls": [
+                u for u in (
+                    wikidata.get("source"),
+                    synopsis_fields.get("anime_synopsis_source"),
+                ) if u
+            ],
         }
 
     # AniList/Tenrai are no-key catalogue sources for animation. Accept only
