@@ -20,7 +20,7 @@ USER_AGENT = "NEXORA-Myanmar-Recap/2.0 (free animation catalogue research)"
 def _norm(value):
     import unicodedata
     value = unicodedata.normalize("NFKC", str(value or "")).casefold()
-    return " ".join(re.findall(r"[^\\W_]+", value, flags=re.UNICODE))
+    return " ".join(re.findall(r"[^\W_]+", value, flags=re.UNICODE))
 
 
 def _bangumi_search(title):
@@ -249,4 +249,4 @@ def format_animation_catalogue_report(report):
         "Wikidata သည် CC0 Open Data ဖြစ်သော်လည်း Cartoon/3D ဖော်ပြချက်များ မပြည့်စုံနိုင်ပါ။",
         "ဒီအချက်အလက်များသည် discovery lead သာဖြစ်ပြီး ဇာတ်ကွက်အတည်ပြုချက် သို့မဟုတ် footage/license ခွင့်ပြုချက် မဟုတ်ပါ။",
     ])
-    return "\\n".join(lines)
+    return "\n".join(lines)
