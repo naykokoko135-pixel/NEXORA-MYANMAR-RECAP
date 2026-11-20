@@ -497,3 +497,8 @@ NEXORA now blocks OpenAI and Gemini API requests by default, even if API keys re
 ## Additional free anime source and report QA
 
 The universal anime track now includes Kitsu's public read-only JSON:API alongside AniList, Tenrai/MyAnimeList and Wikidata. Kitsu public GET catalogue reads do not require an API key; the integration accepts only a unique exact title/alias match, rejects R18/R age ratings, and labels synopsis as series-level research only. See the [official Kitsu API documentation](https://hummingbird-me.github.io/api-docs/) for public anime search and API semantics. The universal report also emits real line breaks, and Wikimedia excerpts are whitespace-normalized correctly. No new dependency, paid key, GPU or paid service is added.
+
+
+### Kitsu Episode Research fallback
+
+`/animationepisodes <Anime/Cartoon/Donghua title>` checks TVmaze first. If TVmaze has no usable result, it can use Kitsu's public episode relationship data only after an independent Anime/Wikidata country check confirms a known non-Indian origin. It returns at most five short episode synopsis excerpts and matches only episode IDs linked to the exact anime record. Missing country verification or missing episode summaries fails closed. These excerpts are research notes, not complete scripts or scene transcripts. See [Kitsu episode resource documentation](https://hummingbird-me.github.io/api-docs/) and the TVmaze source link in the report.

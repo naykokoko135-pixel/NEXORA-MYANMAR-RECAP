@@ -37,6 +37,7 @@ from recap_studio import build_original_recap_notes
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
 from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note, _subtitle_duration_seconds
 from wikidata_metadata import fetch_wikidata_metadata
+from kitsu_anime_research import fetch_kitsu_episode_summaries
 from recap_metadata_resolver import resolve_recap_metadata
 from autofacts_narration import generate_burmese_facts_narration
 from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
@@ -1234,13 +1235,32 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
         return
     await update.message.reply_text("Animation Series ကို အတည်ပြုပြီး Episode summary ရှာနေပါတယ်...")
     result = await asyncio.to_thread(fetch_tvmaze_episode_summaries, query, 5)
+    provider = "TVmaze"
     if not result.get("found"):
-        await update.message.reply_text(result.get("status", "Episode ရင်းမြစ် မရရှိပါ။"))
-        return
+        # Kitsu is a free fallback; require independent non-Indian origin verification.
+        from multi_source_research import research_anime_sources
+        verified = await asyncio.to_thread(research_anime_sources, query)
+        anime = verified.get("anilist") or {}
+        wikidata = verified.get("wikidata") or {}
+        countries = wikidata.get("countries") or []
+        country_code = str(anime.get("country") or "").upper()
+        country_text = " ".join(str(x) for x in countries).casefold()
+        if verified.get("india_excluded") or country_code == "IN" or "india" in country_text:
+            await update.message.reply_text("အိန္ဒိယမူရင်းဖြစ်ကြောင်း တွေ့ရှိသဖြင့် ဒီ Project အတွက် Episode ရင်းမြစ်ကို ပယ်ချထားပါတယ်။")
+            return
+        if not countries and not country_code:
+            await update.message.reply_text("TVmaze Episode မရရှိပါ။ Kitsu ကို ဆက်စစ်ရန် မူရင်းနိုင်ငံ အတည်ပြုချက် လိုအပ်ပါတယ်။")
+            return
+        result = await asyncio.to_thread(fetch_kitsu_episode_summaries, query, 5)
+        provider = "Kitsu"
+        if not result.get("found"):
+            await update.message.reply_text("TVmaze နှင့် Kitsu နှစ်ခုစလုံးမှ Episode အချက်အလက် မရရှိပါ။\n" + str(result.get("status") or ""))
+            return
+        result["country"] = ", ".join(str(x) for x in countries) if countries else country_code
     lines = [
         f"Episode Research — {result.get('title', query)}",
         f"နိုင်ငံ: {result.get('country') or 'မဖော်ပြထား'}",
-        "TVmaze ရင်းမြစ်မှ Episode summary အတိုများ (တစ်ခုလျှင် စာလုံး ၂၄၀ အထိ)။",
+        f"{provider} ရင်းမြစ်မှ Episode summary အတိုများ (တစ်ခုလျှင် စာလုံး ၂၄၀ အထိ)။",
         "",
     ]
     for episode in result.get("episodes", []):
@@ -1255,7 +1275,7 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
             lines.append("Source: " + episode["source"])
         lines.append("")
     lines.append(
-        "သတိပြုရန်: ဒီအချက်အလက်တွေဟာ TVmaze ရဲ့ community-maintained Episode summary အတိုများသာဖြစ်ပြီး "
+        f"သတိပြုရန်: ဒီအချက်အလက်တွေဟာ {provider} ရဲ့ Episode summary အတိုများသာဖြစ်ပြီး "
         "အပြည့်အစုံ Recap script၊ ဇာတ်ဝင်ခန်း transcript သို့မဟုတ် အတည်ပြုပြီးဖြစ်ရပ်မှန် မဟုတ်ပါ။"
     )
     await update.message.reply_text("\n".join(lines), disable_web_page_preview=True)
