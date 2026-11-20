@@ -11,10 +11,24 @@ def build_original_recap_notes(movie_report: dict, recap_examples: list[dict]) -
     title = str(movie_report.get("title") or "Unknown title")
     tmdb = movie_report.get("tmdb") or {}
     wikidata = movie_report.get("wikidata") or {}
+    gemini = movie_report.get("gemini") or {}
     if movie_report.get("india_excluded"):
         raise ValueError("အိန္ဒိယမူရင်း/ထုတ်လုပ်မှုပါဝင်သည့် ရုပ်ရှင်ကို NEXORA စည်းမျဉ်းအရ ပယ်ချထားသည်။")
-    if not tmdb.get("found") and not wikidata.get("found"):
-        raise ValueError("TMDB/Wikidata မှ အတည်ပြုနိုင်သော ရုပ်ရှင်အချက်အလက် မရရှိပါ။ မခန့်မှန်းဘဲ ရပ်ထားသည်။")
+    if not tmdb.get("found") and not wikidata.get("found") and not gemini.get("found"):
+        # Show safe provider statuses so operators can distinguish missing
+        # credentials from exact-match or upstream network failures.
+        diagnostics = []
+        for provider, result in (("TMDB", tmdb), ("Wikidata", wikidata), ("Gemini Google Search", gemini)):
+            status = str(result.get("status") or "အကြောင်းရင်း မသိရှိပါ။").strip()
+            diagnostics.append(f"{provider}: {status}")
+        detail = "\n".join(diagnostics)
+        raise ValueError(
+            "TMDB/Wikidata/Gemini မှ အတည်ပြုနိုင်သော ရုပ်ရှင်အချက်အလက် မရရှိပါ။ "
+            "မခန့်မှန်းဘဲ ရပ်ထားသည်။\n\nရင်းမြစ်စစ်ဆေးချက်:\n" + detail +
+            "\n\nGemini Search မရပါက Render Environment တွင် GEMINI_API_KEY နှင့် "
+            "GEMINI_RESEARCH_MODEL ကို စစ်ဆေးပါ။ TMDB သည် optional ဖြစ်သည်။ "
+            "Token တန်ဖိုးကို Chat ထဲ မပို့ပါနှင့်။"
+        )
     lines = [
         "NEXORA ORIGINAL RECAP PRODUCTION BRIEF",
         "Movie: " + title,
@@ -37,6 +51,14 @@ def build_original_recap_notes(movie_report: dict, recap_examples: list[dict]) -
             "Wikidata year: " + str(wikidata.get("year") or ""),
             "Wikidata genres: " + ", ".join(wikidata.get("genres") or []),
             "Wikidata source: " + str(wikidata.get("source") or ""),
+        ])
+    if gemini.get("found"):
+        lines.extend([
+            "Gemini grounded title: " + str(gemini.get("title") or ""),
+            "Gemini release year: " + str(gemini.get("year") or ""),
+            "Gemini production countries: " + ", ".join(gemini.get("countries") or []),
+            "Gemini overview: " + str(gemini.get("overview") or "Not supplied"),
+            "Gemini source URLs: " + " | ".join(item.get("url", "") for item in gemini.get("sources", [])[:8]),
         ])
     lines.extend([
         "",
