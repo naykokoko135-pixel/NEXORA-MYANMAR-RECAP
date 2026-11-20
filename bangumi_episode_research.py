@@ -9,7 +9,9 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from animation_title_aliases import (\n    animation_title_match_names, animation_title_variants, normalize_animation_title,\n)
+from animation_title_aliases import (
+    animation_title_match_names, animation_title_variants, normalize_animation_title,
+)
 
 SEARCH_URL = "https://api.bgm.tv/v0/search/subjects"
 EPISODES_URL = "https://api.bgm.tv/v0/episodes"
