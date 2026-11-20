@@ -9,9 +9,9 @@ from video_renderer import VideoRenderError, render_slideshow
 
 
 class VideoRendererValidationTests(unittest.TestCase):
-    def test_audio_duration_limit_supports_45_minute_youtube_recap(self):
+    def test_audio_duration_limit_supports_60_minute_longform_recap(self):
         from video_renderer import MAX_AUDIO_SECONDS
-        self.assertEqual(MAX_AUDIO_SECONDS, 45 * 60)
+        self.assertEqual(MAX_AUDIO_SECONDS, 60 * 60)
 
 
 
