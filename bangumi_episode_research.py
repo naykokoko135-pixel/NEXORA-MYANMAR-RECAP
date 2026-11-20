@@ -93,7 +93,7 @@ def fetch_bangumi_episode_summaries(title, limit=5):
             title_text = item.get("name_cn") or item.get("name") or ""
             if not title_text and number is None:
                 continue
-            desc = re.sub(r"\\s+", " ", str(item.get("desc") or "")).strip()
+            desc = " ".join(str(item.get("desc") or "").split())
             episode_id = item.get("id")
             episode = {
                 "season": None,
