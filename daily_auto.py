@@ -437,21 +437,21 @@ def main() -> None:
                     plot_result = None
             if plot_result:
                 research += (
-                    "\\n\\n📖 DETAILED PLOT RESEARCH (EXACT WIKIDATA SITELINK)\\n"
-                    + "Section: " + str(plot_result.get("section", "Plot/Synopsis")) + "\\n"
-                    + "Source type: " + str(plot_result.get("source_notice", "Community-edited plot section")) + "\\n"
-                    + "Source: " + str(plot_result.get("source", "")) + "\\n"
+                    "\n\n📖 DETAILED PLOT RESEARCH (EXACT WIKIDATA SITELINK)\n"
+                    + "Section: " + str(plot_result.get("section", "Plot/Synopsis")) + "\n"
+                    + "Source type: " + str(plot_result.get("source_notice", "Community-edited plot section")) + "\n"
+                    + "Source: " + str(plot_result.get("source", "")) + "\n"
                     + str(plot_result.get("plot_text", ""))[:6000]
-                    + "\\n\\nသတိပြုရန်: ဤသည် Wikipedia လူထုတည်းဖြတ် Plot section ဖြစ်သည်။ Official source နှင့် ထပ်မံတိုက်စစ်ပါ။"
+                    + "\n\nသတိပြုရန်: ဤသည် Wikipedia လူထုတည်းဖြတ် Plot section ဖြစ်သည်။ Official source နှင့် ထပ်မံတိုက်စစ်ပါ။"
                 )
             else:
                 research += (
-                    "\\n\\n⚠️ DETAILED PLOT SOURCE မရရှိပါ။ Intro snippet သာရှိသဖြင့် "
+                    "\n\n⚠️ DETAILED PLOT SOURCE မရရှိပါ။ Intro snippet သာရှိသဖြင့် "
                     "ဇာတ်ညွှန်း/Full recap မထုတ်ဘဲ Worksheet အဖြစ်သာထားပါ။"
                 )
         else:
             research += (
-                "\\n\\n⚠️ Wikidata identity ကို media type နှင့် မခွဲနိုင်သေးပါ။ "
+                "\n\n⚠️ Wikidata identity ကို media type နှင့် မခွဲနိုင်သေးပါ။ "
                 "ဇာတ်ညွှန်း/Full recap မထုတ်ဘဲ Worksheet အဖြစ်သာထားပါ။"
             )
 
