@@ -64,7 +64,7 @@ def search_youtube_movie_recaps(title: str, limit: int = 8, api_key: str | None 
     if not key:
         raise YouTubeRecapResearchError("YOUTUBE_DATA_API_KEY မသတ်မှတ်ရသေးပါ။")
     limit = max(1, min(int(limit), 10))
-    query = f'"{clean}" (movie recap OR film recap OR movie explained OR ending explained)'
+    query = f'"{clean}" ("movie recap"|"film recap"|"movie explained"|"ending explained")'
     found = _api("search", {
         "part": "snippet", "q": query, "type": "video",
         "maxResults": min(25, limit * 3), "order": "viewCount",
