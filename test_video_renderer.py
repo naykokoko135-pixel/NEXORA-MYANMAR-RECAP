@@ -192,13 +192,13 @@ class VideoRendererValidationTests(unittest.TestCase):
 
 class AutomaticRenderSubtitleQATests(unittest.TestCase):
     def test_valid_srt_passes_when_timing_matches_measured_audio(self):
-        srt = "1\\n00:00:00,000 --> 00:00:10,000\\nမြန်မာစာတန်း\\n"
+        srt = "1\n00:00:00,000 --> 00:00:10,000\nမြန်မာစာတန်း\n"
         result = validate_render_subtitles(srt, 10.0)
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["caption_count"], 1)
 
     def test_large_timing_drift_is_flagged_for_review_not_blocked(self):
-        srt = "1\\n00:00:00,000 --> 00:00:10,000\\nမြန်မာစာတန်း\\n"
+        srt = "1\n00:00:00,000 --> 00:00:10,000\nမြန်မာစာတန်း\n"
         result = validate_render_subtitles(srt, 30.0)
         self.assertEqual(result["status"], "REVIEW")
         self.assertGreater(result["difference_seconds"], result["tolerance_seconds"])
@@ -217,7 +217,7 @@ class AutomaticRenderSubtitleQATests(unittest.TestCase):
                 return type("Result", (), {"returncode": 0, "stderr": "", "stdout": ""})()
 
             fake_ffmpeg = SimpleNamespace(get_ffmpeg_exe=lambda: "ffmpeg")
-            srt = "1\\n00:00:00,000 --> 00:00:02,000\\nမြန်မာစာတန်း\\n"
+            srt = "1\n00:00:00,000 --> 00:00:02,000\nမြန်မာစာတန်း\n"
             with ExitStack() as stack:
                 stack.enter_context(patch.dict(sys.modules, {"imageio_ffmpeg": fake_ffmpeg}))
                 stack.enter_context(patch("video_renderer._duration_seconds", return_value=2.0))
