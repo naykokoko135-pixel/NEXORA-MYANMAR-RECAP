@@ -183,3 +183,68 @@ def format_anime_source_report(report):
         "ဒီ report သည် research lead သာဖြစ်ပြီး /recapvideo အတွက် footage/license ခွင့်ပြုချက် မပေးပါ။",
     ])
     return "\n".join(lines)
+
+
+def research_all_media_sources(title):
+    """Research a title across anime, general film, and TV-series catalogs."""
+    from tmdb_movie_research import research_movie_sources
+    from tvmaze_synopsis import fetch_tvmaze_synopsis
+
+    clean = " ".join(str(title or "").split()).strip()
+    if not clean or len(clean) > 120:
+        return {"title": clean, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
+
+    def safe(fetcher, *args):
+        try:
+            value = fetcher(*args)
+            return value if isinstance(value, dict) else {"found": False, "status": "ရင်းမြစ်မှ မမှန်ကန်သော တုံ့ပြန်မှု ရရှိပါသည်။"}
+        except Exception:
+            return {"found": False, "status": "ရင်းမြစ်ကို ယခုချိန်တွင် မရရှိနိုင်ပါ။"}
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        anime_f = pool.submit(safe, research_anime_sources, clean)
+        movie_f = pool.submit(safe, research_movie_sources, clean)
+        series_f = pool.submit(safe, fetch_tvmaze_synopsis, clean)
+        anime, movie, series = anime_f.result(), movie_f.result(), series_f.result()
+    return {"title": clean, "anime": anime, "movie": movie, "series": series}
+
+
+def format_all_media_source_report(report):
+    """Display separate Anime, Movie and TV Series research tracks."""
+    if report.get("status"):
+        return str(report["status"])
+    from tmdb_movie_research import format_movie_source_report
+
+    lines = [
+        "🔎 NEXORA Universal Multi-Source Research",
+        "ခေါင်းစဉ်: " + str(report.get("title") or "မရရှိပါ"),
+        "ရှာဖွေမှု: Anime / Animation, Movies, TV Series — သီးခြားစစ်ဆေးထားသည်။",
+        "",
+        "━━━━━━━━【 ANIME / ANIMATION 】━━━━━━━━",
+        format_anime_source_report(report.get("anime") or {}),
+        "",
+        "━━━━━━━━【 MOVIE / FILM 】━━━━━━━━",
+        format_movie_source_report(report.get("movie") or {}),
+        "",
+        "━━━━━━━━【 TV SERIES 】━━━━━━━━",
+    ]
+    series = report.get("series") or {}
+    if series.get("found"):
+        lines.extend([
+            "အမည်: " + str(series.get("title") or "မရရှိပါ"),
+            "နိုင်ငံ: " + str(series.get("country") or "မရရှိပါ"),
+            "ပထမဆုံးထုတ်လွှင့်ရက်: " + str(series.get("premiered") or "မရရှိပါ"),
+            "အမျိုးအစား: " + (", ".join(series.get("genres") or []) or "မရရှိပါ"),
+            "အခြေအနေ: " + str(series.get("status_label") or "မရရှိပါ"),
+            "Synopsis: " + str(series.get("summary") or "မရရှိပါ")[:1400],
+            "Source: " + str(series.get("provider_url") or ""),
+            str(series.get("notice") or ""),
+        ])
+    else:
+        lines.append(str(series.get("status") or "TVmaze ရင်းမြစ် မရရှိပါ။"))
+    lines.extend([
+        "",
+        "မှတ်ချက်: Catalogue တစ်ခုတွင် မတွေ့ခြင်းသည် အခြား catalogue များတွင် မရှိကြောင်း မဆိုလိုပါ။",
+        "ဒီ report သည် research lead သာဖြစ်ပြီး footage/license ခွင့်ပြုချက် မပေးပါ။",
+    ])
+    return "\\n".join(lines)
