@@ -88,7 +88,7 @@ def fetch_tenrai_synopsis(title):
 
 
 def research_anime_sources(title):
-    """Query AniList, Tenrai and Wikidata concurrently and report only exact matches."""
+    """Query AniList, Kitsu, Tenrai and Wikidata concurrently; keep exact matches only."""
     clean = " ".join(str(title or "").split()).strip()
     if not clean or len(clean) > 120:
         return {"title": clean, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
@@ -125,7 +125,7 @@ def research_anime_sources(title):
         eligibility = "မူရင်းနိုင်ငံကို အတည်မပြုနိုင်သေးပါ။ အမျိုးအစား/နိုင်ငံကို မခန့်မှန်းပါနှင့်။"
 
     years = []
-    for source in (anilist, tenrai, wikidata):
+    for source in (anilist, kitsu, tenrai, wikidata):
         year = str(source.get("year") or "").strip()
         if source.get("found") and year and year not in years:
             years.append(year)
