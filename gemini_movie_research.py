@@ -15,7 +15,8 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.8-flash"
+RETIRED_MODEL_ALIASES = {"gemini-2.5-flash": DEFAULT_MODEL}
 TIMEOUT_SECONDS = 45
 
 
@@ -38,7 +39,11 @@ def fetch_gemini_movie_metadata(title: str) -> dict:
     if not key:
         return _safe_status("GEMINI_API_KEY မချိတ်ထားပါ။ Render Environment ကို စစ်ဆေးပါ။")
 
-    model = os.getenv("GEMINI_RESEARCH_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    configured_model = os.getenv("GEMINI_RESEARCH_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    # Render may retain an older dashboard override after Blueprint changes.
+    # Route the retired 2.5 Flash setting to the current Search-grounding model.
+    model = RETIRED_MODEL_ALIASES.get(configured_model, configured_model)
+    model_fallback_used = model != configured_model
     prompt = (
         "Research the exact film title using Google Search. Do not guess. "
         "Return ONLY a JSON object with keys: title, media_type, release_year, "
@@ -63,10 +68,10 @@ def fetch_gemini_movie_metadata(title: str) -> dict:
         "tools": [{"googleSearch": {}}],
         "generationConfig": {"temperature": 1.0},
     }).encode("utf-8")
-    url = API_BASE + "/" + model + ":generateContent?" + urlencode({"key": key})
+    url = API_BASE + "/" + model + ":generateContent"
     request = Request(
         url, data=payload,
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        headers={"Content-Type": "application/json", "Accept": "application/json", "x-goog-api-key": key},
         method="POST",
     )
     try:
@@ -144,5 +149,5 @@ def fetch_gemini_movie_metadata(title: str) -> dict:
         "overview": overview,
         "sources": sources[:8],
         "source_domains": sorted(domains),
-        "status": "Gemini Google Search ဖြင့် source domain မတူသော web ရင်းမြစ်များကို အခြေခံ၍ အချက်အလက်ရရှိပါပြီ။ Official source ဖြင့် ထပ်မံစစ်ဆေးပါ။",
+        "status": ("GEMINI_RESEARCH_MODEL ဟောင်းကို gemini-3.8-flash သို့ အလိုအလျောက်ပြောင်းပြီး Google Search ဖြင့် အချက်အလက်ရရှိပါပြီ။ " if model_fallback_used else "Gemini Google Search ဖြင့် source domain မတူသော web ရင်းမြစ်များကို အခြေခံ၍ အချက်အလက်ရရှိပါပြီ။ ") + "Official source ဖြင့် ထပ်မံစစ်ဆေးပါ။",
     }
