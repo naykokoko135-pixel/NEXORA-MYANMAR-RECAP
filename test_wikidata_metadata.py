@@ -382,6 +382,40 @@ class WikidataMetadataTests(unittest.TestCase):
         self.assertEqual(result["countries"], ["Japan"])
 
     @patch("wikidata_metadata.urlopen")
+    def test_expected_media_type_selects_anime_series_over_same_name_manga(self, mock_urlopen):
+        search = {"search": [
+            {"id": "Q1001", "label": "One Piece",
+             "description": "Japanese anime television series"},
+            {"id": "Q1002", "label": "One Piece",
+             "description": "Japanese manga series"},
+        ]}
+        entity = {"entities": {"Q1001": {"claims": {}}}}
+        mock_urlopen.side_effect = [
+            Response(json.dumps(search).encode()),
+            Response(json.dumps(entity).encode()),
+        ]
+
+        result = fetch_wikidata_metadata("One Piece", expected_media_type="Animated Series")
+
+        self.assertTrue(result["found"])
+        self.assertEqual(result["entity_id"], "Q1001")
+        self.assertEqual(mock_urlopen.call_count, 2)
+
+    @patch("wikidata_metadata.urlopen")
+    def test_expected_media_type_rejects_wrong_kind_of_work(self, mock_urlopen):
+        search = {"search": [{
+            "id": "Q1003", "label": "One Piece",
+            "description": "Japanese manga series",
+        }]}
+        mock_urlopen.return_value = Response(json.dumps(search).encode())
+
+        result = fetch_wikidata_metadata("One Piece", expected_media_type="Animated Series")
+
+        self.assertFalse(result["found"])
+        self.assertIn("မျှော်မှန်းထားသော Animated Series", result["status"])
+        self.assertEqual(mock_urlopen.call_count, 1)
+
+    @patch("wikidata_metadata.urlopen")
     def test_multiple_primary_screen_work_matches_remain_ambiguous(self, mock_urlopen):
         search = {"search": [
             {"id": "Q901", "label": "Example",
