@@ -64,7 +64,7 @@ TITLE_CATEGORIES = {
         "Larva", "Pucca", "The Haunted House: The Secret of the Ghost Ball",
         "Leafie, A Hen into the Wild", "Masha and the Bear",
         "The Fixies", "Grizzy and the Lemmings", "Oggy and the Cockroaches",
-        "The Amazing World of Gumball", "The Deep",
+        "The Deep",
     ],
     "Donghua": [
         "The King's Avatar", "Soul Land", "The Daily Life of the Immortal King",
