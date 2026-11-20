@@ -32,6 +32,7 @@ from video_renderer import render_slideshow, render_scene_timeline, VideoRenderE
 from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
 from youtube_cc_finder import search_youtube_cc_videos, YouTubeCCSearchError
+from youtube_movie_recap_research import search_youtube_movie_recaps, format_youtube_movie_recaps, YouTubeRecapResearchError
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
 from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note, _subtitle_duration_seconds
 from wikidata_metadata import fetch_wikidata_metadata
@@ -433,6 +434,36 @@ async def voiceover_notes_message(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_document(document=InputFile(file_obj, filename=file_obj.name), caption=f"🎙️ {title} — Part {index}/3")
     context.user_data.pop("pending_voiceover", None)
 
+
+
+async def recapchannels_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Research English-language movie recap videos; metadata only, never reuse footage."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /recapchannels <နိုင်ငံခြားရုပ်ရှင်အမည်>\n"
+            "ဥပမာ: /recapchannels Parasite\n"
+            "English Movie Recap Channel များကို views နှင့် relevance ဖြင့် စုစည်းပေးပါမယ်။"
+        )
+        return
+    await update.message.reply_text(
+        "နိုင်ငံခြား YouTube Movie Recap Channel များကို ခေါင်းစဉ်ကိုက်ညီမှု၊ "
+        "views နှင့် တင်သည့်ရက်အလိုက် စစ်ဆေးနေပါတယ်..."
+    )
+    try:
+        items = await asyncio.to_thread(search_youtube_movie_recaps, query, 8)
+        report = format_youtube_movie_recaps(query, items)
+    except YouTubeRecapResearchError as exc:
+        await update.message.reply_text(str(exc))
+        return
+    except Exception:
+        log.exception("YouTube movie recap research failed")
+        await update.message.reply_text("Movie Recap Channel Research မအောင်မြင်ပါ။")
+        return
+    for start_at in range(0, len(report), 3900):
+        await update.message.reply_text(report[start_at:start_at + 3900], disable_web_page_preview=True)
 
 
 async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2292,6 +2323,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("voiceover", voiceover_cmd))
     telegram_app.add_handler(CommandHandler("voiceover3", voiceover3_cmd))
     telegram_app.add_handler(CommandHandler("clipsource", clipsource_cmd))
+    telegram_app.add_handler(CommandHandler("recapchannels", recapchannels_cmd))
     telegram_app.add_handler(CommandHandler("autoclip", autoclip_cmd))
     telegram_app.add_handler(CommandHandler("autonarrateclip", autonarrateclip_cmd))
     telegram_app.add_handler(CommandHandler("autofactsclip", autofactsclip_cmd))
