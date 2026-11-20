@@ -2412,12 +2412,12 @@ async def productionqa_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Check platform script parts, estimated duration, and supplied SRT structure."""
     if not update.message or not update.message.text:
         return
-    message_parts = update.message.text.split("\\n", 1)
+    message_parts = update.message.text.split("\n", 1)
     header = message_parts[0].split(maxsplit=1)
     if len(header) < 2 or len(message_parts) < 2:
         await update.message.reply_text(
-            "အသုံးပြုပုံ:\\n/productionqa Anime|Demon Slayer|youtube\\n"
-            "[PART 1]\\nScript အပိုင်း ၁\\n[PART 2]\\nScript အပိုင်း ၂\\n[PART 3]\\nScript အပိုင်း ၃\\n[SRT]\\nSRT စာသား\\n"
+            "အသုံးပြုပုံ:\n/productionqa Anime|Demon Slayer|youtube\n"
+            "[PART 1]\nScript အပိုင်း ၁\n[PART 2]\nScript အပိုင်း ၂\n[PART 3]\nScript အပိုင်း ၃\n[SRT]\nSRT စာသား\n"
             "TikTok အတွက် [PART 1] တစ်ခုတည်း ထည့်ပါ။"
         )
         return
@@ -2428,10 +2428,10 @@ async def productionqa_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     category, title, platform = fields
     package_text = message_parts[1]
     parsed_parts, _ = parse_production_package(package_text)
-    combined_script = "\\n\\n".join(parsed_parts.get(number, "") for number in sorted(parsed_parts))
+    combined_script = "\n\n".join(parsed_parts.get(number, "") for number in sorted(parsed_parts))
     editorial = analyze_recap_script(category, title, combined_script)
     production = analyze_production_package(platform, package_text)
-    output = format_recap_qa_report(editorial) + "\\n\\n" + format_production_qa_report(production)
+    output = format_recap_qa_report(editorial) + "\n\n" + format_production_qa_report(production)
     if len(output) <= 3900:
         await update.message.reply_text(output, disable_web_page_preview=True)
     else:
