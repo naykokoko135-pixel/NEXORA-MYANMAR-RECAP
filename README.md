@@ -15,7 +15,7 @@ A free Telegram bot for Burmese recap-writing worksheets and English subtitle SR
 - `/duration <minutes>` — choose a duration valid for the selected platform
 - `/settings` — show the current user's selections
 - `/mode free|ai` — choose the free worksheet or configured AI-script mode
-- `/srt` — convert timestamped subtitle lines into an SRT file\n- `/srtmy` — split a supplied Burmese narration script into estimated-time Burmese SRT captions\n- `/tts <preset>` — create a Burmese MP3 using a selected delivery-style preset
+- `/srt` — convert creator-supplied, timestamped English subtitle lines into an SRT file; validates timestamp ranges and ordering but does not translate text automatically\n- `/srtmy` — split a supplied Burmese narration script into estimated-time Burmese SRT captions\n- `/tts <preset>` — create a Burmese MP3 using a selected delivery-style preset
 - `/voices` — list Burmese voice identities and delivery-style presets
 - `/tts-local` followed by Burmese text on the next line — experimental local MyanmarTTS WAV (requires optional dependencies and explicit host enablement)
 - `/ttssrt <preset>` — create an MP3 and word-boundary-timed Burmese SRT together
