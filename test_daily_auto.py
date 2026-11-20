@@ -128,5 +128,24 @@ class DailyAutoTests(unittest.TestCase):
         self.assertIn("၁၀–၁၅ မိနစ်", facebook)
         self.assertIn("၁–၃ မိနစ်", tiktok)
 
+    def test_source_failure_returns_fallback_without_raising(self):
+        from daily_auto import _source_or_fallback
+
+        def unavailable_source():
+            raise TimeoutError("temporary upstream timeout")
+
+        self.assertEqual(
+            _source_or_fallback("test source", unavailable_source, "fallback brief"),
+            "fallback brief",
+        )
+
+    def test_source_success_returns_original_result(self):
+        from daily_auto import _source_or_fallback
+
+        self.assertEqual(
+            _source_or_fallback("test source", lambda: {"found": True}, {}),
+            {"found": True},
+        )
+
 if __name__ == "__main__":
     unittest.main()
