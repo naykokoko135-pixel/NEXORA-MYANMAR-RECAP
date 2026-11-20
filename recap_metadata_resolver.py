@@ -153,7 +153,7 @@ def resolve_recap_metadata(title):
         # AniList/Tenrai catalogue synopsis without replacing Wikidata identity
         # or country metadata.
         synopsis_fields = {}
-        if not wikidata.get("mywiki_title") or not wikidata.get("enwiki_title"):
+        if not wikidata.get("anime_synopsis"):
             anime = safe_fetch(research_anime_sources, "Anime catalogue")
             if anime.get("india_excluded"):
                 return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယမူရင်းခေါင်းစဉ်များကို မထည့်ပါ။"}
