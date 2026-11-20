@@ -487,3 +487,8 @@ TVmaze ratings are community ratings, not views or popularity. This is an editor
 Use `/multisourceresearch <title>` to query independent Anime/Animation catalogues (AniList, Tenrai/MAL, Wikidata), movie metadata (TMDB when its optional owner-managed token is configured, Wikidata and Gemini when configured), TV-series metadata (TVmaze), and a free Wikimedia cross-category discovery search. The Wikimedia track can surface additional leads for Donghua, Cartoon, 3D Animation, films and series; it is not a dedicated catalogue for every format and does not prove format, origin, rights or plot. Each provider can fail independently without hiding other results.
 
 The new discovery track uses public/free endpoints and Python's standard library. No new paid API, API key, GPU or package is required. Existing optional TMDB/Gemini/OpenAI integrations may incur costs when enabled; they are not required for the free discovery path. AniList matching tolerates harmless punctuation and the common "The Movie" descriptor while still requiring a unique title/alias match. Catalogue descriptions remain research leads, never episode-by-episode plot facts.
+
+
+## Free-only cost protection
+
+NEXORA now blocks OpenAI and Gemini API requests by default, even if API keys remain configured in Render. This prevents accidental paid AI calls from recap script generation and Gemini Search research. The normal free research/worksheet/TTS/render workflow continues. Paid AI can only be deliberately enabled by setting `NEXORA_ALLOW_PAID_AI=true` in Render; leave it unset for the requested free-only operation. This switch does not make an API free: it only makes any potentially chargeable use explicit. No new paid service or package is introduced.
