@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import os
+
+from cost_controls import paid_ai_allowed
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -26,9 +28,12 @@ class AIScriptError(RuntimeError):
 
 def openai_script_status() -> dict:
     key_present = bool(os.getenv("OPENAI_API_KEY", "").strip())
+    allowed = paid_ai_allowed()
     return {
         "provider": "OpenAI",
-        "configured": key_present,
+        "key_present": key_present,
+        "paid_ai_allowed": allowed,
+        "configured": key_present and allowed,
         "model": os.getenv("OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL,
         "max_output_tokens": MAX_OUTPUT_TOKENS,
     }
@@ -37,6 +42,8 @@ def openai_script_status() -> dict:
 def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtube",
                                  duration: str = "46-60") -> str:
     """Draft a Burmese recap only from supplied notes; never fabricate missing plot."""
+    if not paid_ai_allowed():
+        raise AIScriptError("Free-only mode ဖွင့်ထားသည်။ အခကြေးငွေရှိနိုင်သော OpenAI API ကို ပိတ်ထားသည်။")
     key = os.getenv("OPENAI_API_KEY", "").strip()
     if not key:
         raise AIScriptError("OpenAI API မချိတ်ရသေးပါ။ အုပ်ထိန်းသူက Render Environment တွင် OPENAI_API_KEY ကို သတ်မှတ်ပေးရန် လိုအပ်ပါတယ်။")
