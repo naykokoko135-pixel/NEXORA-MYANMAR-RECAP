@@ -175,7 +175,10 @@ def fetch_wikidata_metadata(title, expected_media_type=None):
                 candidate_id: item for candidate_id, item in candidates_by_id.items()
                 if _candidate_matches_exact_title(item, normalized_title)
             }
-            if exact_by_id:
+            # When a media type is known, continue searching other title
+            # languages so an English manga result cannot hide the exact anime
+            # adaptation (or vice versa).
+            if exact_by_id and not expected_media_type:
                 break
         if not exact_by_id:
             return {
