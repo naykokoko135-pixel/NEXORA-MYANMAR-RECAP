@@ -135,6 +135,8 @@ def test_missing_metadata_error_explains_each_provider_without_secrets():
         message = str(exc)
         assert "TMDB:" in message
         assert "Wikidata:" in message
+        assert "TMDB API Read Access Token မချိတ်ရသေးပါ။" in message
+        assert "Wikidata ရင်းမြစ်ကို ယခုချိန်တွင် မရရှိနိုင်ပါ။" in message
         assert "Gemini Google Search:" in message
         assert "GEMINI_API_KEY" in message
         assert "TMDB သည် optional" in message
