@@ -21,6 +21,7 @@ class FakeResponse:
 
 def test_gemini_movie_metadata_requires_grounded_sources_and_exact_identity(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("NEXORA_ALLOW_PAID_AI", "1")
     response = {
         "candidates": [{
             "content": {"parts": [{
@@ -53,6 +54,7 @@ def test_gemini_movie_metadata_requires_grounded_sources_and_exact_identity(monk
 
 def test_gemini_movie_metadata_fails_closed_without_two_source_domains(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("NEXORA_ALLOW_PAID_AI", "1")
     response = {
         "candidates": [{
             "content": {"parts": [{"text": "{}"}]},
@@ -69,6 +71,7 @@ def test_gemini_movie_metadata_fails_closed_without_two_source_domains(monkeypat
 
 
 def test_gemini_movie_metadata_requires_existing_api_key(monkeypatch):
+    monkeypatch.setenv("NEXORA_ALLOW_PAID_AI", "1")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     result = research.fetch_gemini_movie_metadata("Parasite")
     assert result["found"] is False
@@ -88,6 +91,7 @@ def _http_429(body):
 
 def test_gemini_429_rate_limit_is_classified_without_claiming_user_used_quota(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "never-echo-this-key")
+    monkeypatch.setenv("NEXORA_ALLOW_PAID_AI", "1")
     monkeypatch.setattr(
         research, "urlopen",
         lambda *args, **kwargs: (_ for _ in ()).throw(
@@ -103,6 +107,7 @@ def test_gemini_429_rate_limit_is_classified_without_claiming_user_used_quota(mo
 
 def test_gemini_429_billing_error_is_not_reported_as_usage_quota(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("NEXORA_ALLOW_PAID_AI", "1")
     monkeypatch.setattr(
         research, "urlopen",
         lambda *args, **kwargs: (_ for _ in ()).throw(
@@ -116,6 +121,7 @@ def test_gemini_429_billing_error_is_not_reported_as_usage_quota(monkeypatch):
 
 def test_gemini_429_unknown_error_does_not_claim_quota_exhausted(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("NEXORA_ALLOW_PAID_AI", "1")
     monkeypatch.setattr(
         research, "urlopen",
         lambda *args, **kwargs: (_ for _ in ()).throw(_http_429({"error": {"status": "UNKNOWN"}})),
@@ -127,6 +133,7 @@ def test_gemini_429_unknown_error_does_not_claim_quota_exhausted(monkeypatch):
 
 def test_gemini_429_malformed_body_is_handled_safely(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("NEXORA_ALLOW_PAID_AI", "1")
     error = HTTPError("https://example.test", 429, "Too Many Requests", hdrs=None, fp=io.BytesIO(b"not-json"))
     monkeypatch.setattr(
         research, "urlopen",
@@ -135,3 +142,11 @@ def test_gemini_429_malformed_body_is_handled_safely(monkeypatch):
     result = research.fetch_gemini_movie_metadata("Example")
     assert result["found"] is False
     assert "HTTP 429" in result["status"]
+
+
+def test_gemini_movie_research_is_disabled_by_default_even_with_key(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.delenv("NEXORA_ALLOW_PAID_AI", raising=False)
+    result = research.fetch_gemini_movie_metadata("Example")
+    assert result["found"] is False
+    assert "Free-only mode" in result["status"]
