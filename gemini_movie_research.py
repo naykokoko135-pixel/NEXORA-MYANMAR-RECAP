@@ -61,7 +61,7 @@ def fetch_gemini_movie_metadata(title: str) -> dict:
     payload = json.dumps({
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "tools": [{"googleSearch": {}}],
-        "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"},
+        "generationConfig": {"temperature": 1.0},
     }).encode("utf-8")
     url = API_BASE + "/" + model + ":generateContent?" + urlencode({"key": key})
     request = Request(
