@@ -495,6 +495,12 @@ Supported categories: Anime, 3D Animation, Cartoon, Donghua, and International M
 **Important:** This is a structure-only preflight. It does not fact-check plot events, verify that URLs support claims, determine whether footage/music is legally reusable, translate text, or predict views/likes. A clean report means only that the checked editorial signals are present; human review remains required.
 
 
+## Measured audio duration QA
+
+After generating or exporting a narration, send its MP3/WAV/M4A/OGG file to the bot (up to 20 MB), then reply to that file with `/audioqa youtube`, `/audioqa facebook`, or `/audioqa tiktok`. NEXORA downloads the replied file temporarily, uses the repository's bundled FFmpeg to decode the audio stream, reads the media duration, compares it with the platform target (YouTube/Facebook 46–60 minutes; TikTok 4–7 minutes), and deletes the temporary file afterward. This measures the supplied audio file rather than estimating runtime from script character count.
+
+The command does not upload the file elsewhere, retain it as a user library item, inspect plot facts, evaluate narration quality, or verify word-level subtitle synchronization. It is a duration/decode preflight only; listen to the narration and review SRT timing before publishing. The existing `/productionqa` command remains useful for script-part structure and SRT checks.
+
 ## Platform script, duration, and subtitle QA
 
 Use Telegram `/productionqa <category>|<title>|<platform>` and include explicit `[PART 1]`, `[PART 2]`, and `[PART 3]` sections for YouTube/Facebook, or only `[PART 1]` for TikTok, followed by an `[SRT]` block containing the SRT text. YouTube and Facebook are checked against exactly 3 parts, approximately 15–20 minutes per part and 46–60 minutes total. TikTok is checked against one 4–7 minute part. The checker estimates script duration using 12 characters/second (the existing subtitle-builder planning rate), checks SRT sequence numbers, timestamp order/overlaps, caption line length (42 characters), and compares the final SRT timestamp with the estimated script length.
