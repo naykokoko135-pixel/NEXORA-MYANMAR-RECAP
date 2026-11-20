@@ -52,8 +52,8 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     notes = str(notes or "").strip()
     if not topic or len(topic) > 180:
         raise GeminiScriptError("ခေါင်းစဉ်သည် ဗလာမဖြစ်ရ၊ စာလုံး 180 ထက်မကျော်ရပါ။")
-    if len(notes) < 80 or len(notes) > 6000:
-        raise GeminiScriptError("Research Notes ကို စာလုံး 80 မှ 6,000 အတွင်း ထည့်ပါ။")
+    if len(notes) < 80 or len(notes) > 20000:
+        raise GeminiScriptError("Research Notes ကို စာလုံး 80 မှ 20,000 အတွင်း ထည့်ပါ။")
     if platform not in MIN_SCRIPT_CHARS:
         raise GeminiScriptError("Platform မမှန်ကန်ပါ။")
     model = os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
