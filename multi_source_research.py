@@ -13,6 +13,7 @@ import unicodedata
 
 from anilist_synopsis import fetch_anilist_synopsis
 from wikidata_metadata import fetch_wikidata_metadata
+from free_catalogue_research import search_free_catalogue
 
 TENRAI_API = "https://api.tenrai.org/v1/anime"
 USER_AGENT = "NEXORA-Myanmar-Recap/1.0"
@@ -201,12 +202,13 @@ def research_all_media_sources(title):
         except Exception:
             return {"found": False, "status": "ရင်းမြစ်ကို ယခုချိန်တွင် မရရှိနိုင်ပါ။"}
 
-    with ThreadPoolExecutor(max_workers=3) as pool:
+    with ThreadPoolExecutor(max_workers=4) as pool:
         anime_f = pool.submit(safe, research_anime_sources, clean)
         movie_f = pool.submit(safe, research_movie_sources, clean)
         series_f = pool.submit(safe, fetch_tvmaze_synopsis, clean)
-        anime, movie, series = anime_f.result(), movie_f.result(), series_f.result()
-    return {"title": clean, "anime": anime, "movie": movie, "series": series}
+        free_f = pool.submit(safe, search_free_catalogue, clean)
+        anime, movie, series, free_catalogue = anime_f.result(), movie_f.result(), series_f.result(), free_f.result()
+    return {"title": clean, "anime": anime, "movie": movie, "series": series, "free_catalogue": free_catalogue}
 
 
 def format_all_media_source_report(report):
@@ -218,7 +220,7 @@ def format_all_media_source_report(report):
     lines = [
         "🔎 NEXORA Universal Multi-Source Research",
         "ခေါင်းစဉ်: " + str(report.get("title") or "မရရှိပါ"),
-        "ရှာဖွေမှု: Anime / Animation, Movies, TV Series — သီးခြားစစ်ဆေးထားသည်။",
+        "ရှာဖွေမှု: Anime / Animation, Movies, TV Series နှင့် Wikimedia public catalogue — သီးခြားစစ်ဆေးထားသည်။",
         "",
         "━━━━━━━━【 ANIME / ANIMATION 】━━━━━━━━",
         format_anime_source_report(report.get("anime") or {}),
@@ -242,6 +244,14 @@ def format_all_media_source_report(report):
         ])
     else:
         lines.append(str(series.get("status") or "TVmaze ရင်းမြစ် မရရှိပါ။"))
+    lines.extend(["", "━━━━━━━━【 FREE CROSS-CATEGORY DISCOVERY 】━━━━━━━━"])
+    free = report.get("free_catalogue") or {}
+    if free.get("found"):
+        for index, item in enumerate(free.get("items") or [], start=1):
+            lines.extend([f"{index}. {item.get('title') or 'Untitled'}", str(item.get('excerpt') or "")[:500], "Source: " + str(item.get("url") or "")])
+    else:
+        lines.append(str(free.get("status") or "Wikimedia public catalogue မရရှိပါ။"))
+    lines.append("မှတ်ချက်: Wikimedia သည် Donghua၊ Cartoon၊ 3D Animation၊ Anime၊ ရုပ်ရှင်နှင့် စီးရီးများအတွက် cross-category discovery lead သာဖြစ်ပြီး သီးသန့် catalogue အပြည့်အစုံ မဟုတ်ပါ။")
     lines.extend([
         "",
         "မှတ်ချက်: Catalogue တစ်ခုတွင် မတွေ့ခြင်းသည် အခြား catalogue များတွင် မရှိကြောင်း မဆိုလိုပါ။",
