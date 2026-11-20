@@ -1,6 +1,7 @@
 """Create a simple MP4 slideshow from creator-owned images and narration audio."""
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 import tempfile
@@ -18,6 +19,32 @@ AUDIO_SUFFIXES = {".mp3", ".m4a", ".wav", ".ogg"}
 
 class VideoRenderError(ValueError):
     """Raised when inputs cannot be rendered safely."""
+
+
+def validate_render_subtitles(subtitle_text: str, audio_duration: float) -> dict:
+    """Run structural SRT QA and compare its final cue with measured audio duration.
+
+    Subtitle timing is estimated by the caption builder, so alignment drift is
+    reported for human review rather than treated as a hard render failure.
+    """
+    from production_qa import validate_srt
+
+    result = validate_srt(subtitle_text)
+    if not result.get("valid"):
+        issues = result.get("issues") or ["SRT ဖွဲ့စည်းပုံ မမှန်ပါ။"]
+        raise VideoRenderError("SRT QA မအောင်မြင်ပါ: " + "; ".join(issues[:5]))
+    subtitle_duration = float(result.get("duration_seconds") or 0)
+    audio_duration = float(audio_duration)
+    difference = abs(subtitle_duration - audio_duration)
+    tolerance = max(5.0, audio_duration * 0.25)
+    return {
+        "status": "PASS" if difference <= tolerance else "REVIEW",
+        "caption_count": result.get("entries", 0),
+        "audio_duration_seconds": round(audio_duration, 3),
+        "subtitle_duration_seconds": round(subtitle_duration, 3),
+        "difference_seconds": round(difference, 3),
+        "tolerance_seconds": round(tolerance, 3),
+    }
 
 
 def _duration_seconds(ffmpeg: str, audio_path: Path) -> float:
@@ -108,6 +135,13 @@ def render_slideshow(
 
         subtitle_path = None
         if subtitle is not None:
+            qa = validate_render_subtitles(subtitle_text, duration)
+            if qa["status"] == "REVIEW":
+                logging.getLogger("nexora.video_renderer").warning(
+                    "Subtitle/audio timing needs human review: captions=%s audio=%.3fs srt=%.3fs delta=%.3fs",
+                    qa["caption_count"], qa["audio_duration_seconds"],
+                    qa["subtitle_duration_seconds"], qa["difference_seconds"],
+                )
             subtitle_path = work / "captions.srt"
             subtitle_path.write_bytes(subtitle[1])
 
