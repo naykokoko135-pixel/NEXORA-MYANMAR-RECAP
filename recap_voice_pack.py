@@ -1,5 +1,5 @@
 """Input parsing for a creator-written Burmese recap voice pack."""
-MAX_RECAP_SCRIPT_CHARS = 6000
+MAX_RECAP_SCRIPT_CHARS = 80000
 
 def parse_recap_voice_request(message_text: str, available_presets) -> tuple[str, str]:
     if not isinstance(message_text, str):
@@ -14,7 +14,7 @@ def parse_recap_voice_request(message_text: str, available_presets) -> tuple[str
             "ဥပမာ: /recapvoice narrator\nဒီနေ့ ဇာတ်လမ်းရဲ့ အဓိကဖြစ်ရပ်ကို ပြောပြပါမယ်။"
         )
     if len(narration) > MAX_RECAP_SCRIPT_CHARS:
-        raise ValueError("Narration စာသားသည် စာလုံး ၆,၀၀၀ ထက် မကျော်ရပါ။ အပိုင်းခွဲပြီး ထုတ်ပါ။")
+        raise ValueError("Narration စာသားသည် စာလုံး ၈၀,၀၀၀ ထက် မကျော်ရပါ။ အပိုင်းခွဲပြီး ထုတ်ပါ။")
     if preset not in available_presets:
         raise ValueError("Voice preset မမှန်ပါ။ /voices ဖြင့် ရရှိနိုင်သော preset များကို ကြည့်ပါ။")
     return preset, narration
