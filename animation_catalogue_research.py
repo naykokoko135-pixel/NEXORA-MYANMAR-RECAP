@@ -272,12 +272,16 @@ def format_animation_catalogue_report(report):
     if cartoon.get("found"):
         lines.extend([
             "အမည်: " + str(cartoon.get("title") or "မရရှိပါ"),
-            "ဖော်ပြချက်: " + str(cartoon.get("description") or "BCDB catalogue record"),
+            "ဖော်ပြချက်: " + str(cartoon.get("description") or "Cartoon catalogue record"),
             "Source: " + str(cartoon.get("source") or ""),
-            "BCDB Catalogue: " + str(cartoon.get("catalogue_url") or ""),
             "နိုင်ငံအတည်ပြုချက်: " + ("ရရှိ" if cartoon.get("origin_verified") else "မရရှိသေး — production မစတင်ရ"),
-            "Attribution: The Big Cartoon DataBase (bcdb.com), CC BY 4.0",
         ])
+        if cartoon.get("provider") == "The Big Cartoon DataBase (BCDB)":
+            lines.extend([
+                "BCDB Catalogue: " + str(cartoon.get("catalogue_url") or ""),
+                "Attribution: The Big Cartoon DataBase (bcdb.com), CC BY 4.0",
+                "သတိပြုရန်: BCDB Popular စာရင်း၏ page views သည် social-platform trend data မဟုတ်ပါ။",
+            ])
     else:
         lines.append(str(cartoon.get("status") or "ရင်းမြစ် မရရှိပါ။"))
 
