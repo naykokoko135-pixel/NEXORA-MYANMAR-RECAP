@@ -96,3 +96,23 @@ def test_tvmaze_short_name_resolves_only_unique_series(monkeypatch):
     assert result["found"] is True
     assert result["title"] == show["name"]
     assert result["episodes"][0]["number"] == 1
+
+
+def test_kitsu_episode_lookup_rejects_movie_format(monkeypatch):
+    movie = {
+        "id": "movie-1",
+        "attributes": {
+            "canonicalTitle": "Demon Slayer: Kimetsu no Yaiba Infinity Castle",
+            "titles": {"en": "Demon Slayer: Kimetsu no Yaiba Infinity Castle"},
+            "slug": "infinity-castle",
+            "ageRating": "PG",
+            "subtype": "movie",
+        },
+        "relationships": {"episodes": {"data": []}},
+    }
+    monkeypatch.setattr(kitsu, "_get_json", lambda _url: {"data": [movie], "included": []})
+    result = kitsu.fetch_kitsu_episode_summaries(
+        "Demon Slayer: Kimetsu no Yaiba – The Movie: Infinity Castle"
+    )
+    assert result["found"] is False
+    assert "TV/Animation Series" in result["status"]
