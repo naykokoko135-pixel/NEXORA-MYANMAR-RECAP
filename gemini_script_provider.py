@@ -57,6 +57,10 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     if platform not in MIN_SCRIPT_CHARS:
         raise GeminiScriptError("Platform မမှန်ကန်ပါ။")
     model = os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    longform_instruction = (
+        + longform_instruction
+        if platform == "youtube" and duration == "30-45" else ""
+    )
     prompt = (
         "သင်သည် NEXORA Myanmar Recap အတွက် မြန်မာဘာသာ Script Editor ဖြစ်သည်။ "
         "အောက်ပါ research notes များကိုသာ အခြေခံ၍ recap narration ရေးပါ။ "
