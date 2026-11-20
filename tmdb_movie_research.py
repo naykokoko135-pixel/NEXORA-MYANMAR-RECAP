@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from wikidata_metadata import fetch_wikidata_metadata
+from gemini_movie_research import fetch_gemini_movie_metadata
 
 TMDB_API = "https://api.themoviedb.org/3"
 USER_AGENT = "NEXORA-Myanmar-Recap/1.0"
@@ -137,9 +138,9 @@ def research_movie_sources(title):
 
     tmdb = safe_fetch(fetch_tmdb_movie, "TMDB")
     wikidata = safe_fetch(fetch_wikidata_metadata, "Wikidata")
-    tmdb_countries = tmdb.get("countries") or [] if tmdb.get("found") else []
+    # TMDB is optional. When it is not configured or has no exact match, use\n    # the existing Gemini key with Google Search grounding as a third source.\n    gemini = (\n        safe_fetch(fetch_gemini_movie_metadata, "Gemini Google Search")\n        if not tmdb.get("found") else {"found": False, "status": "TMDB metadata ရရှိပြီးဖြစ်သဖြင့် Gemini fallback မလိုအပ်ပါ။"}\n    )\n    tmdb_countries = tmdb.get("countries") or [] if tmdb.get("found") else []
     wd_countries = wikidata.get("countries") or [] if wikidata.get("found") else []
-    combined = " ".join(str(x) for x in tmdb_countries + wd_countries).casefold()
+    gemini_countries = gemini.get("countries") or [] if gemini.get("found") else []\n    combined = " ".join(str(x) for x in tmdb_countries + wd_countries + gemini_countries).casefold()
     india_flag = "india" in combined or "အိန္ဒိယ" in combined
     years = []
     for source in (tmdb, wikidata):
@@ -148,7 +149,7 @@ def research_movie_sources(title):
             years.append(year)
     if india_flag:
         eligibility = "အိန္ဒိယမူရင်း/ထုတ်လုပ်မှုပါဝင်ကြောင်း metadata တွေ့ရှိသဖြင့် ဒီ Project အတွက် ပယ်ချထားသည်။"
-    elif tmdb_countries or wd_countries:
+    elif tmdb_countries or wd_countries or gemini_countries:
         eligibility = "ထုတ်လုပ်သည့်နိုင်ငံအချက်အလက် ရရှိသည်။ Co-production ပါဝင်မှုကို ပြန်စစ်ပါ။"
     else:
         eligibility = "မူရင်းနိုင်ငံကို အတည်မပြုနိုင်သေးပါ။ မခန့်မှန်းပါနှင့်။"
