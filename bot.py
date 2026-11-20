@@ -42,7 +42,7 @@ from autofacts_narration import generate_burmese_facts_narration
 from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
 from verified_plot_narration import generate_burmese_plot_narration
 from anilist_synopsis import fetch_anilist_synopsis
-from multi_source_research import research_anime_sources, format_anime_source_report
+from multi_source_research import research_anime_sources, format_anime_source_report, research_all_media_sources, format_all_media_source_report
 from tmdb_movie_research import research_movie_sources, format_movie_source_report
 from tvmaze_synopsis import fetch_tvmaze_synopsis
 from tvmaze_synopsis import fetch_tvmaze_episode_summaries, fetch_tvmaze_top_rated_episodes
@@ -108,7 +108,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/recapvoice [preset] - ကိုယ်ရေးထားသော Recap Script မှ MP3 + အသံနှင့်ကိုက်ညီသော SRT ထုတ်ရန်\n"
             "/recapvideo <title> - အလိုအလျောက် narration + Licensed Footage (မရှိပါက Original Visuals) + SRT ပါ MP4 ထုတ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
-            "/multisourceresearch <Anime အမည်> - AniList + Tenrai/MAL + Wikidata ကို တစ်ပြိုင်နက်စစ်ရန်\n"
+            "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
@@ -1064,25 +1064,26 @@ async def animesynopsis_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def multisourceresearch_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Compare exact-match AniList, Tenrai/MAL and Wikidata anime metadata."""
+    """Research titles across anime, movies and TV-series catalogues independently."""
     if not update.message:
         return
     query = " ".join(context.args).strip()
     if not query:
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /multisourceresearch <Anime အမည်>\n"
-            "AniList + Tenrai/MyAnimeList + Wikidata ကို တစ်ပြိုင်နက် စစ်ဆေးပေးပါမယ်။"
+            "အသုံးပြုပုံ: /multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်>\\n"
+            "Anime (AniList + Tenrai/MAL + Wikidata), Movie (TMDB + Wikidata + Gemini), "
+            "TV Series (TVmaze) ကို တစ်ပြိုင်နက် သီးခြားစစ်ဆေးပေးပါမယ်။"
         )
         return
     await update.message.reply_text(
-        "AniList၊ Tenrai/MyAnimeList နှင့် Wikidata အရင်းအမြစ်များကို "
-        "တိကျသောခေါင်းစဉ်ဖြင့် တစ်ပြိုင်နက် စစ်ဆေးနေပါတယ်..."
+        "Anime/Animation၊ Movie နဲ့ TV Series ရင်းမြစ်တွေကို သီးခြားခွဲပြီး "
+        "တစ်ပြိုင်နက် စစ်ဆေးနေပါတယ်..."
     )
     try:
-        report = await asyncio.to_thread(research_anime_sources, query)
-        output = format_anime_source_report(report)
+        report = await asyncio.to_thread(research_all_media_sources, query)
+        output = format_all_media_source_report(report)
     except Exception:
-        log.exception("Multi-source anime research failed")
+        log.exception("Universal multi-source research failed")
         await update.message.reply_text("Multi-Source Research မအောင်မြင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
         return
     for start_at in range(0, len(output), 3900):
