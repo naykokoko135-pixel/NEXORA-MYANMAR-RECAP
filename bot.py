@@ -1254,8 +1254,17 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
         result = await asyncio.to_thread(fetch_kitsu_episode_summaries, query, 5)
         provider = "Kitsu"
         if not result.get("found"):
-            await update.message.reply_text("TVmaze နှင့် Kitsu နှစ်ခုစလုံးမှ Episode အချက်အလက် မရရှိပါ။\n" + str(result.get("status") or ""))
-            return
+            # Bangumi is a third free fallback for episode metadata. Country verification
+            # above remains mandatory; no plot is invented when Bangumi has no description.
+            from bangumi_episode_research import fetch_bangumi_episode_summaries
+            result = await asyncio.to_thread(fetch_bangumi_episode_summaries, query, 5)
+            provider = "Bangumi"
+            if not result.get("found"):
+                await update.message.reply_text(
+                    "TVmaze၊ Kitsu နှင့် Bangumi တို့မှ အသုံးပြုနိုင်သော Episode အချက်အလက် မရရှိပါ။\\n"
+                    + str(result.get("status") or "")
+                )
+                return
         result["country"] = ", ".join(str(x) for x in countries) if countries else country_code
     lines = [
         f"Episode Research — {result.get('title', query)}",
@@ -1270,7 +1279,10 @@ async def animationepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TY
             f"S{season} E{number} — {episode.get('title', 'Untitled')} "
             f"({episode.get('airdate') or 'ရက်စွဲမရှိ'})"
         )
-        lines.append(episode.get("summary_excerpt", ""))
+        if episode.get("summary_excerpt"):
+            lines.append(episode["summary_excerpt"])
+        elif provider == "Bangumi":
+            lines.append("Episode အကျဉ်း: Bangumi မှ မဖော်ပြထားပါ (ခေါင်းစဉ်/နံပါတ်/ရက်စွဲသာ ရရှိသည်)။")
         if episode.get("source"):
             lines.append("Source: " + episode["source"])
         lines.append("")
