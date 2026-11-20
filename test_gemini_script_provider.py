@@ -69,7 +69,7 @@ class GeminiScriptProviderTests(unittest.TestCase):
     def test_404_is_clear_and_does_not_retry(self):
         from urllib.error import HTTPError
         error = HTTPError("https://example.invalid", 404, "not found", {}, None)
-        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}, clear=True):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key", "NEXORA_ALLOW_PAID_AI": "1"}, clear=True):
             with patch.object(provider, "urlopen", side_effect=error) as mocked:
                 with self.assertRaisesRegex(provider.GeminiScriptError, "HTTP 404"):
                     provider.generate_burmese_recap_script("Example", "verified notes " * 10)
