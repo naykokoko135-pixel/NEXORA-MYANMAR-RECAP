@@ -93,7 +93,7 @@ def generate_three_part_draft_worksheets(topic: str, notes: str, duration: str =
     if duration not in PLATFORM_DURATIONS["youtube"]:
         duration = DEFAULT_DURATIONS["youtube"]
     lower_minutes, upper_minutes = (int(value) for value in duration.split("-", maxsplit=1))
-    part_low = (lower_minutes + 2) // 3
+    part_low = lower_minutes // 3
     part_high = (upper_minutes + 2) // 3
     digits = str.maketrans("0123456789", "၀၁၂၃၄၅၆၇၈၉")
     part_label = f"{part_low}–{part_high}".translate(digits)
