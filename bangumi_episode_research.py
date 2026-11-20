@@ -4,7 +4,6 @@ The endpoint exposes community-maintained episode names, numbers, dates and
 optional descriptions. Missing descriptions are never synthesized.
 """
 import json
-import re
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -19,7 +18,7 @@ USER_AGENT = "NEXORA-Myanmar-Recap/2.2 (free episode research)"
 
 
 def _norm(value):
-    return " ".join(re.findall(r"[^\\W_]+", str(value or "").casefold(), flags=re.UNICODE))
+    return normalize_animation_title(value)
 
 
 def _post_json(url, payload):
