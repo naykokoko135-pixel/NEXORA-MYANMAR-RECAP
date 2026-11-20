@@ -443,3 +443,17 @@ class WikidataMetadataTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_expected_film_type_filters_out_same_title_series_candidates():
+    from wikidata_metadata import _candidate_matches_media_type
+
+    assert _candidate_matches_media_type(
+        {"description": "2019 South Korean black comedy thriller film"}, "film"
+    )
+    assert not _candidate_matches_media_type(
+        {"description": "South Korean television series"}, "film"
+    )
+    assert not _candidate_matches_media_type(
+        {"description": "Japanese anime television series"}, "film"
+    )

@@ -137,7 +137,7 @@ def research_movie_sources(title):
             }
 
     tmdb = safe_fetch(fetch_tmdb_movie, "TMDB")
-    wikidata = safe_fetch(fetch_wikidata_metadata, "Wikidata")
+    wikidata = safe_fetch(lambda value: fetch_wikidata_metadata(value, expected_media_type="film"), "Wikidata")
     # TMDB is optional. When it is not configured or has no exact match, use
     # the existing Gemini key with Google Search grounding as a third source.
     gemini = (
