@@ -585,7 +585,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         metadata.get("anime_synopsis")
                         or metadata.get("tmdb_overview")
                     )
-                    synopsis_url = str(metadata.get("source") or "")
+                    synopsis_url = str(metadata.get("anime_synopsis_source") or metadata.get("source") or "")
                     if not synopsis or not synopsis_url:
                         raise ValueError(
                             "မြန်မာ/English Wikipedia Plot မရရှိပါ။ AniList/TMDB မှာလည်း "
