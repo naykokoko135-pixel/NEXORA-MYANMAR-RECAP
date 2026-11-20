@@ -323,9 +323,9 @@ def build_platform_daily_message(platform: str, item: dict, research_text: str,
     """Build a platform-specific daily production brief with a distinct title/category."""
     platform = str(platform or "").strip().lower()
     labels = {
-        "youtube": ("YOUTUBE", "Long-form Recap", "၃၀–၄၅ မိနစ်", "၃ ပိုင်း၊ တစ်ပိုင်း ၁၀–၁၅ မိနစ်"),
-        "facebook": ("FACEBOOK", "Mid-form Recap", "၁၀–၁၅ မိနစ်", "၃ ပိုင်း၊ တစ်ပိုင်း ၃–၅ မိနစ်"),
-        "tiktok": ("TIKTOK", "Short-form Recap", "၁–၃ မိနစ်", "တစ်ပုဒ်တည်း၊ Hook → အတည်ပြုထားသော အချက် → CTA"),
+        "youtube": ("YOUTUBE", "Long-form Recap", "၄၆–၆၀ မိနစ်", "၃ ပိုင်းတိတိ၊ တစ်ပိုင်း ၁၅–၂၀ မိနစ်"),
+        "facebook": ("FACEBOOK", "Long-form Recap", "၄၆–၆၀ မိနစ်", "၃ ပိုင်းတိတိ၊ တစ်ပိုင်း ၁၅–၂၀ မိနစ်"),
+        "tiktok": ("TIKTOK", "Mid-length Recap", "၄–၇ မိနစ်", "တစ်ပုဒ်တည်း၊ Hook → အတည်ပြုထားသော အချက် → CTA"),
     }
     if platform not in labels:
         raise ValueError("Unknown publishing platform.")
