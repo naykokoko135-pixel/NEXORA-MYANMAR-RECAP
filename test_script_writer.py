@@ -30,18 +30,22 @@ class TitleClassificationTests(unittest.TestCase):
         self.assertIn("South Korea", plan)
         self.assertNotIn("Anime / 3D Animation / Cartoon / Donghua", plan)
 
-    def test_youtube_plan_is_three_parts_of_10_to_15_minutes(self):
+    def test_youtube_plan_is_three_parts_of_15_to_20_minutes(self):
         plan = generate_all_platform_plan("Pororo")
-        self.assertIn("၃ ပိုင်း | တစ်ပိုင်းလျှင် ၁၀–၁၅ မိနစ် | စုစုပေါင်း ၃၀–၄၅ မိနစ်", plan)
-        self.assertIn("Part 1 (၁၀–၁၅ မိနစ်)", plan)
-        self.assertIn("Part 2 (၁၀–၁၅ မိနစ်)", plan)
-        self.assertIn("Part 3 (၁၀–၁၅ မိနစ်)", plan)
+        self.assertIn("၃ ပိုင်း | တစ်ပိုင်းလျှင် ၁၅–၂၀ မိနစ် | စုစုပေါင်း ၄၆–၆၀ မိနစ်", plan)
+        self.assertIn("Part 1 (၁၅–၂၀ မိနစ်)", plan)
+        self.assertIn("Part 2 (၁၅–၂၀ မိနစ်)", plan)
+        self.assertIn("Part 3 (၁၅–၂၀ မိနစ်)", plan)
 
     def test_youtube_default_duration_and_outline_are_longform_three_parts(self):
-        self.assertEqual(DEFAULT_DURATIONS["youtube"], "30-45")
+        self.assertEqual(DEFAULT_DURATIONS["youtube"], "46-60")
         outline = generate_recap_outline("Pororo")
-        self.assertIn("ရည်မှန်းချိန်: ၃၀–၄၅ မိနစ်", outline)
-        self.assertIn("YouTube သုံးပိုင်း Long-form", outline)
+        self.assertIn("ရည်မှန်းချိန်: ၄၆–၆၀ မိနစ်", outline)
+        self.assertIn("Extended Long-form", outline)
+        self.assertEqual(DEFAULT_DURATIONS["facebook"], "46-60")
+        self.assertEqual(DEFAULT_DURATIONS["tiktok"], "4-7")
+        plan = generate_all_platform_plan("Pororo")
+        self.assertIn("တစ်ပိုင်းလျှင် ၄–၇ မိနစ်", plan)
 
 
 if __name__ == "__main__":

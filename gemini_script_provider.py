@@ -15,8 +15,8 @@ from urllib.request import Request, urlopen
 DEFAULT_MODEL = "gemini-3.8-flash"
 API_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 TIMEOUT_SECONDS = 240
-MAX_OUTPUT_TOKENS = 20000
-MIN_SCRIPT_CHARS = {"youtube": 5000, "facebook": 3300, "tiktok": 250}
+MAX_OUTPUT_TOKENS = 30000
+MIN_SCRIPT_CHARS = {"youtube": 5000, "facebook": 3300, "tiktok": 1800}
 
 
 class GeminiScriptError(RuntimeError):
@@ -44,7 +44,7 @@ def _extract_interaction_text(result: dict) -> str:
 
 
 def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtube",
-                                 duration: str = "30-45") -> str:
+                                 duration: str = "46-60") -> str:
     key = os.getenv("GEMINI_API_KEY", "").strip()
     if not key:
         raise GeminiScriptError("Gemini API မချိတ်ရသေးပါ။ Render Environment တွင် GEMINI_API_KEY ထည့်ရန် လိုအပ်ပါတယ်။")
@@ -58,9 +58,9 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
         raise GeminiScriptError("Platform မမှန်ကန်ပါ။")
     model = os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     longform_instruction = (
-        "YouTube 30-45 မိနစ်အတွက် PART 1, PART 2, PART 3 ဟု အတိအကျ သုံးပိုင်းသာ ခွဲပါ။ "
-        "Part တစ်ခုစီကို ၁၀–၁၅ မိနစ်စာ အသေးစိတ် narration ရေးပြီး အစ၊ အကြောင်းအရာနှင့် ဆက်စပ်ချက် ပါစေ။ "
-        if platform == "youtube" and duration == "30-45" else ""
+        "YouTube/Facebook 46-60 မိနစ်အတွက် PART 1, PART 2, PART 3 ဟု အတိအကျ သုံးပိုင်းသာ ခွဲပါ။ "
+        "Part တစ်ခုစီကို ၁၅–၂၀ မိနစ်စာ အသေးစိတ် narration ရေးပြီး အစ၊ အကြောင်းအရာနှင့် ဆက်စပ်ချက် ပါစေ။ "
+        if platform in {"youtube", "facebook"} and duration == "46-60" else ""
     )
     prompt = (
         "သင်သည် NEXORA Myanmar Recap အတွက် မြန်မာဘာသာ Script Editor ဖြစ်သည်။ "
@@ -113,7 +113,7 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     script = _extract_interaction_text(result)
     if not script:
         raise GeminiScriptError("Gemini မှ Script စာသား မရရှိပါ။")
-    minimum_chars = 18000 if platform == "youtube" and duration == "30-45" else MIN_SCRIPT_CHARS[platform]
+    minimum_chars = 28000 if platform == "youtube" and duration == "46-60" else 24000 if platform == "facebook" and duration == "46-60" else 18000 if platform == "youtube" and duration == "30-45" else MIN_SCRIPT_CHARS[platform]
     if len(script) < minimum_chars:
         raise GeminiScriptError(
             "Gemini မှ ရရှိသော Script သည် သတ်မှတ်ကြာချိန်အတွက် မလုံလောက်ပါ။ "

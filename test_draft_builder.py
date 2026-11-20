@@ -53,18 +53,27 @@ class DraftBuilderTests(unittest.TestCase):
                 "Avatar", "ဇာတ်ကားနဲ့တိုက်စစ်ထားတဲ့ Research Notes တွေ ဒီမှာထည့်ပါ။"
             )
 
-    def test_default_youtube_worksheet_is_three_parts_of_10_to_15_minutes(self):
+    def test_default_youtube_worksheet_is_three_parts_of_15_to_20_minutes(self):
         result = generate_three_part_draft_worksheets(
             "Avatar", "Verified creator note."
         )
-        self.assertIn("စုစုပေါင်းရည်မှန်းချိန်: ၃၀–၄၅ မိနစ်", result)
-        self.assertIn("အပိုင်းတစ်ခုလျှင် ၁၀–၁၅ မိနစ်ခန့်", result)
+        self.assertIn("စုစုပေါင်းရည်မှန်းချိန်: ၄၆–၆၀ မိနစ်", result)
+        self.assertIn("အပိုင်းတစ်ခုလျှင် ၁၅–၂၀ မိနစ်ခန့်", result)
         self.assertEqual(result.count("ရည်မှန်းချိန်: အပိုင်းတစ်ခုလျှင်"), 3)
 
     def test_default_youtube_draft_worksheet_uses_exactly_three_parts(self):
         result = generate_draft_worksheet("Avatar", "Verified creator note.")
         self.assertEqual(result.count("PART "), 3)
-        self.assertIn("ရည်မှန်းချိန်: ၃၀–၄၅ မိနစ်", result)
+        self.assertIn("ရည်မှန်းချိန်: ၄၆–၆၀ မိနစ်", result)
+
+    def test_facebook_extended_duration_uses_three_parts(self):
+        result = generate_draft_worksheet("Avatar", "Verified creator note.", platform="facebook", duration="46-60")
+        self.assertEqual(result.count("PART "), 3)
+        self.assertIn("၁၅–၂၀ မိနစ်", result)
+
+    def test_tiktok_four_to_seven_minute_preset_is_supported(self):
+        result = generate_draft_worksheet("Avatar", "Verified creator note.", platform="tiktok", duration="4-7")
+        self.assertIn("ရည်မှန်းချိန်: ၄–၇ မိနစ်", result)
 
 
 if __name__ == "__main__":
