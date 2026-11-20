@@ -61,8 +61,8 @@ def build_burmese_srt(script: str, chars_per_second: float = DEFAULT_CHARS_PER_S
     """Build sequential estimated timestamps for Burmese script captions."""
     if not (script or "").strip():
         raise ValueError("မြန်မာစာဇာတ်ညွှန်း ထည့်ပါ။")
-    if len(script) > 20000:
-        raise ValueError("စာသားသည် စာလုံး ၂၀,၀၀၀ ထက် မကျော်ရပါ။")
+    if len(script) > 80000:
+        raise ValueError("စာသားသည် စာလုံး ၈၀,၀၀၀ ထက် မကျော်ရပါ။")
     if not (4.0 <= float(chars_per_second) <= 24.0):
         raise ValueError("ဖတ်နှုန်းကို 4 မှ 24 characters/second အတွင်းထားပါ။")
 
