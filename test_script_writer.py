@@ -45,7 +45,7 @@ class TitleClassificationTests(unittest.TestCase):
         self.assertEqual(DEFAULT_DURATIONS["facebook"], "46-60")
         self.assertEqual(DEFAULT_DURATIONS["tiktok"], "4-7")
         plan = generate_all_platform_plan("Pororo")
-        self.assertIn("တစ်ပိုင်းလျှင် ၄–၇ မိနစ်", plan)
+        self.assertIn("တစ်ပုဒ်တည်း | ၄–၇ မိနစ်", plan)
         facebook_outline = generate_recap_outline("Pororo", platform="facebook")
         self.assertIn("Detailed Cinematic Long-form Recap", facebook_outline)
         self.assertIn("အသေးစိတ်ဇာတ်လမ်းအခန်းများ", facebook_outline)
