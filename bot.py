@@ -443,10 +443,10 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not query:
         await update.message.reply_text(
             "အသုံးပြုပုံ: /clipsource <Anime/ရုပ်ရှင်/Scene အမည်>\n"
-            "Wikimedia Commons နှင့် Europeana မှ CC0/CC BY/CC BY-SA/Public Domain Video မှတ်တမ်းများကို ရှာပေးမည်။"
+            "Wikimedia Commons၊ Europeana နှင့် YouTube CC BY မှတ်တမ်းများကို ရှာပေးမည်။ YouTube ရှာရန် YOUTUBE_DATA_API_KEY လိုအပ်သည်။"
         )
         return
-    await update.message.reply_text("Commons နှင့် Europeana မှ လိုင်စင် metadata ပါသော Video မှတ်တမ်းများကို ရှာနေပါတယ်...")
+    await update.message.reply_text("Commons၊ Europeana နှင့် (API key ရှိပါက) YouTube CC BY မှတ်တမ်းများကို ရှာနေပါတယ်...")
     results = []
     errors = []
     try:
