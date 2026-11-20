@@ -251,51 +251,57 @@ def build_daily_message(movie_title: str, research_text: str, metadata_text: str
 
 
 def select_daily_platform_titles(local_date: date, pageview_result: dict | None = None) -> dict:
-    """Choose three distinct editorial categories using the strongest available public attention signals."""
+    """Rotate each platform through five categories daily; keep today's categories distinct.
+
+    YouTube, Facebook and TikTok use fixed phase offsets (0, 1 and 4) in the
+    category cycle. Thus each platform changes category on the next local day,
+    while the three platforms never share a category on the same day.
+    Pageviews rank titles only inside the category assigned to that platform.
+    """
     pageview_result = pageview_result or {}
     category_data = pageview_result.get("categories") or {}
-    rotation_offset = local_date.toordinal() % len(TITLE_CATEGORIES)
-    ranked = []
-    for index, (category, titles) in enumerate(TITLE_CATEGORIES.items()):
-        items = category_data.get(category) or []
+    categories = list(TITLE_CATEGORIES)
+    day_number = local_date.toordinal()
+    # The offsets preserve the established 2026-11-20 lineup:
+    # YouTube=Anime, Facebook=3D Animation, TikTok=International Movies.
+    platform_offsets = {"youtube": 0, "facebook": 1, "tiktok": 4}
+    selected = {}
+    for platform, offset in platform_offsets.items():
+        category_index = (day_number + offset) % len(categories)
+        category = categories[category_index]
+        titles = TITLE_CATEGORIES[category]
         valid_items = [
-            item for item in items
+            item for item in (category_data.get(category) or [])
             if item.get("title") in titles and int(item.get("recent_views") or 0) >= 0
         ]
-        if valid_items:
-            best = max(valid_items, key=lambda item: int(item.get("recent_views") or 0))
-            ranked.append((
-                int(best.get("recent_views") or 0),
-                -((index - rotation_offset) % len(TITLE_CATEGORIES)),
-                category,
-                best.get("title"),
-                best,
-            ))
+        cycle_index = (day_number // len(categories)) % max(len(valid_items), 1)
+        if len(valid_items) >= 2:
+            # Rotate among the available trend samples on each return to this category.
+            ranked_items = sorted(
+                valid_items,
+                key=lambda item: int(item.get("recent_views") or 0),
+                reverse=True,
+            )
+            signal = ranked_items[cycle_index]
+            title = signal["title"]
+            views = int(signal.get("recent_views") or 0)
+            trend_source = "Wikimedia English Wikipedia article pageviews"
         else:
-            fallback = titles[(local_date.toordinal() + index) % len(titles)]
-            ranked.append((
-                -1,
-                -((index - rotation_offset) % len(TITLE_CATEGORIES)),
-                category,
-                fallback,
-                {},
-            ))
-    ranked.sort(reverse=True)
-    selected = {}
-    for platform, entry in zip(("youtube", "facebook", "tiktok"), ranked[:3]):
-        views, _, category, title, signal = entry
+            # A single sampled pageview title is not enough to guarantee non-repetition.
+            # Use the curated catalogue rotation instead of repeating it every cycle.
+            title_index = (day_number // len(categories) + offset) % len(titles)
+            title = titles[title_index]
+            signal = {}
+            views = None
+            trend_source = "Daily category/title rotation fallback (insufficient pageview samples)"
         selected[platform] = {
             "category": category,
             "title": title,
-            "recent_wikipedia_views": views if views >= 0 else None,
+            "recent_wikipedia_views": views,
             "pageview_change_pct": signal.get("change_pct"),
-            "trend_source": (
-                "Wikimedia English Wikipedia article pageviews"
-                if views >= 0 else "Daily category rotation fallback (no pageview data)"
-            ),
+            "trend_source": trend_source,
         }
     return selected
-
 
 def _platform_cta(platform: str) -> str:
     youtube_url = os.environ.get("YOUTUBE_CHANNEL_URL", "").strip()
