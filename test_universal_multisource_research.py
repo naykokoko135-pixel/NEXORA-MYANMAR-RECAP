@@ -12,6 +12,10 @@ def test_universal_research_queries_anime_movie_and_tv_independently(monkeypatch
         "title": title, "anilist": {"found": True}, "tenrai": {"found": False},
         "wikidata": {"found": True},
     })
+    monkeypatch.setattr(research, "research_animation_catalogues", lambda title: {
+        "title": title, "donghua": {"found": False}, "cartoon": {"found": False},
+        "3d_animation": {"found": False},
+    })
     monkeypatch.setattr(tmdb_movie_research, "research_movie_sources", lambda title: {
         "title": title, "tmdb": {"found": True}, "wikidata": {"found": True},
         "gemini": {"found": False},
@@ -33,6 +37,7 @@ def test_universal_research_keeps_other_tracks_when_one_provider_fails(monkeypat
         raise RuntimeError("provider offline")
 
     monkeypatch.setattr(research, "research_anime_sources", broken)
+    monkeypatch.setattr(research, "research_animation_catalogues", broken)
     monkeypatch.setattr(tmdb_movie_research, "research_movie_sources", lambda title: {
         "title": title, "tmdb": {"found": True}, "wikidata": {"found": False},
         "gemini": {"found": False},
@@ -52,6 +57,11 @@ def test_universal_report_labels_all_media_categories():
     report = {
         "title": "Example",
         "anime": {"title": "Example", "anilist": {}, "tenrai": {}, "wikidata": {}},
+        "animation_catalogues": {
+            "title": "Example", "donghua": {"found": False, "status": "none"},
+            "cartoon": {"found": False, "status": "none"},
+            "3d_animation": {"found": False, "status": "none"},
+        },
         "movie": {"title": "Example", "tmdb": {}, "wikidata": {}, "gemini": {}},
         "series": {"found": False, "status": "No TV series match"},
     }
@@ -59,6 +69,7 @@ def test_universal_report_labels_all_media_categories():
     assert "ANIME / ANIMATION" in output
     assert "MOVIE / FILM" in output
     assert "TV SERIES" in output
+    assert "CARTOON / DONGHUA / 3D ANIMATION CATALOGUES" in output
     assert "FREE CROSS-CATEGORY DISCOVERY" in output
     assert "\\n" not in output
     assert "\n━━━━━━━━【 MOVIE / FILM 】" in output

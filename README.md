@@ -106,6 +106,16 @@ Tenrai is an unofficial, community-operated MyAnimeList catalogue API and is cur
 
 Jikan's public API was discontinued on 1 October 2026, so NEXORA does not depend on the old `api.jikan.moe` public endpoint.
 
+## Free animation catalogue expansion
+
+The universal `/multisourceresearch <title>` report now includes a separate Cartoon / Donghua / 3D Animation catalogue section.
+
+- **Bangumi public API**: an East-Asian animation catalogue searched by exact title and animation subject type. It is a discovery source, not a Donghua-only database. A Bangumi match is labelled as a Donghua candidate only when Wikidata independently reports China as a production country. Bangumi's current v0 search API is experimental and may change; this integration uses its optional-auth, read-only search endpoint without a private token or write scopes.
+- **Wikidata**: public CC0 structured open data provides country and descriptive cross-checks. Cartoon classification requires an explicit animated/cartoon description. 3D classification requires an explicit 3D/computer-animation description; the bot does not infer 3D from the generic Animation genre.
+- **TVmaze**: remains a free, general TV-series catalogue with Animation genre and episode data, not a dedicated Cartoon or Donghua catalogue.
+
+Catalogue gaps are reported as not verified, not as proof that a title does not exist. Bangumi and Wikidata records are research leads only; they do not provide episode plot summaries, footage, or reuse permission. For current API details, see https://github.com/bangumi/server/blob/master/openapi/v0.yaml and https://www.wikidata.org/wiki/Wikidata:Data_access.
+
 ## Cartoon and Donghua series research
 
 Use `/seriesresearch <title>` to request an exact-title TVmaze show match. NEXORA only displays the summary when TVmaze marks the entry with the Animation genre and rejects Indian-origin shows. The returned summary is a series-level overview, not an episode plot. TVmaze records are community-maintained; the command does not infer whether an animated work is 2D or 3D, and it does not create a recap video.
