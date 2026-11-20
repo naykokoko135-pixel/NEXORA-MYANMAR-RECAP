@@ -4,6 +4,9 @@ import multi_source_research as research
 
 def test_provider_exception_does_not_discard_other_results(monkeypatch):
     monkeypatch.setattr(
+        research, "fetch_kitsu_anime", lambda title: {"found": False, "status": "no match"},
+    )
+    monkeypatch.setattr(
         research, "fetch_anilist_synopsis",
         lambda title: {"found": True, "title": title, "year": 2023, "country": "JP",
                        "synopsis": "A sufficiently long synopsis for a test result."},
@@ -21,6 +24,7 @@ def test_provider_exception_does_not_discard_other_results(monkeypatch):
     report = research.research_anime_sources("Example Anime")
 
     assert report["anilist"]["found"] is True
+    assert report["kitsu"]["found"] is False
     assert report["tenrai"]["found"] is False
     assert "မရရှိနိုင်ပါ" in report["tenrai"]["status"]
     assert report["wikidata"]["found"] is True
@@ -28,6 +32,7 @@ def test_provider_exception_does_not_discard_other_results(monkeypatch):
 
 
 def test_non_dictionary_provider_response_is_reported_safely(monkeypatch):
+    monkeypatch.setattr(research, "fetch_kitsu_anime", lambda _title: None)
     monkeypatch.setattr(research, "fetch_anilist_synopsis", lambda _title: None)
     monkeypatch.setattr(
         research, "fetch_tenrai_synopsis",
@@ -40,5 +45,6 @@ def test_non_dictionary_provider_response_is_reported_safely(monkeypatch):
 
     report = research.research_anime_sources("Example Anime")
 
+    assert report["kitsu"]["found"] is False
     assert report["anilist"]["found"] is False
     assert "မမှန်ကန်သော တုံ့ပြန်မှု" in report["anilist"]["status"]
