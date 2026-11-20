@@ -14,6 +14,7 @@ import unicodedata
 from anilist_synopsis import fetch_anilist_synopsis
 from wikidata_metadata import fetch_wikidata_metadata
 from free_catalogue_research import search_free_catalogue
+from kitsu_anime_research import fetch_kitsu_anime
 
 TENRAI_API = "https://api.tenrai.org/v1/anime"
 USER_AGENT = "NEXORA-Myanmar-Recap/1.0"
@@ -87,7 +88,7 @@ def fetch_tenrai_synopsis(title):
 
 
 def research_anime_sources(title):
-    """Query AniList, Tenrai and Wikidata concurrently and report only exact matches."""
+    """Query AniList, Kitsu, Tenrai and Wikidata concurrently; keep exact matches only."""
     clean = " ".join(str(title or "").split()).strip()
     if not clean or len(clean) > 120:
         return {"title": clean, "status": "ခေါင်းစဉ် မမှန်ကန်ပါ။"}
@@ -102,10 +103,12 @@ def research_anime_sources(title):
         except Exception:
             return {"found": False, "status": source_name + " ရင်းမြစ်ကို ယခုချိန်တွင် မရရှိနိုင်ပါ။"}
 
-    with ThreadPoolExecutor(max_workers=3) as pool:
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        kitsu_future = pool.submit(safe_fetch, fetch_kitsu_anime, "Kitsu")
         anilist_future = pool.submit(safe_fetch, fetch_anilist_synopsis, "AniList")
         tenrai_future = pool.submit(safe_fetch, fetch_tenrai_synopsis, "Tenrai")
         wikidata_future = pool.submit(safe_fetch, fetch_wikidata_metadata, "Wikidata")
+        kitsu = kitsu_future.result()
         anilist = anilist_future.result()
         tenrai = tenrai_future.result()
         wikidata = wikidata_future.result()
@@ -122,7 +125,7 @@ def research_anime_sources(title):
         eligibility = "မူရင်းနိုင်ငံကို အတည်မပြုနိုင်သေးပါ။ အမျိုးအစား/နိုင်ငံကို မခန့်မှန်းပါနှင့်။"
 
     years = []
-    for source in (anilist, tenrai, wikidata):
+    for source in (anilist, kitsu, tenrai, wikidata):
         year = str(source.get("year") or "").strip()
         if source.get("found") and year and year not in years:
             years.append(year)
@@ -130,6 +133,7 @@ def research_anime_sources(title):
     return {
         "title": clean,
         "anilist": anilist,
+        "kitsu": kitsu,
         "tenrai": tenrai,
         "wikidata": wikidata,
         "eligibility": eligibility,
@@ -146,7 +150,7 @@ def format_anime_source_report(report):
         "ခေါင်းစဉ်: " + (report.get("title") or "မရရှိပါ"),
         "",
     ]
-    for key, label in (("anilist", "AniList"), ("tenrai", "Tenrai / MyAnimeList")):
+    for key, label in (("anilist", "AniList"), ("kitsu", "Kitsu"), ("tenrai", "Tenrai / MyAnimeList")):
         item = report.get(key) or {}
         lines.append("【" + label + "】")
         if item.get("found"):
@@ -257,4 +261,4 @@ def format_all_media_source_report(report):
         "မှတ်ချက်: Catalogue တစ်ခုတွင် မတွေ့ခြင်းသည် အခြား catalogue များတွင် မရှိကြောင်း မဆိုလိုပါ။",
         "ဒီ report သည် research lead သာဖြစ်ပြီး footage/license ခွင့်ပြုချက် မပေးပါ။",
     ])
-    return "\\n".join(lines)
+    return "\n".join(lines)

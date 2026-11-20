@@ -60,3 +60,5 @@ def test_universal_report_labels_all_media_categories():
     assert "MOVIE / FILM" in output
     assert "TV SERIES" in output
     assert "FREE CROSS-CATEGORY DISCOVERY" in output
+    assert "\\n" not in output
+    assert "\n━━━━━━━━【 MOVIE / FILM 】" in output
