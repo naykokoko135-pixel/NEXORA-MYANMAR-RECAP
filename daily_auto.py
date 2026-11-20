@@ -234,6 +234,137 @@ def build_daily_message(movie_title: str, research_text: str, metadata_text: str
     return research_text + "\n\n" + metadata_section + series_section + plan + "\n\n" + generate_episode_selection_guide()
 
 
+
+def select_daily_platform_titles(local_date: date, pageview_result: dict | None = None) -> dict:
+    """Choose three distinct editorial categories using the strongest available public attention signals."""
+    pageview_result = pageview_result or {}
+    category_data = pageview_result.get("categories") or {}
+    rotation_offset = local_date.toordinal() % len(TITLE_CATEGORIES)
+    ranked = []
+    for index, (category, titles) in enumerate(TITLE_CATEGORIES.items()):
+        items = category_data.get(category) or []
+        valid_items = [
+            item for item in items
+            if item.get("title") in titles and int(item.get("recent_views") or 0) >= 0
+        ]
+        if valid_items:
+            best = max(valid_items, key=lambda item: int(item.get("recent_views") or 0))
+            ranked.append((
+                int(best.get("recent_views") or 0),
+                -((index - rotation_offset) % len(TITLE_CATEGORIES)),
+                category,
+                best.get("title"),
+                best,
+            ))
+        else:
+            fallback = titles[(local_date.toordinal() + index) % len(titles)]
+            ranked.append((
+                -1,
+                -((index - rotation_offset) % len(TITLE_CATEGORIES)),
+                category,
+                fallback,
+                {},
+            ))
+    ranked.sort(reverse=True)
+    selected = {}
+    for platform, entry in zip(("youtube", "facebook", "tiktok"), ranked[:3]):
+        views, _, category, title, signal = entry
+        selected[platform] = {
+            "category": category,
+            "title": title,
+            "recent_wikipedia_views": views if views >= 0 else None,
+            "pageview_change_pct": signal.get("change_pct"),
+            "trend_source": (
+                "Wikimedia English Wikipedia article pageviews"
+                if views >= 0 else "Daily category rotation fallback (no pageview data)"
+            ),
+        }
+    return selected
+
+
+def _platform_cta(platform: str) -> str:
+    youtube_url = os.environ.get("YOUTUBE_CHANNEL_URL", "").strip()
+    facebook_url = os.environ.get("FACEBOOK_PAGE_URL", "").strip()
+    if platform == "tiktok":
+        links = " | ".join(x for x in (youtube_url, facebook_url) if x)
+        destination = links or "Profile Bio ထဲက YouTube/Facebook link"
+        return (
+            "📣 CTA: ဒီအကြောင်းအရာရဲ့ နောက်ထပ် Recap တွေကို မလွတ်ချင်ရင် "
+            f"YouTube ကို Subscribe၊ Facebook Page ကို Follow လုပ်ထားပါ။ {destination}"
+        )
+    if platform == "facebook":
+        return (
+            "📣 CTA: အရှည် Recap နဲ့ နောက်ထပ်ဇာတ်လမ်းတွေကို ကြည့်ဖို့ "
+            + (f"YouTube မှာ Subscribe လုပ်ပါ — {youtube_url}" if youtube_url else "NEXORA YouTube Channel ကို Subscribe လုပ်ထားပါ။")
+        )
+    return (
+        "📣 CTA: နေ့စဉ် Recap အသစ်တွေကို မလွတ်စေဖို့ Facebook Page ကို Follow လုပ်ထားပါ။"
+        + (f" {facebook_url}" if facebook_url else "")
+    )
+
+
+def build_platform_daily_message(platform: str, item: dict, research_text: str,
+                                 metadata_text: str = "", series_text: str = "") -> str:
+    """Build a platform-specific daily production brief with a distinct title/category."""
+    platform = str(platform or "").strip().lower()
+    labels = {
+        "youtube": ("YOUTUBE", "Long-form Recap", "၁၅–၂၀ မိနစ်", "၃ ပိုင်း၊ တစ်ပိုင်း ၅–၇ မိနစ်"),
+        "facebook": ("FACEBOOK", "Mid-form Recap", "၁၀–၁၅ မိနစ်", "၃ ပိုင်း၊ တစ်ပိုင်း ၃–၅ မိနစ်"),
+        "tiktok": ("TIKTOK", "Short-form Recap", "၁–၃ မိနစ်", "တစ်ပုဒ်တည်း၊ Hook → အတည်ပြုထားသော အချက် → CTA"),
+    }
+    if platform not in labels:
+        raise ValueError("Unknown publishing platform.")
+    label, format_name, duration, structure = labels[platform]
+    title = item.get("title") or "ခေါင်းစဉ်မရရှိပါ"
+    category = item.get("category") or category_for_title(title)
+    views = item.get("recent_wikipedia_views")
+    signal = (
+        f"နောက်ဆုံး ၇ ရက် English Wikipedia article views: {int(views):,}"
+        if views is not None else "လူကြိုက်များမှုဒေတာ: မရရှိပါ (နေ့စဉ် category rotation ဖြင့် ရွေးထားသည်)"
+    )
+    change = item.get("pageview_change_pct")
+    if change is not None:
+        signal += f" | ယခင် ၇ ရက်နှင့် {float(change):+.1f}%"
+    sections = [
+        f"🎬 NEXORA DAILY — {label}",
+        f"နေ့စွဲ (ထိုင်းစံတော်ချိန်): {datetime.now(ZoneInfo('Asia/Bangkok')).date().isoformat()}",
+        f"အမျိုးအစား: {category}",
+        f"ခေါင်းစဉ်: {title}",
+        f"နိုင်ငံ/ဒေသ: {region_for_title(title)}",
+        f"မီဒီယာပုံစံ: {format_for_title(title)}",
+        f"ရွေးချယ်မှုအချက်ပြ: {signal}",
+        f"ရင်းမြစ်: {item.get('trend_source') or 'Daily category rotation'}",
+        "",
+        f"📺 {format_name} | ကြာချိန် {duration}",
+        f"ဖွဲ့စည်းပုံ: {structure}",
+        "တင်ဆက်ပုံ: ဒီ Platform အတွက် သီးခြား Hook၊ ဇာတ်ကြောင်းအစီအစဉ်၊ ခေါင်းစဉ်၊ Caption နှင့် Edit ဖြစ်ရမည်။",
+        "ဇာတ်ကွက်ကို မခန့်မှန်းပါနှင့်။ Research Notes မလုံလောက်ပါက Worksheet အဖြစ်သာထားပါ။",
+        "",
+        "🔎 RESEARCH NOTES",
+        research_text or "သက်ဆိုင်သော public research result မရရှိပါ။",
+    ]
+    if metadata_text:
+        sections.extend(["", "🧾 IDENTITY / COUNTRY CROSS-CHECK", metadata_text])
+    if series_text:
+        sections.extend(["", "📚 SERIES / EPISODE GUIDE", series_text])
+    if platform == "tiktok":
+        sections.extend([
+            "",
+            "🎯 TikTok CTA (အသံနှင့် Caption နှစ်ခုလုံးတွင် ထည့်ရန်)",
+            _platform_cta(platform),
+            "CTA ကို Video အဆုံး ၃–၅ စက္ကန့်တွင် သဘာဝကျကျ ပြောပါ။ မမှန်သော link သို့မဟုတ် မရှိသော video ကို မညွှန်းပါနှင့်။",
+        ])
+    else:
+        sections.extend(["", _platform_cta(platform)])
+    sections.extend([
+        "",
+        "⚠️ သတိပြုရန်: Wikipedia article pageviews သည် ဆောင်းပါးဖတ်ရှုမှုသာဖြစ်ပြီး YouTube/Facebook/TikTok views မဟုတ်ပါ။ "
+        "လူကြိုက်များမှုကို အတည်ပြုသည့် platform analytics မရှိလျှင် trend proxy ဟုသာ ဖော်ပြပါ။",
+        "အသုံးပြုခွင့်ရှိသော visual/audio သို့မဟုတ် ကိုယ်ပိုင်ဖန်တီးထားသော visuals ကိုသာ သုံးပါ။ "
+        "ဒီနေ့အတွက် အခြား Platform နှစ်ခုနှင့် ခေါင်းစဉ်/အမျိုးအစား မတူစေရပါ။",
+    ])
+    return "\n".join(sections)
+
 def split_telegram_text(text: str, limit: int = 3900) -> list[str]:
     chunks = []
     remaining = text.strip()
@@ -268,27 +399,42 @@ def main() -> None:
     if not token or not chat_id:
         raise RuntimeError("Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID as GitHub Actions secrets.")
     local_today = datetime.now(ZoneInfo("Asia/Bangkok")).date()
-    movie = select_daily_movie(local_today)
-    research = search_movie_sources(movie)
-    metadata = fetch_wikidata_metadata(movie)
-    metadata_report = format_wikidata_metadata(metadata)
-    series_report = ""
-    if format_for_title(movie) == "Animated Series":
-        tvmaze_result = fetch_series_episode_guide(movie)
-        if tvmaze_result.get("found"):
-            series_report = format_series_episode_guide(tvmaze_result)
-        elif category_for_title(movie) == "Anime":
-            anilist_result = fetch_anilist_episode_guide(movie)
-            if anilist_result.get("found"):
-                series_report = format_anilist_episode_guide(anilist_result)
+    # Compare public attention signals across the five editorial categories.
+    # Wikipedia pageviews are a proxy only, never represented as social-video views.
+    pageview_result = fetch_category_pageviews(TITLE_CATEGORIES)
+    selected = select_daily_platform_titles(local_today, pageview_result)
+    messages = [
+        "🌅 NEXORA — နေ့စဉ် Platform သုံးခုအတွက် သီးခြား Trend Research",
+        f"နေ့စွဲ (ထိုင်းစံတော်ချိန်): {local_today.isoformat()}",
+        "YouTube / Facebook / TikTok အတွက် category သုံးမျိုးနှင့် ခေါင်းစဉ်သုံးခုကို သီးခြားရွေးထားသည်။",
+        "ရွေးချယ်မှုသည် နောက်ဆုံးရရှိသော English Wikipedia article pageviews ကို trend proxy အဖြစ်သုံးပြီး data မရှိပါက curated rotation သို့ ပြန်သုံးသည်။",
+    ]
+    for platform in ("youtube", "facebook", "tiktok"):
+        item = selected[platform]
+        title = item["title"]
+        research = search_movie_sources(title)
+        metadata = fetch_wikidata_metadata(title)
+        metadata_report = format_wikidata_metadata(metadata)
+        series_report = ""
+        if format_for_title(title) == "Animated Series":
+            tvmaze_result = fetch_series_episode_guide(title)
+            if tvmaze_result.get("found"):
+                series_report = format_series_episode_guide(tvmaze_result)
+            elif category_for_title(title) == "Anime":
+                anilist_result = fetch_anilist_episode_guide(title)
+                if anilist_result.get("found"):
+                    series_report = format_anilist_episode_guide(anilist_result)
+                else:
+                    series_report = format_wikidata_episode_guide(metadata)
             else:
                 series_report = format_wikidata_episode_guide(metadata)
-        else:
-            series_report = format_wikidata_episode_guide(metadata)
+        messages.extend(["", "━━━━━━━━━━━━━━━━━━", build_platform_daily_message(
+            platform, item, research, metadata_report, series_report
+        )])
     trend_report = format_anime_trends(fetch_anime_trends())
-    pageview_report = format_category_pageviews(fetch_category_pageviews(TITLE_CATEGORIES))
-    message = build_daily_message(movie, research, metadata_report, series_report) + "\n\n" + trend_report + "\n\n" + pageview_report
-    send_telegram_message(token, chat_id, message)
+    pageview_report = format_category_pageviews(pageview_result)
+    messages.extend(["", "━━━━━━━━━━━━━━━━━━", trend_report, "", pageview_report])
+    send_telegram_message(token, chat_id, "\n".join(messages))
 
 
 if __name__ == "__main__":
