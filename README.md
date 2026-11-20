@@ -492,3 +492,8 @@ The new discovery track uses public/free endpoints and Python's standard library
 ## Free-only cost protection
 
 NEXORA now blocks OpenAI and Gemini API requests by default, even if API keys remain configured in Render. This prevents accidental paid AI calls from recap script generation and Gemini Search research. The normal free research/worksheet/TTS/render workflow continues. Paid AI can only be deliberately enabled by setting `NEXORA_ALLOW_PAID_AI=true` in Render; leave it unset for the requested free-only operation. This switch does not make an API free: it only makes any potentially chargeable use explicit. No new paid service or package is introduced.
+
+
+## Additional free anime source and report QA
+
+The universal anime track now includes Kitsu's public read-only JSON:API alongside AniList, Tenrai/MyAnimeList and Wikidata. Kitsu public GET catalogue reads do not require an API key; the integration accepts only a unique exact title/alias match, rejects R18/R age ratings, and labels synopsis as series-level research only. See the [official Kitsu API documentation](https://hummingbird-me.github.io/api-docs/) for public anime search and API semantics. The universal report also emits real line breaks, and Wikimedia excerpts are whitespace-normalized correctly. No new dependency, paid key, GPU or paid service is added.
