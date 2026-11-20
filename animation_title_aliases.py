@@ -31,7 +31,7 @@ _ALIAS_GROUPS = (
 
 def normalize_animation_title(value):
     value = unicodedata.normalize("NFKC", str(value or "")).casefold()
-    value = re.sub(r"[^\\w]+", " ", value, flags=re.UNICODE)
+    value = re.sub(r"[^\w]+", " ", value, flags=re.UNICODE)
     return " ".join(value.split())
 
 
