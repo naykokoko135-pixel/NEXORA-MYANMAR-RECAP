@@ -53,12 +53,13 @@ class DraftBuilderTests(unittest.TestCase):
                 "Avatar", "ဇာတ်ကားနဲ့တိုက်စစ်ထားတဲ့ Research Notes တွေ ဒီမှာထည့်ပါ။"
             )
 
-    def test_duration_is_rounded_to_readable_range(self):
+    def test_default_youtube_worksheet_is_three_parts_of_10_to_15_minutes(self):
         result = generate_three_part_draft_worksheets(
-            "Avatar", "Verified creator note.", duration="15-20"
+            "Avatar", "Verified creator note."
         )
-        self.assertIn("အပိုင်းတစ်ခုလျှင် ၅–၇ မိနစ်ခန့်", result)
-        self.assertNotIn("5.83333", result)
+        self.assertIn("စုစုပေါင်းရည်မှန်းချိန်: ၃၀–၄၅ မိနစ်", result)
+        self.assertIn("အပိုင်းတစ်ခုလျှင် ၁၀–၁၅ မိနစ်ခန့်", result)
+        self.assertEqual(result.count("ရည်မှန်းချိန်: အပိုင်းတစ်ခုလျှင်"), 3)
 
 
 if __name__ == "__main__":
