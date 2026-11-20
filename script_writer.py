@@ -63,7 +63,7 @@ def generate_recap_outline(topic: str, platform: str = "youtube", duration: str 
     platform = platform if platform in PLATFORM_NAMES else "youtube"
     if duration not in PLATFORM_DURATIONS[platform]:
         duration = DEFAULT_DURATIONS[platform]
-    longform = platform == "youtube"
+    longform = platform == "youtube" or (platform == "facebook" and duration == "46-60")
     return f"""🎬 NEXORA Myanmar Recap — Free Script Builder
 
 ခေါင်းစဉ်: {safe_topic}
