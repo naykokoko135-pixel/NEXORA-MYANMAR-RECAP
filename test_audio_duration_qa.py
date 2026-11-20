@@ -3,7 +3,7 @@ from unittest.mock import patch, Mock
 
 from audio_duration_qa import (
     evaluate_audio_duration,
-    evaluate_audio_parts,
+    evaluate_audio_parts,\n    format_audio_parts_qa_report,
     format_audio_qa_report,
     parse_ffmpeg_audio_metadata,
 )
@@ -62,6 +62,13 @@ class AudioDurationQATests(unittest.TestCase):
 
     def test_invalid_measured_duration_fails_closed(self):
         self.assertEqual(evaluate_audio_parts("youtube", [900, float("nan"), 900])["status"], "DURATION FAIL")
+
+    def test_multipart_report_displays_measured_part_and_total(self):
+        evaluation = evaluate_audio_parts("youtube", [15 * 60, 15 * 60, 16 * 60])
+        report = format_audio_parts_qa_report("youtube", evaluation)
+        self.assertIn("DURATION PASS", report)
+        self.assertIn("Part 1: 00:15:00", report)
+        self.assertIn("စုစုပေါင်း: 00:46:00", report)
 
     def test_unknown_platform_rejected(self):
         self.assertEqual(evaluate_audio_duration("instagram", 300)["status"], "NOT READY")
