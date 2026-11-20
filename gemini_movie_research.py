@@ -30,6 +30,59 @@ def _safe_status(message: str) -> dict:
     return {"found": False, "status": message}
 
 
+def _http_error_status(exc: HTTPError) -> str:
+    """Classify Google's HTTP errors without exposing request credentials."""
+    try:
+        body = exc.read(16_384).decode("utf-8", errors="replace")
+        payload = json.loads(body) if body else {}
+    except (OSError, ValueError, TypeError):
+        payload = {}
+
+    error = payload.get("error") if isinstance(payload, dict) else {}
+    if not isinstance(error, dict):
+        error = {}
+    google_status = str(error.get("status") or "").strip()
+    message = str(error.get("message") or "").casefold()
+    reasons = []
+    details = error.get("details") or []
+    if isinstance(details, list):
+        for detail in details:
+            if isinstance(detail, dict):
+                reason = detail.get("reason")
+                if reason:
+                    reasons.append(str(reason).casefold())
+                metadata = detail.get("metadata")
+                if isinstance(metadata, dict):
+                    reasons.extend(str(value).casefold() for value in metadata.values())
+    reason_text = " ".join(reasons)
+    diagnostic = " ".join((google_status.casefold(), reason_text, message))
+
+    if any(term in diagnostic for term in ("free tier", "free-tier", "not available for free", "billingnotenabled")):
+        return _safe_status(
+            "Google API က လက်ရှိ Free Tier တွင် Google Search Grounding ကို ခွင့်မပြုခြင်း သို့မဟုတ် Billing မဖွင့်ထားခြင်း ဖြစ်နိုင်ပါသည်။ "
+            "AI Studio ရှိ Project Billing နှင့် Search Grounding ရရှိနိုင်မှုကို စစ်ဆေးပါ။"
+        )["status"]
+    if any(term in diagnostic for term in ("billing", "spend cap", "payment", "insufficient_quota")):
+        return _safe_status(
+            "Google API က Billing သို့မဟုတ် Project Spend Limit ဆိုင်ရာ ကန့်သတ်ချက်ကို ပြန်ပေးထားပါသည်။ "
+            "အသုံးပြုမှုမရှိဟု မြင်ရသော်လည်း Project Billing နှင့် Spend Cap ကို စစ်ဆေးပါ။"
+        )["status"]
+    if any(term in diagnostic for term in ("ratelimit", "rate_limit", "quota", "resource_exhausted", "too many requests")):
+        label = google_status or (reasons[0] if reasons else "RESOURCE_EXHAUSTED")
+        return _safe_status(
+            f"Google API က Rate/Quota ကန့်သတ်ချက်ကို ပြန်ပေးထားပါသည် ({label[:80]}၊ HTTP {exc.code})။ "
+            "ဒါဟာ သင်ကိုယ်တိုင် အသုံးပြုခဲ့ကြောင်း သက်သေမဟုတ်ပါ။ Project၊ Model နှင့် Search Grounding limit ကို စစ်ဆေးပါ။"
+        )["status"]
+
+    label = google_status or "အကြောင်းရင်းမသတ်မှတ်ရသေး"
+    reason = reasons[0][:80] if reasons else ""
+    suffix = f"၊ reason: {reason}" if reason else ""
+    return (
+        f"Google Gemini API က HTTP {exc.code} ပြန်ပေးထားပါသည် ({label}{suffix})။ "
+        "Quota ပြည့်သည်ဟု တိတိကျကျ မသတ်မှတ်နိုင်သေးပါ။ Google error အကြောင်းရင်းကို စစ်ဆေးရန်လိုပါသည်။"
+    )
+
+
 def fetch_gemini_movie_metadata(title: str) -> dict:
     """Search public web sources via Gemini grounding and return validated facts."""
     clean = " ".join(str(title or "").split()).strip()
@@ -81,7 +134,7 @@ def fetch_gemini_movie_metadata(title: str) -> dict:
         if exc.code in (401, 403):
             return _safe_status("Gemini API Key သို့မဟုတ် permission မမှန်ပါ။")
         if exc.code == 429:
-            return _safe_status("Gemini Search API quota/limit ပြည့်နေပါသည်။")
+            return _safe_status(_http_error_status(exc))
         return _safe_status(f"Gemini Search API ယာယီမရရှိပါ (HTTP {exc.code})။")
     except (URLError, TimeoutError, OSError):
         return _safe_status("Gemini Search API သို့ ချိတ်ဆက်မရပါ။")
