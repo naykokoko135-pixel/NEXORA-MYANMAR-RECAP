@@ -30,7 +30,7 @@ class ErrorReporterTests(unittest.TestCase):
     def test_report_body_excludes_exception_message_and_success_is_cooled_down(self):
         exc = self._raised_error()
         env = {
-            "GITHUB_ERROR_REPORT_TOKEN": "fake-token",
+            "ERROR_REPORT_TOKEN": "fake-token",
             "GITHUB_REPOSITORY": "owner/repo",
         }
         with patch.dict(os.environ, env, clear=True), patch(
@@ -47,7 +47,7 @@ class ErrorReporterTests(unittest.TestCase):
     def test_request_failure_releases_reservation_for_retry(self):
         exc = self._raised_error()
         env = {
-            "GITHUB_ERROR_REPORT_TOKEN": "fake-token",
+            "ERROR_REPORT_TOKEN": "fake-token",
             "GITHUB_REPOSITORY": "owner/repo",
         }
         with patch.dict(os.environ, env, clear=True), patch(
