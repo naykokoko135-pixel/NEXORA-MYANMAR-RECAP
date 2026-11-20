@@ -2476,7 +2476,7 @@ async def audioqa_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         with tempfile.NamedTemporaryFile(prefix="nexora-audioqa-", suffix=".bin", delete=False) as temp_file:
             temp_path = temp_file.name
-        telegram_file = await media_file.get_file()
+        telegram_file = await context.bot.get_file(media_file.file_id)
         await telegram_file.download_to_drive(custom_path=temp_path)
         metadata = await asyncio.to_thread(inspect_audio_file, temp_path)
         evaluation = evaluate_audio_duration(platform, metadata["duration_seconds"])
