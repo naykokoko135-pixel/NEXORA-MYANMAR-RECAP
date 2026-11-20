@@ -51,7 +51,7 @@ class GeminiScriptProviderTests(unittest.TestCase):
         result = {"steps": [{"type": "model_output", "content": [{"type": "text", "text": script}]}]}
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}, clear=True):
             with patch.object(provider, "urlopen", return_value=_FakeResponse(result)) as mocked:
-                output = provider.generate_burmese_recap_script("Example", "verified notes " * 10)
+                output = provider.generate_burmese_recap_script("Example", "verified notes " * 10, duration="15-20")
         self.assertEqual(output, script)
         request = mocked.call_args.args[0]
         self.assertEqual(request.full_url, "https://generativelanguage.googleapis.com/v1beta/interactions")
