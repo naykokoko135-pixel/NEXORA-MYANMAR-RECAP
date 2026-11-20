@@ -183,12 +183,26 @@ class RecapMetadataResolverTests(unittest.TestCase):
             "found": True, "title": "Example", "countries": ["Japan"],
             "year": "2024", "description": "Japanese anime television series",
             "source": "https://www.wikidata.org/wiki/Q1",
+            "enwiki_title": "", "mywiki_title": "",
+        }
+        anime.return_value = {
+            "india_excluded": False, "year_conflict": False,
+            "anilist": {
+                "found": True, "provider": "AniList", "title": "Example",
+                "country": "JP", "year": 2024,
+                "synopsis": "A sufficiently detailed series synopsis for a safe short preview.",
+                "provider_url": "https://anilist.co/anime/1",
+            },
+            "tenrai": {"found": False},
         }
         result = resolve_recap_metadata("Example")
         self.assertTrue(result["found"])
         self.assertEqual(result["provider"], "Wikidata")
+        self.assertEqual(result["countries"], ["Japan"])
+        self.assertEqual(result["anime_synopsis"], "A sufficiently detailed series synopsis for a safe short preview.")
+        self.assertEqual(result["anime_synopsis_source"], "https://anilist.co/anime/1")
         tmdb.assert_not_called()
-        anime.assert_not_called()
+        anime.assert_called_once_with("Example")
 
     @patch("recap_metadata_resolver.research_anime_sources")
     @patch("recap_metadata_resolver.fetch_tmdb_movie")
