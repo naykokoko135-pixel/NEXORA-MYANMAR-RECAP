@@ -413,7 +413,7 @@ def main() -> None:
         item = selected[platform]
         title = item["title"]
         research = search_movie_sources(title)
-        metadata = fetch_wikidata_metadata(title)
+        metadata = fetch_wikidata_metadata(title, expected_media_type=format_for_title(title))
         metadata_report = format_wikidata_metadata(metadata)
         series_report = ""
         if format_for_title(title) == "Animated Series":
