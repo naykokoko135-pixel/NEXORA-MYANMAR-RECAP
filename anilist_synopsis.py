@@ -30,6 +30,7 @@ def _plain_text(value):
 
 def _norm(value):
     value = re.sub(r"\([^)]*\)", " ", str(value or "").casefold())
+    value = re.sub(r"\\bthe\\s+movie\\b|\\bmovie\\b", " ", value)
     return " ".join(re.findall(r"[a-z0-9]+", value))
 
 
@@ -75,10 +76,23 @@ def fetch_anilist_synopsis(title):
     }
     """
     try:
-        payload = _graphql(query, {"search": requested})
-        if payload.get("errors"):
+        search_terms = [requested]
+        compact = re.sub(r"(?i)\\bthe\\s+movie\\b", " ", requested)
+        compact = re.sub(r"[:：–—-]+", " ", compact)
+        compact = " ".join(compact.split()).strip()
+        if compact and compact.casefold() != requested.casefold():
+            search_terms.append(compact)
+        candidates_by_id = {}
+        for term in search_terms:
+            payload = _graphql(query, {"search": term})
+            if payload.get("errors"):
+                continue
+            for candidate in payload.get("data", {}).get("Page", {}).get("media", []):
+                if candidate.get("id") is not None:
+                    candidates_by_id[candidate["id"]] = candidate
+        candidates = list(candidates_by_id.values())
+        if not candidates:
             return {"found": False, "status": "AniList ရင်းမြစ်ကို ယခုဖတ်မရပါ။"}
-        candidates = payload.get("data", {}).get("Page", {}).get("media", [])
         exact = []
         for item in candidates:
             titles = item.get("title") or {}
