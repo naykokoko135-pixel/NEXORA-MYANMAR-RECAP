@@ -13,11 +13,11 @@ def build_original_recap_notes(movie_report: dict, recap_examples: list[dict]) -
     wikidata = movie_report.get("wikidata") or {}
     if movie_report.get("india_excluded"):
         raise ValueError("အိန္ဒိယမူရင်း/ထုတ်လုပ်မှုပါဝင်သည့် ရုပ်ရှင်ကို NEXORA စည်းမျဉ်းအရ ပယ်ချထားသည်။")
-    if not tmdb.get("found") and not wikidata.get("found"):
+    if not tmdb.get("found") and not wikidata.get("found") and not gemini.get("found"):
         # Show safe provider statuses so operators can distinguish missing
         # credentials from exact-match or upstream network failures.
         diagnostics = []
-        for provider, result in (("TMDB", tmdb), ("Wikidata", wikidata)):
+        for provider, result in (("TMDB", tmdb), ("Wikidata", wikidata), ("Gemini Google Search", gemini)):
             status = str(result.get("status") or "အကြောင်းရင်း မသိရှိပါ။").strip()
             diagnostics.append(f"{provider}: {status}")
         detail = "\\n".join(diagnostics)
