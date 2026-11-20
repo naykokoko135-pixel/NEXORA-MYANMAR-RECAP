@@ -138,12 +138,19 @@ def research_movie_sources(title):
 
     tmdb = safe_fetch(fetch_tmdb_movie, "TMDB")
     wikidata = safe_fetch(fetch_wikidata_metadata, "Wikidata")
-    # TMDB is optional. When it is not configured or has no exact match, use\n    # the existing Gemini key with Google Search grounding as a third source.\n    gemini = (\n        safe_fetch(fetch_gemini_movie_metadata, "Gemini Google Search")\n        if not tmdb.get("found") else {"found": False, "status": "TMDB metadata ရရှိပြီးဖြစ်သဖြင့် Gemini fallback မလိုအပ်ပါ။"}\n    )\n    tmdb_countries = tmdb.get("countries") or [] if tmdb.get("found") else []
+    # TMDB is optional. When it is not configured or has no exact match, use
+    # the existing Gemini key with Google Search grounding as a third source.
+    gemini = (
+        safe_fetch(fetch_gemini_movie_metadata, "Gemini Google Search")
+        if not tmdb.get("found") else {"found": False, "status": "TMDB metadata ရရှိပြီးဖြစ်သဖြင့် Gemini fallback မလိုအပ်ပါ။"}
+    )
+    tmdb_countries = tmdb.get("countries") or [] if tmdb.get("found") else []
     wd_countries = wikidata.get("countries") or [] if wikidata.get("found") else []
-    gemini_countries = gemini.get("countries") or [] if gemini.get("found") else []\n    combined = " ".join(str(x) for x in tmdb_countries + wd_countries + gemini_countries).casefold()
+    gemini_countries = gemini.get("countries") or [] if gemini.get("found") else []
+    combined = " ".join(str(x) for x in tmdb_countries + wd_countries + gemini_countries).casefold()
     india_flag = "india" in combined or "အိန္ဒိယ" in combined
     years = []
-    for source in (tmdb, wikidata):
+    for source in (tmdb, wikidata, gemini):
         year = str(source.get("year") or "").strip()
         if source.get("found") and year and year not in years:
             years.append(year)
@@ -157,6 +164,7 @@ def research_movie_sources(title):
         "title": clean,
         "tmdb": tmdb,
         "wikidata": wikidata,
+        "gemini": gemini,
         "india_excluded": india_flag,
         "year_conflict": len(years) > 1,
         "years": years,
@@ -197,6 +205,18 @@ def format_movie_source_report(report):
         ])
     else:
         lines.append(str(wd.get("status") or "Wikidata metadata မရရှိပါ။"))
+    lines.extend(["", "【Gemini Google Search】"])
+    gemini = report.get("gemini") or {}
+    if gemini.get("found"):
+        lines.extend([
+            "အမည်: " + str(gemini.get("title") or "မရရှိပါ"),
+            "နှစ်: " + str(gemini.get("year") or "မရရှိပါ"),
+            "ထုတ်လုပ်သည့်နိုင်ငံ: " + (", ".join(gemini.get("countries") or []) or "မရရှိပါ"),
+            "ရင်းမြစ်: " + " | ".join(item.get("url", "") for item in gemini.get("sources", [])[:4]),
+            "အခြေအနေ: " + str(gemini.get("status") or ""),
+        ])
+    else:
+        lines.append(str(gemini.get("status") or "Gemini metadata မရရှိပါ။"))
     lines.extend(["", "စစ်ဆေးချက်: " + str(report.get("eligibility") or "မရရှိပါ")])
     if report.get("india_excluded"):
         lines.append("ရလဒ်: အိန္ဒိယမူရင်း/ထုတ်လုပ်မှုပါဝင်မှုကြောင့် ပယ်ချထားသည်။")
