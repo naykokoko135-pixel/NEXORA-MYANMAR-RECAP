@@ -57,7 +57,7 @@ Part တစ်ခုစီတွင် မတူညီသောဖြစ်ရ�
     return "Hook၊ အဓိကဖြစ်ရပ်များ၊ အလှည့်အပြောင်းနှင့် အဆုံးသတ်ကို ရှင်းလင်းစွာ ထည့်ပါ။"
 
 
-def generate_recap_outline(topic: str, platform: str = "youtube", duration: str = "30-45") -> str:
+def generate_recap_outline(topic: str, platform: str = "youtube", duration: str = "46-60") -> str:
     """Create a Burmese recap worksheet without inventing plot facts."""
     safe_topic = " ".join((topic or "").split()).strip() or "[ဇာတ်ကား/ဇာတ်လမ်းအမည်]"
     platform = platform if platform in PLATFORM_NAMES else "youtube"
