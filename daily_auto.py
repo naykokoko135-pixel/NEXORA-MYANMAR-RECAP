@@ -15,6 +15,8 @@ from trend_sources import fetch_anime_trends, format_anime_trends
 from pageview_trends import fetch_category_pageviews, format_category_pageviews
 from tvmaze_series import fetch_series_episode_guide, format_series_episode_guide
 from anilist_series import fetch_anilist_episode_guide, format_anilist_episode_guide
+from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
+from english_plot_research import fetch_english_plot_section, EnglishPlotError
 
 # Four animation categories with titles from multiple countries/regions.
 # This curated rotation is not a live popularity or view-count ranking.
@@ -413,8 +415,46 @@ def main() -> None:
         item = selected[platform]
         title = item["title"]
         research = search_movie_sources(title)
-        metadata = fetch_wikidata_metadata(title)
+        metadata = fetch_wikidata_metadata(title, expected_media_type=format_for_title(title))
         metadata_report = format_wikidata_metadata(metadata)
+
+        # Add an actual Plot/Synopsis section only from the exact Wikidata
+        # sitelink. Intro snippets and related list pages remain research leads,
+        # never substitutes for a detailed plot source.
+        if metadata.get("found"):
+            plot_result = None
+            mywiki_title = metadata.get("mywiki_title", "")
+            enwiki_title = metadata.get("enwiki_title", "")
+            if mywiki_title:
+                try:
+                    plot_result = fetch_burmese_plot_section(mywiki_title)
+                except PlotResearchError:
+                    plot_result = None
+            if not plot_result and enwiki_title:
+                try:
+                    plot_result = fetch_english_plot_section(enwiki_title)
+                except EnglishPlotError:
+                    plot_result = None
+            if plot_result:
+                research += (
+                    "\n\n📖 DETAILED PLOT RESEARCH (EXACT WIKIDATA SITELINK)\n"
+                    + "Section: " + str(plot_result.get("section", "Plot/Synopsis")) + "\n"
+                    + "Source type: " + str(plot_result.get("source_notice", "Community-edited plot section")) + "\n"
+                    + "Source: " + str(plot_result.get("source", "")) + "\n"
+                    + str(plot_result.get("plot_text", ""))[:6000]
+                    + "\n\nသတိပြုရန်: ဤသည် Wikipedia လူထုတည်းဖြတ် Plot section ဖြစ်သည်။ Official source နှင့် ထပ်မံတိုက်စစ်ပါ။"
+                )
+            else:
+                research += (
+                    "\n\n⚠️ DETAILED PLOT SOURCE မရရှိပါ။ Intro snippet သာရှိသဖြင့် "
+                    "ဇာတ်ညွှန်း/Full recap မထုတ်ဘဲ Worksheet အဖြစ်သာထားပါ။"
+                )
+        else:
+            research += (
+                "\n\n⚠️ Wikidata identity ကို media type နှင့် မခွဲနိုင်သေးပါ။ "
+                "ဇာတ်ညွှန်း/Full recap မထုတ်ဘဲ Worksheet အဖြစ်သာထားပါ။"
+            )
+
         series_report = ""
         if format_for_title(title) == "Animated Series":
             tvmaze_result = fetch_series_episode_guide(title)
