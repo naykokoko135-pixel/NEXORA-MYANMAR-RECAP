@@ -1,5 +1,5 @@
 """Input and metadata guards for longer licensed recap preview generation."""
-MAX_RECAP_SCRIPT_CHARS = 30000
+MAX_RECAP_SCRIPT_CHARS = 80000
 INDIAN_COUNTRY_NAMES = {"india", "republic of india"}
 
 def parse_recap_video_request(message_text: str, available_presets) -> tuple[str, str, str]:
@@ -17,7 +17,7 @@ def parse_recap_video_request(message_text: str, available_presets) -> tuple[str
     narration = "\n".join(lines).strip()
     # Empty narration signals automatic retrieval of a verified plot section.
     if len(narration) > MAX_RECAP_SCRIPT_CHARS:
-        raise ValueError("Narration သည် စာလုံး ၆,၀၀၀ ထက် မကျော်ရပါ။ အပိုင်းခွဲပါ။")
+        raise ValueError("Narration သည် စာလုံး ၈၀,၀၀၀ ထက် မကျော်ရပါ။")
     return title, preset, narration
 
 def validate_non_indian_wikidata_metadata(metadata: dict) -> list[str]:
