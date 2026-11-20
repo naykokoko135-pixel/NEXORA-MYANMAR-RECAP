@@ -32,6 +32,21 @@ class AniListSynopsisTests(unittest.TestCase):
         self.assertNotIn("<p>", result["synopsis"])
 
     @patch("anilist_synopsis._graphql")
+    def test_movie_descriptor_alias_matches_unique_record(self, mock_graphql):
+        item = self._item(id=178788, title={
+            "romaji": "Kimetsu no Yaiba: Mugenjou-hen Movie 1 - Akaza Sairai",
+            "english": "Demon Slayer: Kimetsu no Yaiba Infinity Castle",
+            "native": "劇場版「鬼滅の刃」無限城編 第一章 猗窩座再来",
+        }, synonyms=["Demon Slayer: Kimetsu no Yaiba Infinity Castle"], format="MOVIE", episodes=1)
+        mock_graphql.side_effect = [
+            {"data": {"Page": {"media": []}}},
+            {"data": {"Page": {"media": [item]}}},
+        ]
+        result = fetch_anilist_synopsis("Demon Slayer: Kimetsu no Yaiba – The Movie: Infinity Castle")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["media_id"], 178788)
+
+    @patch("anilist_synopsis._graphql")
     def test_rejects_fuzzy_match(self, mock_graphql):
         mock_graphql.return_value = {
             "data": {"Page": {"media": [self._item() | {

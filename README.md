@@ -480,3 +480,10 @@ Supported categories: Anime, 3D Animation, Cartoon, Donghua, and International M
 Use Telegram `/episodepack <exact animated series title>` to collect up to five highest-rated episodes from an exact TVmaze Animation-genre match, then search Wikimedia Commons for a strongly title-matched CC0, CC BY, CC BY-SA, or Public Domain video candidate. The pack includes episode rating, short synopsis lead, air date, TVmaze source, and any candidate file's license/creator/Commons page.
 
 TVmaze ratings are community ratings, not views or popularity. This is an editorial research brief, not an automatically written recap or finished MP4. Commons title matching does not establish that a file depicts the actual episode scene; inspect it before use. Follow the specific license attribution/share-alike terms. TVmaze Animation genre does not distinguish 2D from 3D, so do not classify an item as 3D Animation from this command alone. Unknown country or India-origin titles are rejected by the existing TVmaze research guard.
+
+
+## Universal free cross-category research (v2)
+
+Use `/multisourceresearch <title>` to query independent Anime/Animation catalogues (AniList, Tenrai/MAL, Wikidata), movie metadata (TMDB when its optional owner-managed token is configured, Wikidata and Gemini when configured), TV-series metadata (TVmaze), and a free Wikimedia cross-category discovery search. The Wikimedia track can surface additional leads for Donghua, Cartoon, 3D Animation, films and series; it is not a dedicated catalogue for every format and does not prove format, origin, rights or plot. Each provider can fail independently without hiding other results.
+
+The new discovery track uses public/free endpoints and Python's standard library. No new paid API, API key, GPU or package is required. Existing optional TMDB/Gemini/OpenAI integrations may incur costs when enabled; they are not required for the free discovery path. AniList matching tolerates harmless punctuation and the common "The Movie" descriptor while still requiring a unique title/alias match. Catalogue descriptions remain research leads, never episode-by-episode plot facts.
