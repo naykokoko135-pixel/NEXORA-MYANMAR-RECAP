@@ -267,12 +267,12 @@ def format_animation_catalogue_report(report):
     else:
         lines.append(str(donghua.get("status") or "အတည်မပြုနိုင်ပါ။"))
 
-    lines.extend(["", "【CARTOON — Wikidata open catalogue lead】"])
+    lines.extend(["", "【CARTOON — BCDB + Wikidata open catalogue】"])
     cartoon = report.get("cartoon") or {}
     if cartoon.get("found"):
         lines.extend([
             "အမည်: " + str(cartoon.get("title") or "မရရှိပါ"),
-            "ဖော်ပြချက်: " + str(cartoon.get("description") or "မရရှိပါ"),
+            "ဖော်ပြချက်: " + str(cartoon.get("description") or "BCDB catalogue record"),
             "Source: " + str(cartoon.get("source") or ""),
             "BCDB Catalogue: " + str(cartoon.get("catalogue_url") or ""),
             "နိုင်ငံအတည်ပြုချက်: " + ("ရရှိ" if cartoon.get("origin_verified") else "မရရှိသေး — production မစတင်ရ"),
@@ -281,12 +281,12 @@ def format_animation_catalogue_report(report):
     else:
         lines.append(str(cartoon.get("status") or "ရင်းမြစ် မရရှိပါ။"))
 
-    lines.extend(["", "【3D ANIMATION — Wikidata open catalogue lead】"])
+    lines.extend(["", "【3D ANIMATION — Blender Open Movies + Wikidata】"])
     three_d = report.get("3d_animation") or {}
     if three_d.get("found"):
         lines.extend([
             "အမည်: " + str(three_d.get("title") or "မရရှိပါ"),
-            "ဖော်ပြချက်: " + str(three_d.get("description") or "မရရှိပါ"),
+            "ဖော်ပြချက်: " + str(three_d.get("description") or "3D Open Movie catalogue record"),
             "Source: " + str(three_d.get("source") or ""),
             "Catalogue: " + str(three_d.get("catalogue_url") or ""),
         ])
