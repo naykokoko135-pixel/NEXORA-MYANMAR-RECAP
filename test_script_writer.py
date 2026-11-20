@@ -1,6 +1,6 @@
 import unittest
 
-from script_writer import classify_recap_title, generate_all_platform_plan
+from script_writer import (classify_recap_title, generate_all_platform_plan, DEFAULT_DURATIONS, generate_recap_outline)
 
 
 class TitleClassificationTests(unittest.TestCase):
@@ -29,6 +29,19 @@ class TitleClassificationTests(unittest.TestCase):
         self.assertIn("3D Animation / Children's Series", plan)
         self.assertIn("South Korea", plan)
         self.assertNotIn("Anime / 3D Animation / Cartoon / Donghua", plan)
+
+    def test_youtube_plan_is_three_parts_of_10_to_15_minutes(self):
+        plan = generate_all_platform_plan("Pororo")
+        self.assertIn("၃ ပိုင်း | တစ်ပိုင်းလျှင် ၁၀–၁၅ မိနစ် | စုစုပေါင်း ၃၀–၄၅ မိနစ်", plan)
+        self.assertIn("Part 1 (၁၀–၁၅ မိနစ်)", plan)
+        self.assertIn("Part 2 (၁၀–၁၅ မိနစ်)", plan)
+        self.assertIn("Part 3 (၁၀–၁၅ မိနစ်)", plan)
+
+    def test_youtube_default_duration_and_outline_are_longform_three_parts(self):
+        self.assertEqual(DEFAULT_DURATIONS["youtube"], "30-45")
+        outline = generate_recap_outline("Pororo")
+        self.assertIn("ရည်မှန်းချိန်: ၃၀–၄၅ မိနစ်", outline)
+        self.assertIn("YouTube သုံးပိုင်း Long-form", outline)
 
 
 if __name__ == "__main__":

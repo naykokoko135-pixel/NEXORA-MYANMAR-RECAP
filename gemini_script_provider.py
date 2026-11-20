@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 DEFAULT_MODEL = "gemini-3.8-flash"
 API_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 TIMEOUT_SECONDS = 240
-MAX_OUTPUT_TOKENS = 10000
+MAX_OUTPUT_TOKENS = 20000
 MIN_SCRIPT_CHARS = {"youtube": 5000, "facebook": 3300, "tiktok": 250}
 
 
@@ -44,7 +44,7 @@ def _extract_interaction_text(result: dict) -> str:
 
 
 def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtube",
-                                 duration: str = "15-20") -> str:
+                                 duration: str = "30-45") -> str:
     key = os.getenv("GEMINI_API_KEY", "").strip()
     if not key:
         raise GeminiScriptError("Gemini API မချိတ်ရသေးပါ။ Render Environment တွင် GEMINI_API_KEY ထည့်ရန် လိုအပ်ပါတယ်။")
@@ -52,11 +52,16 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     notes = str(notes or "").strip()
     if not topic or len(topic) > 180:
         raise GeminiScriptError("ခေါင်းစဉ်သည် ဗလာမဖြစ်ရ၊ စာလုံး 180 ထက်မကျော်ရပါ။")
-    if len(notes) < 80 or len(notes) > 6000:
-        raise GeminiScriptError("Research Notes ကို စာလုံး 80 မှ 6,000 အတွင်း ထည့်ပါ။")
+    if len(notes) < 80 or len(notes) > 20000:
+        raise GeminiScriptError("Research Notes ကို စာလုံး 80 မှ 20,000 အတွင်း ထည့်ပါ။")
     if platform not in MIN_SCRIPT_CHARS:
         raise GeminiScriptError("Platform မမှန်ကန်ပါ။")
     model = os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    longform_instruction = (
+        "YouTube 30-45 မိနစ်အတွက် PART 1, PART 2, PART 3 ဟု အတိအကျ သုံးပိုင်းသာ ခွဲပါ။ "
+        "Part တစ်ခုစီကို ၁၀–၁၅ မိနစ်စာ အသေးစိတ် narration ရေးပြီး အစ၊ အကြောင်းအရာနှင့် ဆက်စပ်ချက် ပါစေ။ "
+        if platform == "youtube" and duration == "30-45" else ""
+    )
     prompt = (
         "သင်သည် NEXORA Myanmar Recap အတွက် မြန်မာဘာသာ Script Editor ဖြစ်သည်။ "
         "အောက်ပါ research notes များကိုသာ အခြေခံ၍ recap narration ရေးပါ။ "
@@ -66,7 +71,8 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
         "မူရင်း dialogue မကူးပါနှင့်။ သဘာဝကျသော မြန်မာစကားဖြင့် Hook, context, "
         "ဖြစ်ရပ်အစဉ်လိုက် narration, transition, ကိုယ်ပိုင်သုံးသပ်ချက်နှင့် closing ရေးပါ။ "
         "ဇာတ်လမ်းအချက်အလက် မလုံလောက်လျှင် စာသားထပ်ဖြည့်မည့်အစား အချက်အလက်လိုအပ်ကြောင်း ဖော်ပြပါ။ "
-        "ရည်မှန်းကြာချိန်နှင့် ကိုက်ညီအောင် ပြည့်စုံစွာရေးပါ။\\n\\n"
+        + longform_instruction
+        + "အချက်အလက်မရှိလျှင် အရှည်ပြည့်စေရန် မတီထွင်ပါနှင့်။ ရည်မှန်းကြာချိန်နှင့် ကိုက်ညီအောင် ပြည့်စုံစွာရေးပါ။\\n\\n"
         f"ခေါင်းစဉ်: {topic}\\nPlatform: {platform}\\nရည်မှန်းကြာချိန်: {duration} မိနစ်\\n"
         f"Verified research notes:\\n{notes}"
     )
@@ -107,11 +113,12 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     script = _extract_interaction_text(result)
     if not script:
         raise GeminiScriptError("Gemini မှ Script စာသား မရရှိပါ။")
-    if len(script) < MIN_SCRIPT_CHARS[platform]:
+    minimum_chars = 18000 if platform == "youtube" and duration == "30-45" else MIN_SCRIPT_CHARS[platform]
+    if len(script) < minimum_chars:
         raise GeminiScriptError(
             "Gemini မှ ရရှိသော Script သည် သတ်မှတ်ကြာချိန်အတွက် မလုံလောက်ပါ။ "
             "ဇာတ်လမ်းအချက်အလက်မရှိဘဲ စာသားမဖြည့်ထုတ်ထားပါ။"
         )
-    if len(script) > 30000:
-        raise GeminiScriptError("Gemini မှ ထုတ်ပေးသော Script သည် စာလုံး 30,000 ထက် ကျော်နေပါတယ်။")
+    if len(script) > 80000:
+        raise GeminiScriptError("Gemini မှ ထုတ်ပေးသော Script သည် စာလုံး 80,000 ထက် ကျော်နေပါတယ်။")
     return script

@@ -20,6 +20,12 @@ class OpenAIScriptProviderTests(unittest.TestCase):
             with self.assertRaises(provider.AIScriptError):
                 provider.generate_burmese_recap_script("Example", "A" * 100)
 
+    def test_youtube_longform_default_has_extended_script_budget(self):
+        self.assertEqual(provider.generate_burmese_recap_script.__defaults__, ("youtube", "30-45"))
+        self.assertEqual(provider.MAX_NOTES_CHARS, 20000)
+        self.assertGreaterEqual(provider.MAX_OUTPUT_TOKENS, 18000)
+        self.assertEqual(provider.MAX_SCRIPT_CHARS, 80000)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -14,9 +14,9 @@ from urllib.request import Request, urlopen
 API_URL = "https://api.openai.com/v1/responses"
 DEFAULT_MODEL = "gpt-4.1-mini"
 MAX_TOPIC_CHARS = 180
-MAX_NOTES_CHARS = 6000
-MAX_OUTPUT_TOKENS = 10000
-MAX_SCRIPT_CHARS = 30000
+MAX_NOTES_CHARS = 20000
+MAX_OUTPUT_TOKENS = 20000
+MAX_SCRIPT_CHARS = 80000
 TIMEOUT_SECONDS = 240
 
 
@@ -35,7 +35,7 @@ def openai_script_status() -> dict:
 
 
 def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtube",
-                                 duration: str = "8-10") -> str:
+                                 duration: str = "30-45") -> str:
     """Draft a Burmese recap only from supplied notes; never fabricate missing plot."""
     key = os.getenv("OPENAI_API_KEY", "").strip()
     if not key:
@@ -45,11 +45,11 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     if not topic or len(topic) > MAX_TOPIC_CHARS:
         raise AIScriptError("ခေါင်းစဉ်သည် ဗလာမဖြစ်ရ၊ စာလုံး 180 ထက်မကျော်ရပါ။")
     if len(notes) < 80 or len(notes) > MAX_NOTES_CHARS:
-        raise AIScriptError("Research Notes ကို စာလုံး 80 မှ 6,000 အတွင်း ထည့်ပါ။")
+        raise AIScriptError("Research Notes ကို စာလုံး 80 မှ 20,000 အတွင်း ထည့်ပါ။")
     if platform not in {"youtube", "facebook", "tiktok"}:
         raise AIScriptError("Platform မမှန်ကန်ပါ။")
     model = os.getenv("OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
-    duration_ranges = {"youtube": (15, 20), "facebook": (10, 15), "tiktok": (1, 3)}
+    duration_ranges = {"youtube": (30, 45), "facebook": (10, 15), "tiktok": (1, 3)}
     preset_ranges = {"1-3": (1, 3), "3-5": (3, 5), "5-7": (5, 7), "8-10": (8, 10), "10-15": (10, 15), "12-15": (12, 15), "15-20": (15, 20), "20-30": (20, 30), "30-45": (30, 45), "45-60": (45, 60)}
     min_minutes, max_minutes = preset_ranges.get(duration, duration_ranges[platform])
     prompt = (
@@ -60,7 +60,11 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
         "မူရင်းဇာတ်ကား၏ dialogue ကို မကူးယူပါနှင့်။ မူရင်းဗီဒီယို footage ရှိသည်ဟု မဆိုပါနှင့်။ "
         "သုံးသပ်ချက်နှင့် ဖြစ်ရပ်မှန်ကို ခွဲရေးပါ။ Hook, context, chronological narration, "
         "transition, original commentary, closing တို့ကို သဘာဝကျသော မြန်မာစကားဖြင့် ဖွဲ့စည်းပါ။ "
-        "မြန်မာ narration ပုံမှန်ပြောနှုန်း တစ်မိနစ်လျှင် စကားလုံး ၁၀၀ မှ ၁၂၀ ခန့်ဖြင့် ရည်မှန်းချိန်ပြည့်အောင် အသေးစိတ်ရေးပါ။ "
+        + ("YouTube 30-45 မိနစ်အတွက် PART 1, PART 2, PART 3 ဟု အတိအကျ သုံးပိုင်းသာ ခွဲပါ။ "
+           "Part တစ်ခုစီကို ၁၀–၁၅ မိနစ်စာ အသေးစိတ် narration ရေးပြီး သီးခြားအစ၊ အကြောင်းအရာနှင့် နောက်ပိုင်းသို့ ဆက်စပ်ချက် ပါစေ။ "
+           "အခန်းခေါင်းစဉ်များစွာဖြင့် အပိုင်း ၃ ပိုင်းကို မပြောင်းလဲပါနှင့်။ "
+           if platform == "youtube" and duration == "30-45" else "")
+        + "မြန်မာ narration ပုံမှန်ပြောနှုန်း တစ်မိနစ်လျှင် စကားလုံး ၁၀၀ မှ ၁၂၀ ခန့်ဖြင့် ရည်မှန်းချိန်ပြည့်အောင် အသေးစိတ်ရေးပါ။ "
         "အချက်အလက်မရှိဘဲ ထပ်ခါထပ်ခါ မဖြည့်ပါနှင့်။ ထုတ်ဝေမီ source fact-check လုပ်ရန် သတိပေးပါ။\n\n"
         f"ခေါင်းစဉ်: {topic}\nPlatform: {platform}\nရည်မှန်းကြာချိန်: {duration} မိနစ် (အနည်းဆုံး {min_minutes}၊ အများဆုံး {max_minutes} မိနစ်)\n"
         f"Verified research notes:\n{notes}"
@@ -110,12 +114,15 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
     script = "\n".join(output).strip()
     if not script:
         raise AIScriptError("OpenAI မှ Script စာသား မရရှိပါ။")
-    minimum_chars = {"youtube": 5000, "facebook": 3300, "tiktok": 250}[platform]
+    minimum_chars = (
+        18000 if platform == "youtube" and duration == "30-45"
+        else {"youtube": 5000, "facebook": 3300, "tiktok": 250}[platform]
+    )
     if len(script) < minimum_chars:
         raise AIScriptError(
             "ရရှိသော ဇာတ်လမ်းအချက်အလက်ဖြင့် သတ်မှတ်ထားသော ကြာချိန်ပြည့် Script မရနိုင်သေးပါ။ "
             "ပိုမိုပြည့်စုံသော ဇာတ်လမ်းရင်းမြစ် လိုအပ်ပါတယ်။ အချက်အလက်မရှိဘဲ စာသားဖြည့်မထုတ်ထားပါ။"
         )
     if len(script) > MAX_SCRIPT_CHARS:
-        raise AIScriptError("ထုတ်ပေးသော Script သည် စာလုံး 30,000 ထက် ကျော်နေပါတယ်။")
+        raise AIScriptError("ထုတ်ပေးသော Script သည် စာလုံး 80,000 ထက် ကျော်နေပါတယ်။")
     return script

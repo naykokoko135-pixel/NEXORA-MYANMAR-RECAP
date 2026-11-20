@@ -124,7 +124,8 @@ class DailyAutoTests(unittest.TestCase):
         youtube = build_platform_daily_message("youtube", item, "Research")
         facebook = build_platform_daily_message("facebook", item, "Research")
         tiktok = build_platform_daily_message("tiktok", item, "Research")
-        self.assertIn("၁၅–၂၀ မိနစ်", youtube)
+        self.assertIn("၃၀–၄၅ မိနစ်", youtube)
+        self.assertIn("၃ ပိုင်း၊ တစ်ပိုင်း ၁၀–၁၅ မိနစ်", youtube)
         self.assertIn("၁၀–၁၅ မိနစ်", facebook)
         self.assertIn("၁–၃ မိနစ်", tiktok)
 
