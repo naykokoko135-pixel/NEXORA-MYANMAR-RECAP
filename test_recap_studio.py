@@ -139,3 +139,39 @@ def test_missing_metadata_error_explains_each_provider_without_secrets():
         assert "Token တန်ဖိုးကို Chat ထဲ မပို့ပါနှင့်" in message
     else:
         assert False, "Expected a safe provider diagnostic"
+
+
+def test_gemini_grounded_metadata_can_build_original_recap_notes():
+    report = {
+        "title": "Example Film",
+        "tmdb": {"found": False, "status": "TMDB မချိတ်ထားပါ။"},
+        "wikidata": {"found": False, "status": "Wikidata မှတ်တမ်းမတွေ့ပါ။"},
+        "gemini": {
+            "found": True,
+            "title": "Example Film",
+            "year": "2020",
+            "countries": ["South Korea"],
+            "overview": "A verified synopsis from grounded sources.",
+            "sources": [{"url": "https://studio.example/film"}],
+        },
+        "india_excluded": False,
+    }
+    notes = build_original_recap_notes(report, [])
+    assert "Gemini grounded title: Example Film" in notes
+    assert "South Korea" in notes
+    assert "https://studio.example/film" in notes
+
+
+def test_gemini_indian_coproduction_is_excluded_by_movie_research(monkeypatch):
+    import tmdb_movie_research as movie_research
+    monkeypatch.setattr(movie_research, "fetch_tmdb_movie", lambda title: {
+        "found": False, "status": "TMDB token not configured"
+    })
+    monkeypatch.setattr(movie_research, "fetch_wikidata_metadata", lambda title: {
+        "found": False, "status": "No record"
+    })
+    monkeypatch.setattr(movie_research, "fetch_gemini_movie_metadata", lambda title: {
+        "found": True, "countries": ["South Korea", "India"], "year": "2020"
+    })
+    report = movie_research.research_movie_sources("Example Film")
+    assert report["india_excluded"] is True
