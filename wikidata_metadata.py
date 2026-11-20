@@ -72,6 +72,27 @@ def _candidate_is_primary_screen_work(item):
     return any(term in description for term in preferred)
 
 
+def _candidate_matches_media_type(item, expected_media_type):
+    """Require the candidate description to agree with the known editorial media type."""
+    description = _normalize_title(item.get("description", ""))
+    media_type = str(expected_media_type or "").strip().casefold()
+    if media_type == "animated series":
+        return any(term in description for term in (
+            "anime television series", "animated television series",
+            "animated series", "television anime",
+        ))
+    if media_type == "animated film":
+        return any(term in description for term in (
+            "animated film", "anime film", "animated feature film",
+        ))
+    if media_type in {"live-action film", "live action film"}:
+        return (
+            any(term in description for term in ("film", "movie"))
+            and not any(term in description for term in ("animated", "anime", "manga"))
+        )
+    return True
+
+
 def _claim_entity_ids(claims, property_id):
     values = []
     for claim in claims.get(property_id, []):
@@ -116,8 +137,8 @@ def _quantity_value(claims, property_id):
     return next(iter(values)) if len(values) == 1 else None
 
 
-def fetch_wikidata_metadata(title):
-    """Return metadata for an exact title match, or a safe unavailable result."""
+def fetch_wikidata_metadata(title, expected_media_type=None):
+    """Return an exact title match constrained by known media type when supplied."""
     clean_title = " ".join((title or "").split()).strip()
     if not clean_title or len(clean_title) > 120:
         return {"found": False, "status": "ခေါင်းစဉ်မမှန်ကန်ပါ။"}
@@ -197,9 +218,36 @@ def fetch_wikidata_metadata(title):
                         ],
                     }
 
+        if expected_media_type:
+            typed_matches = {
+                entity_id: item for entity_id, item in exact_by_id.items()
+                if _candidate_matches_media_type(item, expected_media_type)
+            }
+            if len(typed_matches) == 1:
+                exact_by_id = typed_matches
+            elif not typed_matches or len(typed_matches) > 1:
+                return {
+                    "found": False,
+                    "status": (
+                        "Wikidata ခေါင်းစဉ်ကိုက်ညီမှုရှိသော်လည်း မျှော်မှန်းထားသော "
+                        + str(expected_media_type)
+                        + " အမျိုးအစားနှင့် တစ်ခုတည်းအဖြစ် မခွဲနိုင်ပါ။ "
+                        "မမှန်သောမှတ်တမ်းကို မရွေးဘဲ အတည်ပြုရန် ချန်ထားပါသည်။"
+                    ),
+                    "candidates": [
+                        {
+                            "entity_id": entity_id,
+                            "title": item.get("label", ""),
+                            "description": item.get("description", "မရရှိပါ"),
+                            "source": "https://www.wikidata.org/wiki/" + entity_id,
+                        }
+                        for entity_id, item in exact_by_id.items()
+                    ],
+                }
+
         if len(exact_by_id) > 1:
-            # Prefer one clearly described screen work over manga/franchise
-            # records, but never choose between multiple films or series.
+            # Legacy callers without a known media type get only a unique
+            # screen-work preference; ambiguous film/series collisions fail closed.
             screen_work_matches = {
                 entity_id: item for entity_id, item in exact_by_id.items()
                 if _candidate_is_primary_screen_work(item)
