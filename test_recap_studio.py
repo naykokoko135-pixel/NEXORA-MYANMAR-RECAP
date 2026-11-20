@@ -135,7 +135,9 @@ def test_missing_metadata_error_explains_each_provider_without_secrets():
         message = str(exc)
         assert "TMDB:" in message
         assert "Wikidata:" in message
-        assert "TMDB_API_READ_ACCESS_TOKEN" in message
+        assert "Gemini Google Search:" in message
+        assert "GEMINI_API_KEY" in message
+        assert "TMDB သည် optional" in message
         assert "Token တန်ဖိုးကို Chat ထဲ မပို့ပါနှင့်" in message
     else:
         assert False, "Expected a safe provider diagnostic"
