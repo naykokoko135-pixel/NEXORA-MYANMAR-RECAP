@@ -1,0 +1,52 @@
+import unittest
+from unittest.mock import patch, Mock
+
+from audio_duration_qa import (
+    evaluate_audio_duration,
+    format_audio_qa_report,
+    parse_ffmpeg_audio_metadata,
+)
+
+
+class AudioDurationQATests(unittest.TestCase):
+    def test_parse_audio_duration_metadata(self):
+        output = (
+            "Input #0, mp3, from 'sample.mp3':\\n"
+            "  Duration: 00:48:12.34, start: 0.025057, bitrate: 128 kb/s\\n"
+            "  Stream #0:0: Audio: mp3, 44100 Hz, stereo, fltp"
+        )
+        result = parse_ffmpeg_audio_metadata(output)
+        self.assertEqual(result["duration_seconds"], 2892.34)
+        self.assertIn("mp3", result["audio_stream"])
+
+    def test_missing_duration_rejected(self):
+        with self.assertRaises(ValueError):
+            parse_ffmpeg_audio_metadata("Stream #0:0: Audio: mp3")
+
+    def test_missing_audio_stream_rejected(self):
+        with self.assertRaises(ValueError):
+            parse_ffmpeg_audio_metadata("Duration: 00:05:00.00")
+
+    def test_youtube_facebook_duration_limits(self):
+        self.assertEqual(evaluate_audio_duration("youtube", 46 * 60)["status"], "DURATION PASS")
+        self.assertEqual(evaluate_audio_duration("facebook", 60 * 60)["status"], "DURATION PASS")
+        self.assertEqual(evaluate_audio_duration("youtube", 45 * 60)["status"], "TOO SHORT")
+        self.assertEqual(evaluate_audio_duration("facebook", 61 * 60)["status"], "TOO LONG")
+
+    def test_tiktok_duration_limits(self):
+        self.assertEqual(evaluate_audio_duration("tiktok", 4 * 60)["status"], "DURATION PASS")
+        self.assertEqual(evaluate_audio_duration("tt", 7 * 60)["status"], "DURATION PASS")
+        self.assertEqual(evaluate_audio_duration("tiktok", 239)["status"], "TOO SHORT")
+
+    def test_unknown_platform_rejected(self):
+        self.assertEqual(evaluate_audio_duration("instagram", 300)["status"], "NOT READY")
+
+    def test_report_disclaims_scope(self):
+        metadata = {"duration_seconds": 300, "audio_stream": "mp3", "decode_ok": True}
+        report = format_audio_qa_report("tiktok", metadata, evaluate_audio_duration("tiktok", 300))
+        self.assertIn("FFmpeg ဖြင့် တိုင်းတာထားသော Audio ကြာချိန်", report)
+        self.assertIn("SRT နှင့် စကားလုံးတစ်လုံးချင်း sync", report)
+
+
+if __name__ == "__main__":
+    unittest.main()
