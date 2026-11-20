@@ -32,7 +32,7 @@ def search_free_catalogue(title, limit=5):
             exact = " ".join(re.findall(r"[a-z0-9]+", name.casefold())) == " ".join(re.findall(r"[a-z0-9]+", requested.casefold()))
             if exact or (target and len(target.intersection(tokens)) >= min(2, len(target))):
                 key = str(page.get("key") or name.replace(" ", "_"))
-                items.append({"title": name, "excerpt": re.sub(r"\\s+", " ", str(page.get("excerpt") or ""))[:700],
+                items.append({"title": name, "excerpt": re.sub(r"\s+", " ", str(page.get("excerpt") or ""))[:700],
                               "url": "https://en.wikipedia.org/wiki/" + key, "exact_title": exact})
         return {"found": bool(items), "provider": "Wikimedia public REST search", "items": items[:5],
                 "status": "" if items else "Wikimedia တွင် ခေါင်းစဉ်နှင့် သက်ဆိုင်သော ရလဒ် မတွေ့ပါ။",
