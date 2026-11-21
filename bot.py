@@ -30,7 +30,7 @@ from auto_research import search_movie_sources, ResearchLookupError
 from seriesguide_command import series_guide_cmd
 from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
-from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError
+from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError, classify_render_document
 from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
 from youtube_cc_finder import search_youtube_cc_videos, YouTubeCCSearchError
@@ -1777,9 +1777,13 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     elif message.voice:
         media_file = await message.voice.get_file()
         filename, kind = "narration.ogg", "audio"
-    if media_file is None and message.document and (message.document.file_name or "").lower().endswith(".srt"):
-        media_file = await message.document.get_file()
-        filename, kind = message.document.file_name or "captions.srt", "subtitle"
+    if media_file is None and message.document:
+        document_name = message.document.file_name or ""
+        document_kind = classify_render_document(document_name)
+        if document_kind:
+            media_file = await message.document.get_file()
+            filename = document_name or ("captions.srt" if document_kind == "subtitle" else "narration.mp3")
+            kind = document_kind
     if media_file is None:
         return
     size = getattr(media_file, "file_size", 0) or 0
@@ -1793,6 +1797,22 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if kind == "subtitle":
         session["subtitle"] = (filename, data)
         await message.reply_text("မြန်မာစာတန်းထိုး SRT လက်ခံပြီးပါပြီ။ /render finish ဖြင့် MP4 ထုတ်နိုင်ပါပြီ။")
+    elif kind == "audio" and message.document:
+        if session.get("mode") == "timeline":
+            active = session.get("active_scene")
+            if active is None:
+                await message.reply_text("အရင်ဆုံး /render scene <အမည်> ဖြင့် Scene ဖွင့်ပါ။")
+                return
+            if session["scenes"][active].get("audio"):
+                await message.reply_text("ဒီ Scene မှာ အသံရှိပြီးပါပြီ။ နောက် Scene အတွက် /render scene <အမည်> ပို့ပါ။")
+                return
+            session["scenes"][active]["audio"] = (filename, data)
+            await message.reply_text(f"Scene {active + 1} အသံဖိုင် လက်ခံပြီးပါပြီ။")
+            return
+        if session.get("mode") != "timeline":
+            session["audio"] = (filename, data)
+            await message.reply_text("Narration အသံဖိုင် လက်ခံပြီးပါပြီ။ /render finish ပို့နိုင်ပါပြီ။")
+            return
     elif kind == "image":
         if session.get("mode") == "timeline":
             active = session.get("active_scene")
