@@ -16,6 +16,16 @@ SUBTITLE_SUFFIXES = {".srt"}
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
 AUDIO_SUFFIXES = {".mp3", ".m4a", ".wav", ".ogg"}
 
+def classify_render_document(filename: str) -> str | None:
+    """Classify supported Telegram document uploads for the render session."""
+    suffix = Path(filename or "").suffix.lower()
+    if suffix in SUBTITLE_SUFFIXES:
+        return "subtitle"
+    if suffix in AUDIO_SUFFIXES:
+        return "audio"
+    return None
+
+
 
 class VideoRenderError(ValueError):
     """Raised when inputs cannot be rendered safely."""
