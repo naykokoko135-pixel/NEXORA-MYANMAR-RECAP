@@ -167,6 +167,9 @@ class DailyAutoTests(unittest.TestCase):
         self.assertIn("၃ ပိုင်းတိတိ၊ တစ်ပိုင်း ၁၅–၂၀ မိနစ်", facebook)
         self.assertIn("၄–၇ မိနစ်", tiktok)
         self.assertIn("တစ်ပုဒ်တည်း", tiktok)
+        self.assertIn("/dailyrecap youtube", youtube)
+        self.assertIn("/dailyrecap facebook", facebook)
+        self.assertIn("/dailyrecap tiktok", tiktok)
 
     def test_source_failure_returns_fallback_without_raising(self):
         from daily_auto import _source_or_fallback
