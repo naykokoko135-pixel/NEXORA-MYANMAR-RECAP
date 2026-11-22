@@ -128,7 +128,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/recapvoice [preset] - တစ်ဖိုင်တည်း narration MP3 + SRT ထုတ်ရန်\n"
             "/recapvoice3 [preset] - YouTube/Facebook Script ၃ ပိုင်းမှ MP3/SRT ၃ စုံထုတ်ပြီး Audio ကြာချိန် QA စစ်ရန်\n"
             "/recapvideo <title> - အလိုအလျောက် narration + ခွင့်ပြုထားသော Footage မရှိပါက ရပ်မည်; သင့် Video ကို /sourcevideo ဖြင့် MP4 ထုတ်ရန်\n"
-            "/sourcevideo - ကိုယ်ပိုင်/ခွင့်ပြုထားသော Video + မြန်မာအသံ + SRT မှ MP4 ထုတ်ရန်\\n"
+            "/sourcevideo - ကိုယ်ပိုင်/ခွင့်ပြုထားသော Video + မြန်မာအသံ + SRT မှ MP4 ထုတ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
@@ -1596,8 +1596,8 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not base_url:
                 raise SourceVideoRenderError("Download Link ထုတ်ရန် Public URL မရှိပါ။")
             await update.message.reply_text(
-                "NEXORA Recap MP4 ပြီးပါပြီ။ မြန်မာ Narration နှင့် SRT ထည့်ထားပြီး မူရင်း Video အသံကို အစားထိုးထားပါတယ်။\\n"
-                f"လုံခြုံသော Download Link (၂၄ နာရီအတွင်းသာ အသုံးပြုနိုင်သည်):\\n{base_url}/download/{token}\\n"
+                "NEXORA Recap MP4 ပြီးပါပြီ။ မြန်မာ Narration နှင့် SRT ထည့်ထားပြီး မူရင်း Video အသံကို အစားထိုးထားပါတယ်။\n"
+                f"လုံခြုံသော Download Link (၂၄ နာရီအတွင်းသာ အသုံးပြုနိုင်သည်):\n{base_url}/download/{token}\n"
                 "ဖိုင်သည် Render server storage ပေါ်တွင် ယာယီသိမ်းထားခြင်းဖြစ်ပြီး service restart/deploy လုပ်ပါက link ပျက်နိုင်ပါတယ်။ "
                 "ထုတ်ဝေမီ မူပိုင်ခွင့်၊ အသုံးပြုခွင့်နှင့် Attribution ကို စစ်ဆေးပါ။"
             )
@@ -1630,7 +1630,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Attribution: {str(metadata.get('attribution', ''))[:350]}",
                 f"Source: {str(metadata.get('source_page', ''))[:500]}",
             ]
-            await update.message.reply_text("\\n".join(attribution_lines), disable_web_page_preview=True)
+            await update.message.reply_text("\n".join(attribution_lines), disable_web_page_preview=True)
         return
     platform = context.user_data.get("platform", "youtube")
     context.user_data["video_render"] = {
