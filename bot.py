@@ -3417,7 +3417,7 @@ async def telegram_webhook(
 CHATGPT_BRIDGE_API_KEY = os.getenv("CHATGPT_BRIDGE_API_KEY")
 CHATGPT_BRIDGE_CHAT_ID = os.getenv("CHATGPT_BRIDGE_CHAT_ID")
 BRIDGE_ALLOWED_COMMANDS = {
-    "status", "help", "auto", "seriesguide", "create", "research", "draft3",
+    "status", "help", "auto", "seriesguide", "create", "research", "draft3", "dailyrecap",
     "allplatforms", "voiceover3", "render", "animesynopsis", "multisourceresearch",
     "seriesresearch", "animationepisodes", "topratedepisodes", "episodepack",
     "episodeoutline", "recapvideo", "movieplotresearch", "moviemultisourceresearch",
