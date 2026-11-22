@@ -917,6 +917,36 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         import tempfile
+        fallback_source_notes = []
+        fallback_source_errors = []
+        if not source:
+            # Try independent discovery providers when Commons has no exact reusable match.
+            # Europeana and YouTube CC results are discovery leads only; neither is auto-downloaded.
+            try:
+                europeana_leads = await asyncio.to_thread(
+                    search_europeana_licensed_video, query, 4, search_titles
+                )
+                for item in europeana_leads[:3]:
+                    page = str(item.get("source_page") or "").strip()
+                    if page:
+                        fallback_source_notes.append(
+                            f"Europeana: {item.get('title', 'Untitled')} | {item.get('license', 'rights unknown')} | {page} "
+                            "(Provider media ကို အလိုအလျောက် download မလုပ်ပါ)"
+                        )
+            except Exception as exc:
+                fallback_source_errors.append("Europeana: " + str(exc)[:140])
+            try:
+                youtube_leads = await asyncio.to_thread(search_youtube_cc_videos, query, 4)
+                for item in youtube_leads[:3]:
+                    watch_url = str(item.get("url") or "").strip()
+                    if watch_url:
+                        fallback_source_notes.append(
+                            f"YouTube CC: {item.get('title', 'Untitled')} | {item.get('license', 'CC metadata')} | {watch_url} "
+                            "(Uploader ထံမှ original file/rights ကို အတည်ပြုရမည်; stream download မလုပ်ပါ)"
+                        )
+            except Exception as exc:
+                fallback_source_errors.append("YouTube CC: " + str(exc)[:140])
+
         if not source:
             # Preserve MP3/SRT so the creator can pair them with an owned/licensed source video.
             audio_bytes, subtitle_bytes = build_recap_video_sidecars(audio, srt_text)
@@ -937,6 +967,16 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "ပြန်လည်အသုံးပြုခွင့်ကို အတည်ပြုနိုင်သော မူရင်းဗီဒီယို မရရှိပါ။\\n"
                 "မသက်ဆိုင်သော footage ဖြင့် MP4 မထုတ်ထားပါ။ MP3/SRT ကို ပို့ပေးထားပါတယ်။\\n\\n"
                 "ကိုယ်ပိုင် သို့မဟုတ် လိုင်စင်ရ Video ရှိပါက /sourcevideo workflow မှာ အသုံးပြုနိုင်ပါတယ်။"
+                + (
+                    "\\n\\n🔎 အခြားရင်းမြစ်များမှ တွေ့ရှိသော ခွင့်ပြုချက်စစ်ဆေးရန် Leads:\\n"
+                    + "\\n".join(fallback_source_notes[:5])
+                    if fallback_source_notes else
+                    "\\n\\nအခြားရင်းမြစ်များတွင်လည်း အသုံးပြုခွင့်ရှိသော အလိုအလျောက် Download လုပ်နိုင်သည့် မူရင်းဖိုင် မတွေ့ပါ။"
+                )
+                + (
+                    "\\n\\nProvider စစ်ဆေးမှုမှတ်ချက်: " + " | ".join(fallback_source_errors)
+                    if fallback_source_errors else ""
+                )
             )
             return
         if platform in {"youtube", "facebook"}:
