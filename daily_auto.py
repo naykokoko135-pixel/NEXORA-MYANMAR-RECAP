@@ -442,7 +442,7 @@ def trigger_daily_recap(local_today: date) -> bool:
         method="POST",
     )
     try:
-        with urlopen(request, timeout=25) as response:
+        with urlopen(request, timeout=90) as response:
             result = json.loads(response.read().decode("utf-8"))
     except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
         raise RuntimeError("Render daily recap trigger request failed.") from exc
