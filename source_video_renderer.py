@@ -24,7 +24,7 @@ PLATFORM_DIMENSIONS = {
 
 
 def _srt_duration(text: str) -> float:
-    times = re.findall(r"-->\\s*(\\d{2}):(\\d{2}):(\\d{2}),(\\d{3})", text)
+    times = re.findall(r"-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})", text)
     if not times:
         raise SourceVideoRenderError("SRT timestamp မမှန်ပါ။")
     h, m, s, ms = times[-1]
