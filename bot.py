@@ -627,7 +627,7 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
     query = " ".join(context.args).strip()
     if not query:
-        await update.message.reply_text("အသုံးပြုပုံ: /licensedownload <ခေါင်းစဉ်>\\nခေါင်းစဉ်တိတိကျကျ ကိုက်ညီပြီး CC/Public Domain လိုင်စင်ရှိသော Commons Video ကိုသာ Download ဆွဲပေးပါမယ်။")
+        await update.message.reply_text("အသုံးပြုပုံ: /licensedownload <ခေါင်းစဉ်>\nခေါင်းစဉ်တိတိကျကျ ကိုက်ညီပြီး CC/Public Domain လိုင်စင်ရှိသော Commons Video ကိုသာ Download ဆွဲပေးပါမယ်။")
         return
     await update.message.reply_text("Wikimedia Commons မှ လိုင်စင်နဲ့ ခေါင်းစဉ်ကိုက်ညီမှု စစ်ပြီး Download လုပ်နေပါတယ်...")
     try:
@@ -645,12 +645,12 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await update.message.reply_document(
                     document=InputFile(video_file, filename=os.path.basename(output)),
                     caption=(
-                        f"ခွင့်ပြုထားသော Video Download ပြီးပါပြီ။\\n"
-                        f"ခေါင်းစဉ်: {source.get('title', '')}\\n"
-                        f"လိုင်စင်: {source.get('license', '')}\\n"
-                        f"ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\\n"
-                        f"Attribution: {str(source.get('attribution', ''))[:300]}\\n"
-                        f"မူရင်းရင်းမြစ်: {source.get('source_page', '')}\\n"
+                        f"ခွင့်ပြုထားသော Video Download ပြီးပါပြီ။\n"
+                        f"ခေါင်းစဉ်: {source.get('title', '')}\n"
+                        f"လိုင်စင်: {source.get('license', '')}\n"
+                        f"ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\n"
+                        f"Attribution: {str(source.get('attribution', ''))[:300]}\n"
+                        f"မူရင်းရင်းမြစ်: {source.get('source_page', '')}\n"
                         "ထုတ်ဝေမီ လိုင်စင်စည်းကမ်းနဲ့ Attribution ကို လိုက်နာပါ။"
                     ),
                     read_timeout=120,
