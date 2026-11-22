@@ -47,7 +47,7 @@ jobs:
               --request POST "$BASE_URL/internal/daily-recap" \
               --header "X-NEXORA-Daily-Token: $NEXORA_DAILY_RECAP_TOKEN" \
               --header "Content-Type: application/json" \
-              --data "{\\"chat_id\\":\\"$TELEGRAM_CHAT_ID\\"}" || true)
+              --data '{"chat_id":"'"$TELEGRAM_CHAT_ID"'"}' || true)
             if [ "$CODE" = "202" ] || [ "$CODE" = "409" ]; then
               TRIGGERED=1
               break
