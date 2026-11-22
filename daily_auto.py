@@ -378,6 +378,7 @@ def build_platform_daily_message(platform: str, item: dict, research_text: str,
         sections.extend(["", _platform_cta(platform)])
     sections.extend([
         "",
+        f"🚀 ထုတ်လုပ်ရန်: /dailyrecap {platform}",
         "⚠️ သတိပြုရန်: Wikipedia article pageviews သည် ဆောင်းပါးဖတ်ရှုမှုသာဖြစ်ပြီး YouTube/Facebook/TikTok views မဟုတ်ပါ။ "
         "လူကြိုက်များမှုကို အတည်ပြုသည့် platform analytics မရှိလျှင် trend proxy ဟုသာ ဖော်ပြပါ။",
         "အသုံးပြုခွင့်ရှိသော visual/audio သို့မဟုတ် ကိုယ်ပိုင်ဖန်တီးထားသော visuals ကိုသာ သုံးပါ။ "
