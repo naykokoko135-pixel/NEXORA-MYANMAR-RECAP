@@ -71,9 +71,10 @@ def render_user_source_video(
         raise SourceVideoRenderError("SRT သည် UTF-8 မြန်မာစာ ဖြစ်ရပါမယ်။") from exc
     if "-->" not in srt_text:
         raise SourceVideoRenderError("SRT timestamp မတွေ့ပါ။")
-    duration = _srt_duration(srt_text)
-    if not 1 <= duration <= 3600:
-        raise SourceVideoRenderError("Narration/SRT ကြာချိန်သည် ၁ စက္ကန့်မှ ၆၀ မိနစ်အတွင်း ဖြစ်ရပါမယ်။")
+    srt_duration = _srt_duration(srt_text)
+    duration = float(expected_duration_seconds) if expected_duration_seconds is not None else srt_duration
+    if not 1 <= duration <= 3600 or srt_duration > duration + 0.5:
+        raise SourceVideoRenderError("Narration/SRT ကြာချိန်သည် သတ်မှတ်ထားသော အပိုင်းကြာချိန်နှင့် မကိုက်ညီပါ။")
     if platform not in PLATFORM_DIMENSIONS:
         raise SourceVideoRenderError("Platform သည် youtube/facebook/tiktok ဖြစ်ရပါမယ်။")
     width, height = PLATFORM_DIMENSIONS[platform]
