@@ -1,5 +1,5 @@
 import unittest
-from recap_video_pack import MAX_RECAP_SCRIPT_CHARS, parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message, format_original_visual_fallback_notice
+from recap_video_pack import MAX_RECAP_SCRIPT_CHARS, parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message, format_original_visual_fallback_notice, validate_platform_recap_duration
 from licensed_narrated_clip import _subtitle_duration_seconds, LicensedClipError, build_licensed_attribution_note
 PRESETS = {"narrator", "hero", "female"}
 
@@ -119,6 +119,29 @@ class OriginalVisualRecapTests(unittest.TestCase):
         cards = build_original_visual_cards("မြန်မာခေါင်းစဉ်", count=1)
         self.assertEqual(len(cards), 1)
         self.assertTrue(cards[0][1].startswith(b"\x89PNG"))
+
+
+
+class PlatformRecapDurationTests(unittest.TestCase):
+    def test_longform_platforms_require_46_to_60_minutes(self):
+        for platform in ("youtube", "facebook"):
+            with self.subTest(platform=platform):
+                self.assertTrue(validate_platform_recap_duration(platform, 46 * 60)["ok"])
+                self.assertTrue(validate_platform_recap_duration(platform, 60 * 60)["ok"])
+                self.assertFalse(validate_platform_recap_duration(platform, 45 * 60)["ok"])
+                self.assertFalse(validate_platform_recap_duration(platform, 61 * 60)["ok"])
+
+    def test_tiktok_requires_four_to_seven_minutes(self):
+        self.assertTrue(validate_platform_recap_duration("tiktok", 4 * 60)["ok"])
+        self.assertTrue(validate_platform_recap_duration("tiktok", 7 * 60)["ok"])
+        self.assertFalse(validate_platform_recap_duration("tiktok", 239)["ok"])
+        self.assertFalse(validate_platform_recap_duration("tiktok", 421)["ok"])
+
+    def test_invalid_platform_and_duration_fail_closed(self):
+        self.assertFalse(validate_platform_recap_duration("instagram", 300)["ok"])
+        for value in (None, 0, -1, float("nan"), float("inf"), True):
+            with self.subTest(value=value):
+                self.assertFalse(validate_platform_recap_duration("youtube", value)["ok"])
 
 if __name__ == "__main__":
     unittest.main()

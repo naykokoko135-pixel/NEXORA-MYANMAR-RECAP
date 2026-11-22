@@ -75,3 +75,46 @@ def format_original_visual_fallback_notice(title: str, search_failed: bool = Fal
         reason + "\n\nNEXORA ကိုယ်တိုင်ဖန်တီးသော Original Abstract Visuals ဖြင့် "
         "MP4 ဆက်ထုတ်နေပါတယ်။ ဒီပုံများသည် မူရင်း Anime/Film ဇာတ်ဝင်ခန်း မဟုတ်ပါ။"
     )
+
+
+PLATFORM_RECAP_DURATION_SECONDS = {
+    "youtube": (46 * 60, 60 * 60),
+    "facebook": (46 * 60, 60 * 60),
+    "tiktok": (4 * 60, 7 * 60),
+}
+
+
+def validate_platform_recap_duration(platform: str, duration_seconds: float) -> dict:
+    """Require measured narration duration to match the selected platform's brief."""
+    import math
+
+    key = str(platform or "").strip().casefold()
+    if key not in PLATFORM_RECAP_DURATION_SECONDS:
+        return {"ok": False, "platform": key, "status": "NOT READY", "issues": ["youtube/facebook/tiktok ကို ရွေးပါ။"]}
+    if isinstance(duration_seconds, bool):
+        return {"ok": False, "platform": key, "status": "NOT READY", "issues": ["Audio ကြာချိန် မမှန်ပါ။"]}
+    try:
+        duration = float(duration_seconds)
+    except (TypeError, ValueError):
+        duration = float("nan")
+    if not math.isfinite(duration) or duration <= 0:
+        return {"ok": False, "platform": key, "status": "NOT READY", "issues": ["Audio ကြာချိန် မမှန်ပါ။"]}
+    minimum, maximum = PLATFORM_RECAP_DURATION_SECONDS[key]
+    if duration < minimum:
+        status = "TOO SHORT"
+        issue = f"Audio သည် သတ်မှတ်အနည်းဆုံး {minimum // 60} မိနစ်ထက် တိုနေသည်။"
+    elif duration > maximum:
+        status = "TOO LONG"
+        issue = f"Audio သည် သတ်မှတ်အများဆုံး {maximum // 60} မိနစ်ထက် ရှည်နေသည်။"
+    else:
+        status = "DURATION PASS"
+        issue = None
+    return {
+        "ok": issue is None,
+        "platform": key,
+        "status": status,
+        "duration_seconds": round(duration, 3),
+        "minimum_seconds": minimum,
+        "maximum_seconds": maximum,
+        "issues": [issue] if issue else [],
+    }
