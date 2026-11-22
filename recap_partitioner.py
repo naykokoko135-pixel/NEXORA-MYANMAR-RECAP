@@ -71,7 +71,7 @@ def plan_three_part_srt(srt_text: str) -> list[dict]:
     for index in range(3):
         start, end = bounds[index], bounds[index + 1]
         part_cues = [
-            (cue_start - start, cue_end - start, text_lines)
+            (cue_start - start, min(cue_end, end) - start, text_lines)
             for cue_start, cue_end, text_lines in cues
             if start <= cue_start < end
         ]
