@@ -934,6 +934,31 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "ကိုယ်ပိုင် သို့မဟုတ် လိုင်စင်ရ Video ရှိပါက /sourcevideo workflow မှာ အသုံးပြုနိုင်ပါတယ်။"
             )
             return
+        if platform in {"youtube", "facebook"}:
+            # The Commons preview renderer is intentionally capped at 20 minutes.
+            # Long-form 46–60 minute outputs must use the creator-owned/licensed
+            # source-video renderer, which supports up to 60 minutes.
+            audio_bytes, subtitle_bytes = build_recap_video_sidecars(audio, srt_text)
+            voice_file = BytesIO(audio_bytes)
+            voice_file.name = "nexora_recap_voiceover.mp3"
+            await update.message.reply_document(
+                document=InputFile(voice_file, filename=voice_file.name),
+                caption="Long-form Recap အတွက် မြန်မာ Narration MP3 ပါ။",
+            )
+            subtitle_file = BytesIO(subtitle_bytes)
+            subtitle_file.name = "nexora_recap_subtitles.srt"
+            await update.message.reply_document(
+                document=InputFile(subtitle_file, filename=subtitle_file.name),
+                caption="Long-form Recap အတွက် အချိန်ကိုက် SRT ပါ။",
+            )
+            await update.message.reply_text(
+                "YouTube/Facebook Long-form ကို ၄၆–၆၀ မိနစ် ထုတ်ရန် လိုအပ်ပါတယ်။ "
+                "Commons Preview renderer သည် ၂၀ မိနစ်အထိသာ ထောက်ပံ့သောကြောင့် "
+                "အတိုချုံ့ထားသော MP4 ကို Long-form ဟု မထုတ်ပါ။\\n"
+                "ကိုယ်ပိုင်/လိုင်စင်ရ မူရင်းဗီဒီယိုဖြင့် /sourcevideo ကို အသုံးပြုပါ။ "
+                "ဒီ workflow သည် ၆၀ မိနစ်အထိ Render လုပ်နိုင်ပါတယ်။"
+            )
+            return
         await update.message.reply_text("လိုင်စင်အမျိုးအစားနှင့် ခေါင်းစဉ်ကို စစ်ပြီး licensed footage + narration + SRT + MP4 ပြင်ဆင်နေပါတယ်...")
         with tempfile.TemporaryDirectory(prefix="nexora_recap_video_") as temp:
             output = os.path.join(temp, "nexora_recap_preview.mp4")
