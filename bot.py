@@ -562,7 +562,7 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not query:
         await update.message.reply_text(
             "အသုံးပြုပုံ: /clipsource <Anime/ရုပ်ရှင်/Scene အမည်>\n"
-            "Wikimedia Commons၊ Europeana နှင့် YouTube CC BY မှတ်တမ်းများကို ရှာပေးမည်။ YouTube ရှာရန် YOUTUBE_DATA_API_KEY လိုအပ်သည်။"
+            "Wikimedia Commons၊ Europeana၊ Internet Archive နှင့် YouTube CC BY မှတ်တမ်းများကို ရှာပေးမည်။ YouTube ရှာရန် YOUTUBE_DATA_API_KEY လိုအပ်သည်။"
         )
         return
     await update.message.reply_text("Commons၊ Europeana နှင့် (API key ရှိပါက) YouTube CC BY မှတ်တမ်းများကို ရှာနေပါတယ်...")
@@ -603,6 +603,11 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         results.extend(youtube_sources)
     except YouTubeCCSearchError as exc:
         errors.append("YouTube CC: " + str(exc))
+    try:
+        archive_sources = await asyncio.to_thread(search_internet_archive_licensed_video, query, 5)
+        results.extend(archive_sources)
+    except InternetArchiveSearchError as exc:
+        errors.append("Internet Archive: " + str(exc))
     if not results:
         detail = ("\n" + "\n".join(errors)) if errors else ""
         await update.message.reply_text(
@@ -619,6 +624,8 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "နှင့် CC BY သက်ဆိုင်မှုကို လူကိုယ်တိုင်စစ်ပါ။ NEXORA သည် YouTube stream ကို download/extract မလုပ်ပါ။ "
                 "Creator ထံမှ ခွင့်ပြုထားသော မူရင်းဖိုင်ရရှိမှသာ ထုတ်လုပ်မှုတွင် ထည့်သုံးပါ။"
             )
+        elif source_name == "Internet Archive":
+            download_note = str(item.get("notice") or "Uploader ထည့်သွင်းထားသော လိုင်စင်ကို မူရင်းအခွင့်အရေးပိုင်ရှင်ထံမှ အတည်ပြုပါ။ Auto-download ပိတ်ထားသည်။")
         elif item.get("download_enabled") is False:
             download_note = "Europeana မှတ်တမ်းသာဖြစ်သည်။ မီဒီယာကို အလိုအလျောက် ဒေါင်းလုဒ်မလုပ်ပါ။ Provider စာမျက်နှာရှိ ခွင့်ပြုချက်ကို ပြန်စစ်ပါ။"
         else:
