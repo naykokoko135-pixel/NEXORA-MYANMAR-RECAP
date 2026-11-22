@@ -6,7 +6,9 @@ import hmac
 from io import BytesIO
 import logging
 import os
+import re
 import tempfile
+from pathlib import Path
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -1540,11 +1542,12 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         missing = [
             label for key, label in (
-                ("source_video", "မူရင်း Video"),
                 ("narration_audio", "မြန်မာ Narration MP3"),
                 ("subtitles", "SRT"),
             ) if not session.get(key)
         ]
+        if not (session.get("source_video") or session.get("source_video_path")):
+            missing.insert(0, "မူရင်း Video")
         if missing:
             await update.message.reply_text("မရသေးသောဖိုင်: " + "၊ ".join(missing))
             return
