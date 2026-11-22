@@ -11,6 +11,7 @@ import tempfile
 import secrets
 from pathlib import Path
 from contextlib import asynccontextmanager
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -36,6 +37,7 @@ from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_
 from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError, classify_render_document
 from source_video_renderer import render_user_source_video, SourceVideoRenderError
 from recap_partitioner import render_three_part_longform, RecapPartitionError
+from automatic_longform_pipeline import render_licensed_longform_parts
 from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
 from youtube_cc_finder import search_youtube_cc_videos, YouTubeCCSearchError
@@ -938,30 +940,116 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         if platform in {"youtube", "facebook"}:
-            # The Commons preview renderer is intentionally capped at 20 minutes.
-            # Long-form 46–60 minute outputs must use the creator-owned/licensed
-            # source-video renderer, which supports up to 60 minutes.
             audio_bytes, subtitle_bytes = build_recap_video_sidecars(audio, srt_text)
+            public = urlparse(str(PUBLIC_URL or ""))
+            rendered_paths = []
+            render_failure = ""
+            if source and public.scheme == "https" and public.netloc:
+                try:
+                    work_root = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work"))
+                    chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
+                    safe_chat = re.sub(r"[^0-9-]", "", chat_id) or "unknown"
+                    output_dir = work_root / safe_chat / "exports"
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    batch_dir = output_dir / ("nexora_auto_" + secrets.token_hex(8))
+                    await update.message.reply_text(
+                        "ခေါင်းစဉ်ကိုက်ညီသော CC/Public Domain Commons ရင်းမြစ် ရရှိပါပြီ။ "
+                        "Server ပေါ်သို့ လိုင်စင်စစ်ပြီး Download လုပ်ကာ အရှည်အပြည့် လုံလောက်မှုကို စစ်ပြီး "
+                        "သုံးပိုင်း MP4 အလိုအလျောက် Render လုပ်နေပါတယ်..."
+                    )
+                    rendered_paths = await asyncio.to_thread(
+                        render_licensed_longform_parts,
+                        source,
+                        ("nexora_recap_voiceover.mp3", audio_bytes),
+                        ("nexora_recap_subtitles.srt", subtitle_bytes),
+                        batch_dir,
+                        platform,
+                    )
+                    if len(rendered_paths) != 3:
+                        raise RecapPartitionError("သုံးပိုင်း MP4 အပြည့်အစုံ မရရှိပါ။")
+                    now = time.time()
+                    for old_token, record in list(DOWNLOAD_LINKS.items()):
+                        if float(record.get("expires_at", 0)) <= now:
+                            Path(str(record.get("path", ""))).unlink(missing_ok=True)
+                            DOWNLOAD_LINKS.pop(old_token, None)
+                    while len(DOWNLOAD_LINKS) + len(rendered_paths) > MAX_DOWNLOAD_LINKS:
+                        oldest = min(
+                            DOWNLOAD_LINKS,
+                            key=lambda key: float(DOWNLOAD_LINKS[key].get("created_at", 0)),
+                        )
+                        old_record = DOWNLOAD_LINKS.pop(oldest)
+                        Path(str(old_record.get("path", ""))).unlink(missing_ok=True)
+                    links = []
+                    for index, rendered_path in enumerate(rendered_paths, 1):
+                        token = secrets.token_urlsafe(32)
+                        DOWNLOAD_LINKS[token] = {
+                            "path": str(rendered_path),
+                            "filename": f"nexora_{platform}_part_{index}.mp4",
+                            "created_at": now,
+                            "expires_at": now + DOWNLOAD_LINK_TTL_SECONDS,
+                        }
+                        links.append(f"Part {index}: {PUBLIC_URL.rstrip('/')}/download/{token}")
+                    await update.message.reply_text(
+                        "ပြီးပါပြီ — YouTube/Facebook အတွက် ၁၅–၂၀ မိနစ်စီ သုံးပိုင်း MP4 ထုတ်ပြီးပါပြီ။ "
+                        "အပိုင်းတစ်ခုစီတွင် သီးခြား narration၊ SRT နှင့် မူရင်း licensed footage အပိုင်းမတူ ပါဝင်ပါတယ်။\n"
+                        + "\n".join(links)
+                        + "\nDownload Link များသည် ၂၄ နာရီသာ အသုံးပြုနိုင်ပြီး Render restart/deploy လုပ်ပါက ပျက်နိုင်ပါတယ်။"
+                    )
+                    voice_file = BytesIO(audio_bytes)
+                    voice_file.name = "nexora_recap_voiceover.mp3"
+                    await update.message.reply_document(
+                        document=InputFile(voice_file, filename=voice_file.name),
+                        caption="အလိုအလျောက်ထုတ်ထားသော Recap Narration MP3 မူရင်းဖိုင်ပါ။",
+                    )
+                    subtitle_file = BytesIO(subtitle_bytes)
+                    subtitle_file.name = "nexora_recap_subtitles.srt"
+                    await update.message.reply_document(
+                        document=InputFile(subtitle_file, filename=subtitle_file.name),
+                        caption="အလိုအလျောက်ထုတ်ထားသော အချိန်ကိုက် မြန်မာ SRT မူရင်းဖိုင်ပါ။",
+                    )
+                    attribution = build_licensed_attribution_note(
+                        source, metadata.get("title", query), metadata.get("source", "")
+                    )
+                    credit_file = BytesIO(attribution.encode("utf-8-sig"))
+                    credit_file.name = "nexora_footage_attribution.txt"
+                    await update.message.reply_document(
+                        document=InputFile(credit_file, filename=credit_file.name),
+                        caption="အသုံးပြုထားသော CC/Public Domain footage အတွက် Attribution/လိုင်စင်မှတ်တမ်းပါ။ မထုတ်ဝေမီ ပြန်စစ်ပါ။",
+                    )
+                    return
+                except Exception as exc:
+                    for rendered_path in rendered_paths:
+                        Path(rendered_path).unlink(missing_ok=True)
+                    log.exception("Automatic three-part licensed longform render failed")
+                    render_failure = str(exc)[:350]
+            elif source:
+                render_failure = "Render download link အတွက် HTTPS Public URL မသတ်မှတ်ရသေးပါ။"
             voice_file = BytesIO(audio_bytes)
             voice_file.name = "nexora_recap_voiceover.mp3"
             await update.message.reply_document(
                 document=InputFile(voice_file, filename=voice_file.name),
-                caption="Long-form Recap အတွက် မြန်မာ Narration MP3 ပါ။",
+                caption="Long-form Recap Narration MP3 မူကြမ်းပါ။",
             )
             subtitle_file = BytesIO(subtitle_bytes)
             subtitle_file.name = "nexora_recap_subtitles.srt"
             await update.message.reply_document(
                 document=InputFile(subtitle_file, filename=subtitle_file.name),
-                caption="Long-form Recap အတွက် အချိန်ကိုက် SRT ပါ။",
+                caption="Long-form Recap အတွက် အချိန်ကိုက် SRT မူကြမ်းပါ။",
             )
-            await update.message.reply_text(
-                "YouTube/Facebook Long-form ကို ၄၆–၆၀ မိနစ် ထုတ်ရန် လိုအပ်ပါတယ်။ "
-                "Commons Preview renderer သည် ၂၀ မိနစ်အထိသာ ထောက်ပံ့သောကြောင့် "
-                "အတိုချုံ့ထားသော MP4 ကို Long-form ဟု မထုတ်ပါ။\\n"
-                "ကိုယ်ပိုင်/လိုင်စင်ရ မူရင်းဗီဒီယိုဖြင့် /sourcevideo ကို အသုံးပြုပါ။ "
-                "ဒီ workflow သည် MP4 တစ်ဖိုင်ကို ၆၀ မိနစ်အထိ Render လုပ်နိုင်သော်လည်း "
-                "၃ ပိုင်းခွဲပြီး အလိုအလျောက်ထုတ်ပေးသည့် စနစ်ကို မပြီးစီးသေးပါ။"
-            )
+            if not source:
+                await update.message.reply_text(
+                    "Commons တွင် ခေါင်းစဉ်ကိုက်ညီသော ပြန်လည်အသုံးပြုခွင့်ရှိသည့် Video မတွေ့ပါ။ "
+                    "Europeana/YouTube CC ရှာဖွေမှုများသည် မှတ်တမ်း/Provider link သာဖြစ်ပြီး အလိုအလျောက် Download ခွင့်မပြုသောကြောင့် "
+                    "မူရင်းဖိုင်ကို Creator ထံမှ ခွင့်ပြုချက်ဖြင့် ရယူရန်လိုပါတယ်။ /clipsource ဖြင့် အခြားရင်းမြစ်များကို စစ်နိုင်ပါတယ်။ "
+                    "MP4 ကို မထုတ်ထားပါ။"
+                )
+            else:
+                await update.message.reply_text(
+                    "လိုင်စင်ရှိသော Commons ရင်းမြစ်ကို တွေ့သော်လည်း ၄၆–၆၀ မိနစ် အပြည့်အဝ မလုံလောက်ခြင်း၊ "
+                    "သို့မဟုတ် Render/Download အမှားကြောင့် သုံးပိုင်း MP4 မထုတ်နိုင်ပါ။ "
+                    "အတိုဗီဒီယိုကို loop မလုပ်ဘဲ MP3/SRT မူကြမ်းအဖြစ်သာ ထားပါတယ်။"
+                    + (f"\nအကြောင်းရင်း: {render_failure}" if render_failure else "")
+                )
             return
         await update.message.reply_text("လိုင်စင်အမျိုးအစားနှင့် ခေါင်းစဉ်ကို စစ်ပြီး licensed footage + narration + SRT + MP4 ပြင်ဆင်နေပါတယ်...")
         with tempfile.TemporaryDirectory(prefix="nexora_recap_video_") as temp:
