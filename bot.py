@@ -127,7 +127,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/audioqa <Platform> ကို Audio ဖိုင်အား reply လုပ်၍ တကယ့်ကြာချိန် စစ်ရန်\n"
             "/recapvoice [preset] - တစ်ဖိုင်တည်း narration MP3 + SRT ထုတ်ရန်\n"
             "/recapvoice3 [preset] - YouTube/Facebook Script ၃ ပိုင်းမှ MP3/SRT ၃ စုံထုတ်ပြီး Audio ကြာချိန် QA စစ်ရန်\n"
-            "/recapvideo <title> - အလိုအလျောက် narration + ခွင့်ပြုထားသော Footage မရှိပါက ရပ်မည်; သင့် Video ကို /sourcevideo ဖြင့် MP4 ထုတ်ရန်\n"
+            "/recapvideo <title> - အလိုအလျောက် narration + ခွင့်ပြုထားသော Footage မရှိပါက ရပ်မည်; သင့် Video ကို /sourcevideo ဖြင့် MP4 ထုတ်ရန်\n"            "/dailyrecap [youtube|facebook|tiktok|all] - ယနေ့ Daily Report ရွေးထားသော ခေါင်းစဉ်များကို Licensed Recap pipeline ဖြင့် စတင်ရန် (default all)\n"
             "/sourcevideo - ကိုယ်ပိုင်/ခွင့်ပြုထားသော Video + မြန်မာအသံ + SRT မှ MP4 ထုတ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
@@ -725,6 +725,67 @@ async def autoclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         log.exception("Automatic licensed clip preview failed")
         await update.message.reply_text("Licensed Preview မထုတ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
+
+
+async def dailyrecap_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Run the existing licensed recap pipeline for today's three distinct Daily Auto picks."""
+    if not update.message:
+        return
+    requested = (context.args[0].strip().lower() if context.args else "all")
+    platforms = ("youtube", "facebook", "tiktok") if requested == "all" else (requested,)
+    if any(platform not in {"youtube", "facebook", "tiktok"} for platform in platforms):
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /dailyrecap [youtube|facebook|tiktok|all]\n"
+            "မရေးထားပါက ယနေ့ရွေးထားသော Platform သုံးခုလုံးကို အစဉ်လိုက် စမ်းသပ်ထုတ်လုပ်ပါမယ်။"
+        )
+        return
+
+    await update.message.reply_text(
+        "ယနေ့ Daily Report ရဲ့ Platform သီးခြားရွေးချယ်မှုကို ပြန်တွက်ပြီး "
+        "ခေါင်းစဉ်တစ်ခုချင်းစီအတွက် Metadata → ဇာတ်လမ်းရင်းမြစ် → Licensed Footage → "
+        "မြန်မာ MP3/SRT → MP4 ကို စစ်ဆေးထုတ်လုပ်နေပါတယ်။\n"
+        "မူပိုင်ခွင့်ရှိသော Streaming Service များမှ ကာကွယ်ထားသည့် Full Movie ကို မဆွဲယူပါ။ "
+        "ခွင့်ပြုထားသော footage မရှိလျှင် အစားထိုးမသုံးဘဲ အဲဒီခေါင်းစဉ်ကို ရပ်ပါမယ်။"
+    )
+    try:
+        from datetime import datetime
+        from types import SimpleNamespace
+        from zoneinfo import ZoneInfo
+        from daily_auto import TITLE_CATEGORIES, select_daily_platform_titles
+        from pageview_trends import fetch_category_pageviews
+
+        local_today = datetime.now(ZoneInfo("Asia/Bangkok")).date()
+        pageviews = await asyncio.to_thread(fetch_category_pageviews, TITLE_CATEGORIES)
+        selected = select_daily_platform_titles(local_today, pageviews)
+        chosen = [selected[platform] for platform in platforms]
+        if len({item.get("title") for item in chosen}) != len(chosen):
+            await update.message.reply_text(
+                "ယနေ့ရွေးချယ်မှုတွင် ခေါင်းစဉ်ထပ်နေမှုရှိသဖြင့် မှားယွင်းသော Recap မထုတ်ရန် ရပ်ထားပါတယ်။"
+            )
+            return
+
+        previous_platform = context.user_data.get("platform", "youtube")
+        try:
+            for platform in platforms:
+                item = selected[platform]
+                await update.message.reply_text(
+                    f"▶️ {platform.upper()} စတင်ပါပြီ — {item.get('category')}: {item.get('title')}"
+                )
+                context.user_data["platform"] = platform
+                proxy_message = SimpleNamespace(
+                    text=f"/recapvideo {item.get('title', '')}",
+                    reply_text=update.message.reply_text,
+                    reply_video=update.message.reply_video,
+                    reply_document=update.message.reply_document,
+                )
+                await recapvideo_cmd(SimpleNamespace(message=proxy_message), context)
+        finally:
+            context.user_data["platform"] = previous_platform
+    except Exception:
+        log.exception("Daily platform recap runner failed")
+        await update.message.reply_text(
+            "Daily Recap စတင်မှု မအောင်မြင်ပါ။ /status နှင့် ရင်းမြစ်/API အခြေအနေကို စစ်ဆေးပါ။"
+        )
 
 
 async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2988,6 +3049,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("episodeoutline", episodeoutline_cmd))
     telegram_app.add_handler(CommandHandler("recapvoice", recapvoice_cmd))
     telegram_app.add_handler(CommandHandler("recapvoice3", recapvoice3_cmd))
+    telegram_app.add_handler(CommandHandler("dailyrecap", dailyrecap_cmd))
     telegram_app.add_handler(CommandHandler("recapvideo", recapvideo_cmd))
     telegram_app.add_handler(CommandHandler("sourcevideo", sourcevideo_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
