@@ -540,3 +540,18 @@ The universal anime track now includes Kitsu's public read-only JSON:API alongsi
 ### Kitsu Episode Research fallback
 
 `/animationepisodes <Anime/Cartoon/Donghua title>` checks TVmaze first. If TVmaze has no usable result, it can use Kitsu's public episode relationship data only after an independent Anime/Wikidata country check confirms a known non-Indian origin. It returns at most five short episode synopsis excerpts and matches only episode IDs linked to the exact anime record. Missing country verification or missing episode summaries fails closed. These excerpts are research notes, not complete scripts or scene transcripts. See [Kitsu episode resource documentation](https://hummingbird-me.github.io/api-docs/) and the TVmaze source link in the report.
+
+
+## Daily Auto versus finished MP4 production
+
+The scheduled GitHub Actions workflow `.github/workflows/daily-auto.yml` runs `daily_auto.py`: it selects three distinct platform/category/title research briefs and delivers them to Telegram. It does **not** invoke the Telegram `/dailyrecap all` command, does not upload videos to YouTube/Facebook/TikTok, and does not have access to a full-length movie asset. A successful daily research message is not evidence that an MP4 was rendered.
+
+The Telegram `/dailyrecap all` command separately attempts the existing recap pipeline for today's three picks. It can produce a narration/subtitle draft when sources allow, but a final YouTube/Facebook long-form render requires a creator-owned or otherwise licensed source video long enough to cover the complete 46–60 minute narration. The renderer splits that source into exactly three non-overlapping 15–20 minute parts and fails closed if the source is too short. TikTok uses one 4–7 minute output. Short Commons clips are not stretched or looped to fake a full-length recap.
+
+To render from your own or licensed full-length media:
+1. Select the platform with `/platform youtube`, `/platform facebook`, or `/platform tiktok`.
+2. Send `/sourcevideo` and follow the bot's prompts to provide the source video, Burmese narration MP3, and matching SRT.
+3. Send `/sourcevideo finish`. YouTube/Facebook return three separate MP4 links; TikTok returns one.
+4. Review rights, attribution, narration, subtitle timing, and the rendered files before publishing.
+
+Render Free uses temporary storage; download links expire after 24 hours and can stop working after a restart or deploy. For reliable long-term media storage, configure an appropriate persistent storage/hosting setup. Never provide streaming-service credentials or attempt DRM bypass.

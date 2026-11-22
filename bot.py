@@ -743,11 +743,13 @@ async def dailyrecap_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await update.message.reply_text(
-        "ယနေ့ Daily Report ရဲ့ Platform သီးခြားရွေးချယ်မှုကို ပြန်တွက်ပြီး "
-        "ခေါင်းစဉ်တစ်ခုချင်းစီအတွက် Metadata → ဇာတ်လမ်းရင်းမြစ် → Licensed Footage → "
-        "မြန်မာ MP3/SRT → MP4 ကို စစ်ဆေးထုတ်လုပ်နေပါတယ်။\n"
-        "မူပိုင်ခွင့်ရှိသော Streaming Service များမှ ကာကွယ်ထားသည့် Full Movie ကို မဆွဲယူပါ။ "
-        "ခွင့်ပြုထားသော footage မရှိလျှင် အစားထိုးမသုံးဘဲ အဲဒီခေါင်းစဉ်ကို ရပ်ပါမယ်။"
+        "ယနေ့ Daily Report မှ Platform သီးခြားခေါင်းစဉ်များကို ပြန်တွက်ပြီး Metadata၊ ဇာတ်လမ်းရင်းမြစ်၊ "
+        "မြန်မာ MP3/SRT နှင့် ခွင့်ပြုထားသော footage ရှိ/မရှိကို စစ်ဆေးနေပါတယ်။\n"
+        "အရေးကြီးချက်: Daily Auto သည် ရွေးချယ်မှုနှင့် research ကို အလိုအလျောက်လုပ်နိုင်သော်လည်း "
+        "YouTube/Facebook ၄၆–၆၀ မိနစ် MP4 သုံးပိုင်းကို အလိုအလျောက်ပြီးစီးမည်ဟု မဆိုလိုပါ။ "
+        "အရှည်အပြည့် မူပိုင်ခွင့်ခွင့်ပြုထားသော မူရင်း Video မရှိလျှင် MP4 မထုတ်ဘဲ draft/MP3/SRT အဆင့်တွင်သာ ရပ်ပါမယ်။\n"
+        "Netflix/Crunchyroll သို့မဟုတ် အခြားကာကွယ်ထားသော Streaming Service မှ Full Movie ကို မဆွဲယူပါ။ "
+        "မကိုက်ညီသော footage ကို အစားထိုးမသုံးပါ။"
     )
     try:
         from datetime import datetime
