@@ -1,8 +1,6 @@
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from automatic_longform_pipeline import render_licensed_longform_parts
 
 
@@ -56,24 +54,36 @@ def test_download_failure_does_not_call_renderer_or_leave_partial_source(tmp_pat
     with patch("automatic_longform_pipeline.download_licensed_source", side_effect=failed_download), patch(
         "automatic_longform_pipeline.render_three_part_longform"
     ) as render:
-        with pytest.raises(RuntimeError, match="download failed"):
+        try:
             render_licensed_longform_parts(
                 SOURCE, ("voice.mp3", b"audio"), ("captions.srt", b"srt"), tmp_path, "facebook"
             )
+        except RuntimeError as exc:
+            assert "download failed" in str(exc)
+        else:
+            raise AssertionError("expected download failure")
     render.assert_not_called()
     assert not list(tmp_path.glob(".nexora_source_*"))
 
 
 def test_rejects_tiktok_for_three_part_longform(tmp_path):
-    with pytest.raises(ValueError, match="YouTube/Facebook"):
+    try:
         render_licensed_longform_parts(
             SOURCE, ("voice.mp3", b"audio"), ("captions.srt", b"srt"), tmp_path, "tiktok"
         )
+    except ValueError as exc:
+        assert "YouTube/Facebook" in str(exc)
+    else:
+        raise AssertionError("expected unsupported platform failure")
 
 
 def test_requires_a_source_page(tmp_path):
-    with pytest.raises(ValueError, match="source page"):
+    try:
         render_licensed_longform_parts(
             {**SOURCE, "source_page": ""}, ("voice.mp3", b"audio"), ("captions.srt", b"srt"),
             tmp_path, "youtube"
         )
+    except ValueError as exc:
+        assert "source page" in str(exc)
+    else:
+        raise AssertionError("expected missing source page failure")
