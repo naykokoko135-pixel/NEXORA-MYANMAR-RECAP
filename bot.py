@@ -99,6 +99,7 @@ WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET")
 PUBLIC_URL = os.getenv("RENDER_EXTERNAL_URL")
 telegram_app: Application | None = None
 comment_autoreply_task: asyncio.Task | None = None
+daily_recap_task: asyncio.Task | None = None
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3383,6 +3384,78 @@ async def health():
     if telegram_app is None:
         raise HTTPException(status_code=503, detail="Telegram bot is not ready")
     return {"status": "ok", "telegram": True}
+
+class _DailyRecapTelegramProxy:
+    """Minimal message facade used by the internal scheduled-runner."""
+    def __init__(self, bot, chat_id: int):
+        self.bot = bot
+        self.chat_id = chat_id
+        self.text = "/dailyrecap all"
+
+    async def reply_text(self, text: str, **kwargs):
+        return await self.bot.send_message(chat_id=self.chat_id, text=text, **kwargs)
+
+    async def reply_document(self, document, **kwargs):
+        return await self.bot.send_document(chat_id=self.chat_id, document=document, **kwargs)
+
+    async def reply_video(self, video, **kwargs):
+        return await self.bot.send_video(chat_id=self.chat_id, video=video, **kwargs)
+
+
+async def _run_scheduled_daily_recap(chat_id: int):
+    global daily_recap_task
+    try:
+        if telegram_app is None:
+            raise RuntimeError("Telegram bot is not ready")
+        from types import SimpleNamespace
+        proxy = _DailyRecapTelegramProxy(telegram_app.bot, chat_id)
+        update = SimpleNamespace(
+            message=proxy,
+            effective_chat=SimpleNamespace(id=chat_id),
+        )
+        context = SimpleNamespace(args=["all"], user_data={})
+        await dailyrecap_cmd(update, context)
+    except Exception:
+        log.exception("Scheduled daily recap execution failed")
+        if telegram_app is not None:
+            try:
+                await telegram_app.bot.send_message(
+                    chat_id=chat_id,
+                    text="NEXORA Daily Recap အလိုအလျောက်စတင်မှု မအောင်မြင်ပါ။ Render log နှင့် /status ကို စစ်ဆေးပါ။",
+                )
+            except Exception:
+                log.exception("Could not notify scheduled recap failure")
+    finally:
+        daily_recap_task = None
+
+
+@web_app.post("/internal/daily-recap", status_code=202)
+async def trigger_internal_daily_recap(
+    request: Request,
+    x_nexora_daily_token: str = Header(default=""),
+):
+    """Queue the three-platform daily recap after a constant-time secret check."""
+    global daily_recap_task
+    expected = os.getenv("NEXORA_DAILY_RECAP_TOKEN", "").strip()
+    if len(expected) < 32:
+        raise HTTPException(status_code=503, detail="Daily recap trigger token is not configured")
+    if not x_nexora_daily_token or not hmac.compare_digest(x_nexora_daily_token, expected):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if telegram_app is None:
+        raise HTTPException(status_code=503, detail="Telegram bot is not ready")
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    chat_id_value = payload.get("chat_id") if isinstance(payload, dict) else None
+    chat_id_text = str(chat_id_value or "").strip()
+    if not re.fullmatch(r"-?\\d{5,20}", chat_id_text):
+        raise HTTPException(status_code=400, detail="A valid Telegram chat_id is required")
+    if daily_recap_task is not None and not daily_recap_task.done():
+        raise HTTPException(status_code=409, detail="A daily recap run is already active")
+    daily_recap_task = asyncio.create_task(_run_scheduled_daily_recap(int(chat_id_text)))
+    return {"status": "accepted", "message": "Daily recap job queued"}
+
 
 @web_app.get("/download/{token}")
 async def download_rendered_video(token: str):
