@@ -1583,7 +1583,24 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("MP4 ထုတ်လုပ်မှု မအောင်မြင်ပါ။ Video/Audio/SRT ဖိုင်များကို ပြန်စစ်ပါ။")
             return
         finally:
+            downloaded_source = session.get("source_video_path")
+            if downloaded_source:
+                try:
+                    Path(downloaded_source).unlink(missing_ok=True)
+                except OSError:
+                    log.warning("Could not remove temporary licensed source video")
             context.user_data.pop("video_render", None)
+        metadata = session.get("source_metadata") or {}
+        if metadata:
+            attribution_lines = [
+                "Source attribution (လိုင်စင်စည်းကမ်းအရ ထည့်သွင်းရန်):",
+                f"Title: {str(metadata.get('title', ''))[:250]}",
+                f"License: {str(metadata.get('license', ''))[:120]}",
+                f"Creator: {str(metadata.get('artist', 'Unknown'))[:200]}",
+                f"Attribution: {str(metadata.get('attribution', ''))[:350]}",
+                f"Source: {str(metadata.get('source_page', ''))[:500]}",
+            ]
+            await update.message.reply_text("\\n".join(attribution_lines), disable_web_page_preview=True)
         return
     platform = context.user_data.get("platform", "youtube")
     context.user_data["video_render"] = {
