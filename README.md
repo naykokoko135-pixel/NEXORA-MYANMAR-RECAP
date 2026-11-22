@@ -540,3 +540,16 @@ The universal anime track now includes Kitsu's public read-only JSON:API alongsi
 ### Kitsu Episode Research fallback
 
 `/animationepisodes <Anime/Cartoon/Donghua title>` checks TVmaze first. If TVmaze has no usable result, it can use Kitsu's public episode relationship data only after an independent Anime/Wikidata country check confirms a known non-Indian origin. It returns at most five short episode synopsis excerpts and matches only episode IDs linked to the exact anime record. Missing country verification or missing episode summaries fails closed. These excerpts are research notes, not complete scripts or scene transcripts. See [Kitsu episode resource documentation](https://hummingbird-me.github.io/api-docs/) and the TVmaze source link in the report.
+
+
+## Automatic Daily Recap trigger
+
+After the daily research report is successfully delivered, GitHub Actions can ask the Render bot to start `/dailyrecap all` automatically. This is an authenticated trigger, not a full-film downloader. The existing pipeline still verifies metadata/plot sources and uses only matching footage whose license permits reuse; if those checks fail, it stops rather than substituting unrelated footage.
+
+To enable it, configure these values without putting secrets in the repository:
+1. Render Environment: set `NEXORA_DAILY_RECAP_TOKEN` to a newly generated random secret of at least 32 characters.
+2. GitHub Actions Secrets: set `NEXORA_DAILY_RECAP_TOKEN` to the exact same secret.
+3. GitHub Actions Variables: set `NEXORA_DAILY_RECAP_URL` to the HTTPS base URL of the Render service, for example `https://YOUR-SERVICE.onrender.com`.
+4. Redeploy the Render service after adding its environment variable.
+
+The trigger accepts only the current Bangkok date, only the configured private Telegram destination, and only one accepted run per date per Render process. The response means the job was queued, not that MP3/SRT/MP4 production succeeded. Render restarts or its free-tier sleep can interrupt in-memory background work; use a persistent worker/queue for production-grade guarantees. Until both GitHub settings and the Render secret are configured, Daily Auto remains report-only.
