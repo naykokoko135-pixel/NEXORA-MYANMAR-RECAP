@@ -102,7 +102,7 @@ def download_licensed_source(source: dict, output_path: str | Path) -> Path:
     from urllib.request import Request, HTTPRedirectHandler, build_opener
 
     license_name = str(source.get("license", "")).strip()
-    if not re.match(r"^(?:CC0(?:\\s|$)|CC BY(?:-SA)?(?:\\s|$)|Public domain$)", license_name, re.IGNORECASE):
+    if not re.match(r"^(?:CC0(?:\s|$)|CC BY(?:-SA)?(?:\s|$)|Public domain$)", license_name, re.IGNORECASE):
         raise LicensedClipError("လိုင်စင်ကို အတည်မပြုနိုင်သောကြောင့် Download ပိတ်ထားပါတယ်။")
     parsed = urlparse(str(source.get("url", "")))
     if parsed.scheme != "https" or parsed.hostname != ALLOWED_HOST or parsed.username or parsed.password:
