@@ -95,6 +95,9 @@ WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET")
 PUBLIC_URL = os.getenv("RENDER_EXTERNAL_URL")
 telegram_app: Application | None = None
 comment_autoreply_task: asyncio.Task | None = None
+DAILY_RECAP_TOKEN = os.getenv("NEXORA_DAILY_RECAP_TOKEN", "")
+DAILY_RECAP_STARTED_DATES: set[str] = set()
+DAILY_RECAP_TASKS: dict[str, asyncio.Task] = {}
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3186,6 +3189,67 @@ async def health():
     if telegram_app is None:
         raise HTTPException(status_code=503, detail="Telegram bot is not ready")
     return {"status": "ok", "telegram": True}
+
+@web_app.post("/internal/daily-recap")
+async def internal_daily_recap_trigger(request: Request):
+    """Start today's /dailyrecap all only from the authenticated scheduled workflow."""
+    supplied = request.headers.get("x-nexora-daily-token", "")
+    if len(DAILY_RECAP_TOKEN) < 32 or not hmac.compare_digest(supplied, DAILY_RECAP_TOKEN):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if telegram_app is None:
+        raise HTTPException(status_code=503, detail="Telegram bot is not ready")
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="JSON object required")
+    requested_date = str(payload.get("date", ""))
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    today = datetime.now(ZoneInfo("Asia/Bangkok")).date().isoformat()
+    if requested_date != today:
+        raise HTTPException(status_code=400, detail="Only today's Bangkok date is accepted")
+    try:
+        chat_id = int(CHATGPT_BRIDGE_CHAT_ID or "")
+    except (NameError, ValueError):
+        raise HTTPException(status_code=503, detail="Private Telegram destination is not configured")
+    if chat_id <= 0:
+        raise HTTPException(status_code=503, detail="Private Telegram destination is not configured")
+    if requested_date in DAILY_RECAP_STARTED_DATES:
+        raise HTTPException(status_code=409, detail="Today's automatic recap was already accepted")
+    DAILY_RECAP_STARTED_DATES.add(requested_date)
+
+    async def run_daily_recap():
+        try:
+            synthetic_update = Update.de_json({
+                "update_id": time.time_ns() % 2_000_000_000,
+                "message": {
+                    "message_id": int(time.time()) % 2_000_000_000,
+                    "date": int(time.time()),
+                    "chat": {"id": chat_id, "type": "private"},
+                    "from": {"id": chat_id, "is_bot": False, "first_name": "NEXORA Daily Auto"},
+                    "text": "/dailyrecap all",
+                    "entities": [{"type": "bot_command", "offset": 0, "length": 11}],
+                },
+            }, telegram_app.bot)
+            await telegram_app.process_update(synthetic_update)
+        except Exception:
+            log.exception("Scheduled daily recap execution failed for %s", requested_date)
+            try:
+                await telegram_app.bot.send_message(
+                    chat_id=chat_id,
+                    text="Daily Auto Recap အလိုအလျောက်စတင်မှု အတွင်းပိုင်းအမှားဖြစ်သွားပါတယ်။ /dailyrecap all ဖြင့် ကိုယ်တိုင်ပြန်စတင်နိုင်ပါတယ်။",
+                )
+            except Exception:
+                log.exception("Could not notify private chat about daily recap failure")
+        finally:
+            DAILY_RECAP_TASKS.pop(requested_date, None)
+
+    task = asyncio.create_task(run_daily_recap())
+    DAILY_RECAP_TASKS[requested_date] = task
+    return {"accepted": True, "date": requested_date, "platforms": ["youtube", "facebook", "tiktok"]}
+
 
 @web_app.get("/download/{token}")
 async def download_rendered_video(token: str):
