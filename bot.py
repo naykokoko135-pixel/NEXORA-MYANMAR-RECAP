@@ -31,6 +31,7 @@ from seriesguide_command import series_guide_cmd
 from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
 from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError, classify_render_document
+from source_video_renderer import render_user_source_video, SourceVideoRenderError
 from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
 from youtube_cc_finder import search_youtube_cc_videos, YouTubeCCSearchError
@@ -117,7 +118,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/audioqa <Platform> ကို Audio ဖိုင်အား reply လုပ်၍ တကယ့်ကြာချိန် စစ်ရန်\n"
             "/recapvoice [preset] - တစ်ဖိုင်တည်း narration MP3 + SRT ထုတ်ရန်\n"
             "/recapvoice3 [preset] - YouTube/Facebook Script ၃ ပိုင်းမှ MP3/SRT ၃ စုံထုတ်ပြီး Audio ကြာချိန် QA စစ်ရန်\n"
-            "/recapvideo <title> - အလိုအလျောက် narration + Licensed Footage (မရှိပါက Original Visuals) + SRT ပါ MP4 ထုတ်ရန်\n"
+            "/recapvideo <title> - အလိုအလျောက် narration + ခွင့်ပြုထားသော Footage မရှိပါက ရပ်မည်; သင့် Video ကို /sourcevideo ဖြင့် MP4 ထုတ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
@@ -1470,6 +1471,81 @@ async def topratedepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TYP
     await update.message.reply_text("\n".join(lines), disable_web_page_preview=True)
 
 
+async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Accept a creator-owned/licensed source video, narration, and SRT for MP4 rendering."""
+    if not update.message:
+        return
+    action = context.args[0].lower() if context.args else "start"
+    if action == "cancel":
+        context.user_data.pop("video_render", None)
+        await update.message.reply_text("Source Video Recap ကို ပယ်ဖျက်ပြီးပါပြီ။")
+        return
+    session = context.user_data.get("video_render")
+    if action == "finish":
+        if not session or session.get("mode") != "source_video":
+            await update.message.reply_text("အရင်ဆုံး /sourcevideo ပို့ပါ။")
+            return
+        missing = [
+            label for key, label in (
+                ("source_video", "မူရင်း Video"),
+                ("narration_audio", "မြန်မာ Narration MP3"),
+                ("subtitles", "SRT"),
+            ) if not session.get(key)
+        ]
+        if missing:
+            await update.message.reply_text("မရသေးသောဖိုင်: " + "၊ ".join(missing))
+            return
+        await update.message.reply_text("သင်ပေးထားသော မူရင်း Video ကို Narration/SRT နှင့် ပေါင်းပြီး MP4 ထုတ်နေပါတယ်...")
+        try:
+            with tempfile.TemporaryDirectory(prefix="nexora_source_recap_") as temp:
+                output = os.path.join(temp, "nexora_source_recap.mp4")
+                await asyncio.to_thread(
+                    render_user_source_video,
+                    session["source_video"],
+                    session["narration_audio"],
+                    session["subtitles"],
+                    output,
+                    session.get("platform", "youtube"),
+                )
+                with open(output, "rb") as video_file:
+                    await update.message.reply_video(
+                        video=InputFile(video_file, filename="nexora_source_recap.mp4"),
+                        supports_streaming=True,
+                        caption=(
+                            "NEXORA Recap MP4 ပြီးပါပြီ။ သင်ပေးထားသော Source Video ကိုသာ အသုံးပြုထားပြီး "
+                            "မူရင်းအသံကို ဖယ်ကာ မြန်မာ Narration နှင့် SRT ထည့်ထားပါတယ်။ "
+                            "မူပိုင်ခွင့်/အသုံးပြုခွင့်နှင့် ထုတ်ဝေခွင့်ကို ကိုယ်တိုင်အတည်ပြုပြီးမှ တင်ပါ။"
+                        ),
+                        read_timeout=180,
+                        write_timeout=180,
+                    )
+        except SourceVideoRenderError as exc:
+            await update.message.reply_text(str(exc))
+            return
+        except Exception:
+            log.exception("User source video recap render failed")
+            await update.message.reply_text("MP4 ထုတ်လုပ်မှု မအောင်မြင်ပါ။ Video/Audio/SRT ဖိုင်များကို ပြန်စစ်ပါ။")
+            return
+        finally:
+            context.user_data.pop("video_render", None)
+        return
+    platform = context.user_data.get("platform", "youtube")
+    context.user_data["video_render"] = {
+        "mode": "source_video",
+        "platform": platform,
+        "source_video": None,
+        "narration_audio": None,
+        "subtitles": None,
+    }
+    await update.message.reply_text(
+        "Source Video Recap စတင်ပါပြီ။ သင်ပိုင်ဆိုင်သော သို့မဟုတ် အသုံးပြုခွင့်ရထားသော Video ကိုသာ ပို့ပါ။\\n"
+        "၁) MP4/MOV/M4V/WEBM Video (၂၀ MB အောက်)\\n"
+        "၂) မြန်မာ Narration MP3/M4A/WAV/OGG (၂၀ MB အောက်)\\n"
+        "၃) UTF-8 .SRT စာတန်းထိုး (၁ MB အောက်)\\n"
+        "ဖိုင် ၃ မျိုးလုံးပို့ပြီး /sourcevideo finish ပို့ပါ။ /sourcevideo cancel ဖြင့် ရပ်နိုင်ပါတယ်။"
+    )
+
+
 async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
@@ -1733,6 +1809,44 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
     session = context.user_data.get("video_render")
     if session is None:
+        return
+    if session.get("mode") == "source_video":
+        media = None
+        filename = ""
+        kind = ""
+        if message.video:
+            media, filename, kind = message.video, (message.video.file_name or "source.mp4"), "video"
+        elif message.document:
+            doc_name = message.document.file_name or ""
+            suffix = os.path.splitext(doc_name)[1].lower()
+            if suffix in {".mp4", ".mov", ".m4v", ".webm"}:
+                media, filename, kind = message.document, doc_name, "video"
+            elif suffix == ".srt":
+                media, filename, kind = message.document, doc_name, "subtitle"
+            elif suffix in {".mp3", ".m4a", ".wav", ".ogg"}:
+                media, filename, kind = message.document, doc_name, "audio"
+        elif message.audio or message.voice:
+            media = message.audio or message.voice
+            filename = getattr(media, "file_name", None) or ("narration.ogg" if message.voice else "narration.mp3")
+            kind = "audio"
+        if media is None:
+            return
+        media_file = await media.get_file()
+        size = getattr(media_file, "file_size", 0) or 0
+        limit = 20 * 1024 * 1024 if kind in {"video", "audio"} else 1024 * 1024
+        if size <= 0 or size > limit:
+            await message.reply_text("Video/အသံသည် ၂၀ MB အောက်၊ SRT သည် ၁ MB အောက် ဖြစ်ရပါမယ်။")
+            return
+        buffer = BytesIO()
+        await media_file.download_to_memory(out=buffer)
+        payload = (filename, buffer.getvalue())
+        key = {"video": "source_video", "audio": "narration_audio", "subtitle": "subtitles"}[kind]
+        session[key] = payload
+        await message.reply_text({
+            "video": "မူရင်း Video လက်ခံပြီးပါပြီ။",
+            "audio": "မြန်မာ Narration အသံ လက်ခံပြီးပါပြီ။",
+            "subtitle": "SRT စာတန်းထိုး လက်ခံပြီးပါပြီ။",
+        }[kind] + " လိုအပ်သည့်ဖိုင်အားလုံးပြီးလျှင် /sourcevideo finish ပို့ပါ။")
         return
     media_file = None
     filename = ""
@@ -2764,6 +2878,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("recapvoice", recapvoice_cmd))
     telegram_app.add_handler(CommandHandler("recapvoice3", recapvoice3_cmd))
     telegram_app.add_handler(CommandHandler("recapvideo", recapvideo_cmd))
+    telegram_app.add_handler(CommandHandler("sourcevideo", sourcevideo_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
