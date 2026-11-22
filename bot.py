@@ -8,11 +8,12 @@ import logging
 import os
 import re
 import tempfile
+import secrets
 from pathlib import Path
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from telegram import InputFile, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
@@ -79,6 +80,12 @@ logging.basicConfig(
 )
 log = logging.getLogger("nexora")
 
+# Opaque, short-lived links for rendered MP4 files. Metadata is process-local;
+# links intentionally expire and are invalidated by a service restart.
+DOWNLOAD_LINKS: dict[str, dict[str, object]] = {}
+DOWNLOAD_LINK_TTL_SECONDS = 24 * 60 * 60
+MAX_DOWNLOAD_LINKS = 100
+
 # HTTPX logs full Telegram API URLs at INFO level; those URLs contain the bot token.
 # Keep request URLs out of Render logs.
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -121,7 +128,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/recapvoice [preset] - တစ်ဖိုင်တည်း narration MP3 + SRT ထုတ်ရန်\n"
             "/recapvoice3 [preset] - YouTube/Facebook Script ၃ ပိုင်းမှ MP3/SRT ၃ စုံထုတ်ပြီး Audio ကြာချိန် QA စစ်ရန်\n"
             "/recapvideo <title> - အလိုအလျောက် narration + ခွင့်ပြုထားသော Footage မရှိပါက ရပ်မည်; သင့် Video ကို /sourcevideo ဖြင့် MP4 ထုတ်ရန်\n"
-            "/sourcevideo - ကိုယ်ပိုင်/ခွင့်ပြုထားသော Video + မြန်မာအသံ + SRT မှ MP4 ထုတ်ရန်\\n"
+            "/sourcevideo - ကိုယ်ပိုင်/ခွင့်ပြုထားသော Video + မြန်မာအသံ + SRT မှ MP4 ထုတ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
@@ -1552,35 +1559,58 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("မရသေးသောဖိုင်: " + "၊ ".join(missing))
             return
         await update.message.reply_text("သင်ပေးထားသော မူရင်း Video ကို Narration/SRT နှင့် ပေါင်းပြီး MP4 ထုတ်နေပါတယ်...")
+        output = None
         try:
-            with tempfile.TemporaryDirectory(prefix="nexora_source_recap_") as temp:
-                output = os.path.join(temp, "nexora_source_recap.mp4")
-                await asyncio.to_thread(
-                    render_user_source_video,
-                    session.get("source_video") or session.get("source_video_path"),
-                    session["narration_audio"],
-                    session["subtitles"],
-                    output,
-                    session.get("platform", "youtube"),
-                )
-                with open(output, "rb") as video_file:
-                    await update.message.reply_video(
-                        video=InputFile(video_file, filename="nexora_source_recap.mp4"),
-                        supports_streaming=True,
-                        caption=(
-                            "NEXORA Recap MP4 ပြီးပါပြီ။ သင်ပေးထားသော Source Video ကိုသာ အသုံးပြုထားပြီး "
-                            "မူရင်းအသံကို ဖယ်ကာ မြန်မာ Narration နှင့် SRT ထည့်ထားပါတယ်။ "
-                            "မူပိုင်ခွင့်/အသုံးပြုခွင့်နှင့် ထုတ်ဝေခွင့်ကို ကိုယ်တိုင်အတည်ပြုပြီးမှ တင်ပါ။"
-                        ),
-                        read_timeout=180,
-                        write_timeout=180,
-                    )
+            work_root = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work"))
+            chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
+            safe_chat = re.sub(r"[^0-9-]", "", chat_id) or "unknown"
+            output_dir = work_root / safe_chat / "exports"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output = output_dir / ("nexora_recap_" + secrets.token_hex(8) + ".mp4")
+            await asyncio.to_thread(
+                render_user_source_video,
+                session.get("source_video") or session.get("source_video_path"),
+                session["narration_audio"],
+                session["subtitles"],
+                output,
+                session.get("platform", "youtube"),
+            )
+            now = time.time()
+            for old_token, record in list(DOWNLOAD_LINKS.items()):
+                if float(record.get("expires_at", 0)) <= now:
+                    old_path = Path(str(record.get("path", "")))
+                    old_path.unlink(missing_ok=True)
+                    DOWNLOAD_LINKS.pop(old_token, None)
+            if len(DOWNLOAD_LINKS) >= MAX_DOWNLOAD_LINKS:
+                oldest = min(DOWNLOAD_LINKS, key=lambda key: float(DOWNLOAD_LINKS[key].get("created_at", 0)))
+                old_record = DOWNLOAD_LINKS.pop(oldest)
+                Path(str(old_record.get("path", ""))).unlink(missing_ok=True)
+            token = secrets.token_urlsafe(32)
+            DOWNLOAD_LINKS[token] = {
+                "path": str(output),
+                "filename": "nexora_myanmar_recap.mp4",
+                "created_at": now,
+                "expires_at": now + DOWNLOAD_LINK_TTL_SECONDS,
+            }
+            base_url = (PUBLIC_URL or "").rstrip("/")
+            if not base_url:
+                raise SourceVideoRenderError("Download Link ထုတ်ရန် Public URL မရှိပါ။")
+            await update.message.reply_text(
+                "NEXORA Recap MP4 ပြီးပါပြီ။ မြန်မာ Narration နှင့် SRT ထည့်ထားပြီး မူရင်း Video အသံကို အစားထိုးထားပါတယ်။\n"
+                f"လုံခြုံသော Download Link (၂၄ နာရီအတွင်းသာ အသုံးပြုနိုင်သည်):\n{base_url}/download/{token}\n"
+                "ဖိုင်သည် Render server storage ပေါ်တွင် ယာယီသိမ်းထားခြင်းဖြစ်ပြီး service restart/deploy လုပ်ပါက link ပျက်နိုင်ပါတယ်။ "
+                "ထုတ်ဝေမီ မူပိုင်ခွင့်၊ အသုံးပြုခွင့်နှင့် Attribution ကို စစ်ဆေးပါ။"
+            )
         except SourceVideoRenderError as exc:
+            if output:
+                Path(output).unlink(missing_ok=True)
             await update.message.reply_text(str(exc))
             return
         except Exception:
+            if output:
+                Path(output).unlink(missing_ok=True)
             log.exception("User source video recap render failed")
-            await update.message.reply_text("MP4 ထုတ်လုပ်မှု မအောင်မြင်ပါ။ Video/Audio/SRT ဖိုင်များကို ပြန်စစ်ပါ။")
+            await update.message.reply_text("MP4 ထုတ်လုပ်မှု မအောင်မြင်ပါ။ Video/Audio/SRT ဖိုင်များနှင့် Server Storage ကို ပြန်စစ်ပါ။")
             return
         finally:
             downloaded_source = session.get("source_video_path")
@@ -1600,7 +1630,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Attribution: {str(metadata.get('attribution', ''))[:350]}",
                 f"Source: {str(metadata.get('source_page', ''))[:500]}",
             ]
-            await update.message.reply_text("\\n".join(attribution_lines), disable_web_page_preview=True)
+            await update.message.reply_text("\n".join(attribution_lines), disable_web_page_preview=True)
         return
     platform = context.user_data.get("platform", "youtube")
     context.user_data["video_render"] = {
@@ -3026,6 +3056,33 @@ async def health():
     if telegram_app is None:
         raise HTTPException(status_code=503, detail="Telegram bot is not ready")
     return {"status": "ok", "telegram": True}
+
+@web_app.get("/download/{token}")
+async def download_rendered_video(token: str):
+    """Serve an MP4 through an unguessable, expiring, process-local download token."""
+    record = DOWNLOAD_LINKS.get(token)
+    if not record:
+        raise HTTPException(status_code=404, detail="Download link is invalid or expired")
+    if float(record.get("expires_at", 0)) <= time.time():
+        DOWNLOAD_LINKS.pop(token, None)
+        Path(str(record.get("path", ""))).unlink(missing_ok=True)
+        raise HTTPException(status_code=410, detail="Download link has expired")
+    path = Path(str(record.get("path", ""))).resolve()
+    root = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work")).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError:
+        DOWNLOAD_LINKS.pop(token, None)
+        raise HTTPException(status_code=404, detail="File not found")
+    if path.suffix.lower() != ".mp4" or not path.is_file():
+        DOWNLOAD_LINKS.pop(token, None)
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(
+        path,
+        media_type="video/mp4",
+        filename=str(record.get("filename", "nexora_recap.mp4")),
+        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
+    )
 
 
 @web_app.get("/console", response_class=HTMLResponse)
