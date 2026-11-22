@@ -140,3 +140,48 @@ def split_audio_for_parts(
         raise
     finally:
         source.unlink(missing_ok=True)
+
+
+
+def render_three_part_longform(
+    source_video: tuple[str, bytes] | str | Path,
+    narration_audio: tuple[str, bytes],
+    subtitles_srt: tuple[str, bytes],
+    output_dir: str | Path,
+    platform: str,
+) -> list[Path]:
+    """Render three sequential source ranges with distinct audio/SRT files."""
+    import tempfile
+    from source_video_renderer import render_user_source_video
+
+    if platform not in {"youtube", "facebook"}:
+        raise RecapPartitionError("သုံးပိုင်း Render ကို YouTube/Facebook အတွက်သာ အသုံးပြုနိုင်ပါတယ်။")
+    try:
+        srt_text = subtitles_srt[1].decode("utf-8-sig")
+    except (AttributeError, UnicodeDecodeError) as exc:
+        raise RecapPartitionError("UTF-8 SRT ဖိုင် လိုအပ်ပါတယ်။") from exc
+    parts = plan_three_part_srt(srt_text)
+    target_dir = Path(output_dir)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    outputs: list[Path] = []
+    with tempfile.TemporaryDirectory(prefix="nexora_recap_parts_") as temp:
+        split_parts = split_audio_for_parts(narration_audio, parts, temp)
+        try:
+            for part in split_parts:
+                output = target_dir / f"nexora_recap_part_{part['part']}.mp4"
+                render_user_source_video(
+                    source_video,
+                    part["audio"],
+                    part["subtitle"],
+                    output,
+                    platform,
+                    source_start_seconds=part["start_seconds"],
+                    require_source_coverage=True,
+                    expected_duration_seconds=part["duration_seconds"],
+                )
+                outputs.append(output)
+        except Exception:
+            for output in outputs:
+                output.unlink(missing_ok=True)
+            raise
+    return outputs
