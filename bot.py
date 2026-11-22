@@ -1539,8 +1539,14 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     action = context.args[0].lower() if context.args else "start"
     if action == "cancel":
-        context.user_data.pop("video_render", None)
-        await update.message.reply_text("Source Video Recap ကို ပယ်ဖျက်ပြီးပါပြီ။")
+        cancelled = context.user_data.pop("video_render", None) or {}
+        downloaded_source = cancelled.get("source_video_path")
+        if downloaded_source:
+            try:
+                Path(downloaded_source).unlink(missing_ok=True)
+            except OSError:
+                log.warning("Could not remove cancelled licensed source video")
+        await update.message.reply_text("Source Video Recap ကို ပယ်ဖျက်ပြီး ယာယီ Video ဖိုင်ကို ရှင်းလင်းပြီးပါပြီ။")
         return
     session = context.user_data.get("video_render")
     if action == "finish":
@@ -1585,6 +1591,9 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 oldest = min(DOWNLOAD_LINKS, key=lambda key: float(DOWNLOAD_LINKS[key].get("created_at", 0)))
                 old_record = DOWNLOAD_LINKS.pop(oldest)
                 Path(str(old_record.get("path", ""))).unlink(missing_ok=True)
+            base_url = (PUBLIC_URL or "").rstrip("/")
+            if not base_url:
+                raise SourceVideoRenderError("Download Link ထုတ်ရန် Public URL မရှိပါ။")
             token = secrets.token_urlsafe(32)
             DOWNLOAD_LINKS[token] = {
                 "path": str(output),
@@ -1592,9 +1601,6 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "created_at": now,
                 "expires_at": now + DOWNLOAD_LINK_TTL_SECONDS,
             }
-            base_url = (PUBLIC_URL or "").rstrip("/")
-            if not base_url:
-                raise SourceVideoRenderError("Download Link ထုတ်ရန် Public URL မရှိပါ။")
             await update.message.reply_text(
                 "NEXORA Recap MP4 ပြီးပါပြီ။ မြန်မာ Narration နှင့် SRT ထည့်ထားပြီး မူရင်း Video အသံကို အစားထိုးထားပါတယ်။\n"
                 f"လုံခြုံသော Download Link (၂၄ နာရီအတွင်းသာ အသုံးပြုနိုင်သည်):\n{base_url}/download/{token}\n"
