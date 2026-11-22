@@ -36,7 +36,7 @@ class DailyRecapTriggerTests(unittest.TestCase):
         self.assertEqual(request.get_method(), "POST")
         self.assertEqual(request.get_header("X-nexora-daily-token"), "s" * 40)
         self.assertEqual(json.loads(request.data.decode("utf-8")), {"date": "2026-11-23"})
-        opener.assert_called_once_with(request, timeout=25)
+        opener.assert_called_once_with(request, timeout=90)
 
 
 if __name__ == "__main__":
