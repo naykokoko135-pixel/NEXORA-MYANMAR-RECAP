@@ -1538,10 +1538,10 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "subtitles": None,
     }
     await update.message.reply_text(
-        "Source Video Recap စတင်ပါပြီ။ သင်ပိုင်ဆိုင်သော သို့မဟုတ် အသုံးပြုခွင့်ရထားသော Video ကိုသာ ပို့ပါ။\\n"
-        "၁) MP4/MOV/M4V/WEBM Video (၂၀ MB အောက်)\\n"
-        "၂) မြန်မာ Narration MP3/M4A/WAV/OGG (၂၀ MB အောက်)\\n"
-        "၃) UTF-8 .SRT စာတန်းထိုး (၁ MB အောက်)\\n"
+        "Source Video Recap စတင်ပါပြီ။ သင်ပိုင်ဆိုင်သော သို့မဟုတ် အသုံးပြုခွင့်ရထားသော Video ကိုသာ ပို့ပါ။\n"
+        "၁) MP4/MOV/M4V/WEBM Video (၂၀ MB အောက်)\n"
+        "၂) မြန်မာ Narration MP3/M4A/WAV/OGG (၂၀ MB အောက်)\n"
+        "၃) UTF-8 .SRT စာတန်းထိုး (၁ MB အောက်)\n"
         "ဖိုင် ၃ မျိုးလုံးပို့ပြီး /sourcevideo finish ပို့ပါ။ /sourcevideo cancel ဖြင့် ရပ်နိုင်ပါတယ်။"
     )
 
