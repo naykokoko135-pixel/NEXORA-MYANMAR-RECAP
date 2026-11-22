@@ -559,6 +559,7 @@ def main() -> None:
     pageview_report = format_category_pageviews(pageview_result)
     messages.extend(["", "━━━━━━━━━━━━━━━━━━", trend_report, "", pageview_report])
     send_telegram_message(token, chat_id, "\n".join(messages))
+    trigger_daily_recap(local_today)
 
 
 if __name__ == "__main__":
