@@ -414,6 +414,44 @@ def send_telegram_message(token: str, chat_id: str, message: str) -> None:
             raise RuntimeError("Telegram rejected the message.")
 
 
+def trigger_daily_recap(local_today: date) -> bool:
+    """Ask the authenticated Render service to start today's recap pipeline.
+
+    The trigger is optional until both GitHub variables/secrets are configured.
+    It never sends a streaming-service download request; Render runs the
+    existing metadata/licensed-footage gated /dailyrecap command.
+    """
+    endpoint = os.environ.get("NEXORA_DAILY_RECAP_URL", "").strip()
+    secret = os.environ.get("NEXORA_DAILY_RECAP_TOKEN", "").strip()
+    if not endpoint and not secret:
+        log.warning("Daily recap auto-trigger is not configured; report-only run.")
+        return False
+    if not endpoint.startswith("https://") or len(secret) < 32:
+        raise RuntimeError(
+            "Configure HTTPS NEXORA_DAILY_RECAP_URL and a 32+ character "
+            "NEXORA_DAILY_RECAP_TOKEN before enabling automatic recap."
+        )
+    payload = json.dumps({"date": local_today.isoformat()}).encode("utf-8")
+    request = Request(
+        endpoint.rstrip("/") + "/internal/daily-recap",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "X-Nexora-Daily-Token": secret,
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=25) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
+        raise RuntimeError("Render daily recap trigger request failed.") from exc
+    if not isinstance(result, dict) or result.get("accepted") is not True:
+        raise RuntimeError("Render did not accept the daily recap trigger.")
+    log.info("Render accepted automatic recap for %s.", local_today.isoformat())
+    return True
+
+
 def main() -> None:
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
