@@ -3468,7 +3468,7 @@ async def trigger_internal_daily_recap(
         raise HTTPException(status_code=400, detail="Invalid JSON")
     chat_id_value = payload.get("chat_id") if isinstance(payload, dict) else None
     chat_id_text = str(chat_id_value or "").strip()
-    if not re.fullmatch(r"-?\\d{5,20}", chat_id_text):
+    if not re.fullmatch(r"-?\d{5,20}", chat_id_text):
         raise HTTPException(status_code=400, detail="A valid Telegram chat_id is required")
     if daily_recap_task is not None and not daily_recap_task.done():
         raise HTTPException(status_code=409, detail="A daily recap run is already active")
