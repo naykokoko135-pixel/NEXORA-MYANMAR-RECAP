@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 MAX_SOURCE_BYTES = 1024 * 1024 * 1024
+MAX_PREVIEW_SOURCE_BYTES = 80 * 1024 * 1024
 MAX_PREVIEW_SECONDS = 45
 ALLOWED_HOST = "upload.wikimedia.org"
 
@@ -60,12 +61,12 @@ def render_licensed_preview(source: dict, output_path: str | Path, platform: str
         request = Request(url, headers={"User-Agent": "NEXORA-Myanmar-Recap/1.0"})
         opener = build_opener(CommonsRedirectHandler)
         with opener.open(request, timeout=25) as response:
-            data = response.read(MAX_SOURCE_BYTES + 1)
+            data = response.read(MAX_PREVIEW_SOURCE_BYTES + 1)
     except LicensedClipError:
         raise
     except Exception as exc:
         raise LicensedClipError("Commons Video ကို ဒေါင်းလုဒ်မလုပ်နိုင်ပါ။") from exc
-    if not data or len(data) > MAX_SOURCE_BYTES:
+    if not data or len(data) > MAX_PREVIEW_SOURCE_BYTES:
         raise LicensedClipError("Video ဖိုင်သည် ဗလာဖြစ်နေခြင်း သို့မဟုတ် 80 MB ထက်ကြီးနေပါတယ်။")
 
     dimensions = {"youtube": (1280, 720), "facebook": (864, 1080), "tiktok": (720, 1280)}
