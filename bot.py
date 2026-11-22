@@ -2886,7 +2886,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("productionqa", productionqa_cmd))
     telegram_app.add_handler(CommandHandler("audioqa", audioqa_cmd))
     telegram_app.add_handler(CommandHandler("render", render_cmd))
-    telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
+    telegram_app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO | filters.AUDIO | filters.VOICE | filters.Document.ALL, video_media_message))
     telegram_app.add_handler(CommandHandler("cancel", cancel_voiceover_cmd))
     telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, voiceover_notes_message))
     telegram_app.add_handler(CommandHandler("mode", mode_cmd))
