@@ -7,7 +7,8 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
-MAX_SOURCE_BYTES = 80 * 1024 * 1024
+MAX_SOURCE_BYTES = 1024 * 1024 * 1024
+MAX_PREVIEW_SOURCE_BYTES = 80 * 1024 * 1024
 MAX_PREVIEW_SECONDS = 45
 ALLOWED_HOST = "upload.wikimedia.org"
 
@@ -60,12 +61,12 @@ def render_licensed_preview(source: dict, output_path: str | Path, platform: str
         request = Request(url, headers={"User-Agent": "NEXORA-Myanmar-Recap/1.0"})
         opener = build_opener(CommonsRedirectHandler)
         with opener.open(request, timeout=25) as response:
-            data = response.read(MAX_SOURCE_BYTES + 1)
+            data = response.read(MAX_PREVIEW_SOURCE_BYTES + 1)
     except LicensedClipError:
         raise
     except Exception as exc:
         raise LicensedClipError("Commons Video ကို ဒေါင်းလုဒ်မလုပ်နိုင်ပါ။") from exc
-    if not data or len(data) > MAX_SOURCE_BYTES:
+    if not data or len(data) > MAX_PREVIEW_SOURCE_BYTES:
         raise LicensedClipError("Video ဖိုင်သည် ဗလာဖြစ်နေခြင်း သို့မဟုတ် 80 MB ထက်ကြီးနေပါတယ်။")
 
     dimensions = {"youtube": (1280, 720), "facebook": (864, 1080), "tiktok": (720, 1280)}
@@ -97,8 +98,8 @@ def render_licensed_preview(source: dict, output_path: str | Path, platform: str
     return target
 
 
-def download_licensed_source(source: dict, output_path: str | Path) -> Path:
-    """Download only a license-allowlisted Wikimedia Commons upload file."""
+def download_licensed_source(source: dict, output_path: str | Path, max_bytes: int = MAX_SOURCE_BYTES) -> Path:
+    """Stream an allowlisted Commons video directly to server disk (never through Telegram)."""
     from urllib.request import Request, HTTPRedirectHandler, build_opener
 
     license_name = str(source.get("license", "")).strip()
@@ -107,29 +108,48 @@ def download_licensed_source(source: dict, output_path: str | Path) -> Path:
     parsed = urlparse(str(source.get("url", "")))
     if parsed.scheme != "https" or parsed.hostname != ALLOWED_HOST or parsed.username or parsed.password:
         raise LicensedClipError("Wikimedia Commons တရားဝင် upload host မဟုတ်ပါ။")
+    if not isinstance(max_bytes, int) or max_bytes < 1 or max_bytes > MAX_SOURCE_BYTES:
+        raise LicensedClipError("Download အရွယ်အစားကန့်သတ်ချက် မမှန်ပါ။")
     declared_size = int(source.get("size", 0) or 0)
-    if declared_size > 20 * 1024 * 1024:
-        raise LicensedClipError("ဒီ Bot ရဲ့ Telegram Source Video လက်ခံနိုင်မှုအတွက် ၂၀ MB ထက်ကြီးနေပါတယ်။")
+    if declared_size > max_bytes:
+        raise LicensedClipError("Commons Video သည် Server Download ကန့်သတ်ချက်ထက် ကြီးနေပါတယ်။")
+
     class SafeRedirect(HTTPRedirectHandler):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
             target = urlparse(newurl)
-            if target.scheme != "https" or target.hostname != ALLOWED_HOST:
+            if target.scheme != "https" or target.hostname != ALLOWED_HOST or target.username or target.password:
                 raise LicensedClipError("ခွင့်မပြုထားသော Download Redirect ကို ပိတ်ထားပါတယ်။")
             return super().redirect_request(req, fp, code, msg, headers, newurl)
+
     request = Request(str(source["url"]), headers={"User-Agent": "NEXORA-Myanmar-Recap/1.0 (licensed download)"})
+    target_path = Path(output_path)
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = target_path.with_suffix(target_path.suffix + ".part")
     try:
         with build_opener(SafeRedirect).open(request, timeout=30) as response:
             content_type = str(response.headers.get("Content-Type", "")).lower()
             if not content_type.startswith("video/"):
                 raise LicensedClipError("Server က Video Content-Type မပေးပါ။")
-            data = response.read(20 * 1024 * 1024 + 1)
+            content_length = response.headers.get("Content-Length")
+            if content_length and int(content_length) > max_bytes:
+                raise LicensedClipError("Video သည် Server Download ကန့်သတ်ချက်ထက် ကြီးနေပါတယ်။")
+            total = 0
+            with temporary_path.open("wb") as output:
+                while True:
+                    chunk = response.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > max_bytes:
+                        raise LicensedClipError("Video သည် Server Download ကန့်သတ်ချက်ထက် ကြီးနေပါတယ်။")
+                    output.write(chunk)
+        if total <= 0:
+            raise LicensedClipError("Download Video ဖိုင်သည် ဗလာဖြစ်နေပါတယ်။")
+        temporary_path.replace(target_path)
     except LicensedClipError:
+        temporary_path.unlink(missing_ok=True)
         raise
     except Exception as exc:
+        temporary_path.unlink(missing_ok=True)
         raise LicensedClipError("ခွင့်ပြုထားသော Commons Video ကို Download မလုပ်နိုင်ပါ။") from exc
-    if not data or len(data) > 20 * 1024 * 1024:
-        raise LicensedClipError("Download ဖိုင်သည် ဗလာဖြစ်နေခြင်း သို့မဟုတ် ၂၀ MB ကျော်နေပါတယ်။")
-    target = Path(output_path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(data)
-    return target
+    return target_path

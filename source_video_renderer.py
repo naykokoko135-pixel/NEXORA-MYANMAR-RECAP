@@ -32,7 +32,7 @@ def _srt_duration(text: str) -> float:
 
 
 def render_user_source_video(
-    source_video: tuple[str, bytes],
+    source_video: tuple[str, bytes] | str | Path,
     narration_audio: tuple[str, bytes],
     subtitles_srt: tuple[str, bytes],
     output_path: str | Path,
@@ -41,15 +41,23 @@ def render_user_source_video(
     """Use only the exact uploaded video; loop visuals if needed and replace source audio."""
     import imageio_ffmpeg
 
-    video_name, video_data = source_video
+    if isinstance(source_video, (str, Path)):
+        video_path = Path(source_video)
+        video_name = video_path.name
+        if not video_path.is_file() or video_path.stat().st_size <= 0:
+            raise SourceVideoRenderError("Server တွင် မူရင်း Video ဖိုင် မတွေ့ပါ။ /licensedownload ကို ပြန်လုပ်ပါ။")
+        video_data = None
+    else:
+        video_name, video_data = source_video
+        video_path = None
     audio_name, audio_data = narration_audio
     srt_name, srt_data = subtitles_srt
     video_suffix = Path(video_name).suffix.lower()
     audio_suffix = Path(audio_name).suffix.lower()
-    if video_suffix not in ALLOWED_VIDEO_SUFFIXES or not video_data:
+    if video_suffix not in ALLOWED_VIDEO_SUFFIXES or (video_path is None and not video_data):
         raise SourceVideoRenderError("MP4/MOV/M4V/WEBM မူရင်း Video ဖိုင် လိုအပ်ပါတယ်။")
-    if len(video_data) > MAX_SOURCE_VIDEO_BYTES:
-        raise SourceVideoRenderError("Telegram မှ လက်ခံနိုင်သော Video အရွယ်အစား ၂၀ MB အောက် ဖြစ်ရပါမယ်။")
+    if video_path is None and len(video_data) > MAX_SOURCE_VIDEO_BYTES:
+        raise SourceVideoRenderError("Telegram မှ တိုက်ရိုက်ပို့သော Video သည် ၂၀ MB အောက် ဖြစ်ရပါမယ်။ Commons မှ Server-side Download ကို /licensedownload သုံးပါ။")
     if audio_suffix not in ALLOWED_AUDIO_SUFFIXES or not audio_data or len(audio_data) > MAX_NARRATION_BYTES:
         raise SourceVideoRenderError("Narration MP3/M4A/WAV/OGG ဖိုင် မမှန်ပါ သို့မဟုတ် ၄၅ MB ကျော်နေပါတယ်။")
     if Path(srt_name).suffix.lower() != ".srt" or not srt_data or len(srt_data) > MAX_SRT_BYTES:
@@ -72,15 +80,16 @@ def render_user_source_video(
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     with tempfile.TemporaryDirectory(prefix="nexora_user_source_") as temp:
         work = Path(temp)
-        video_path = work / ("source" + video_suffix)
+        render_video_path = video_path if video_path is not None else work / ("source" + video_suffix)
         audio_path = work / ("narration" + audio_suffix)
         srt_path = work / "captions.srt"
-        video_path.write_bytes(video_data)
+        if video_path is None:
+            render_video_path.write_bytes(video_data)
         audio_path.write_bytes(audio_data)
         srt_path.write_bytes(srt_data)
         command = [
             ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
-            "-stream_loop", "-1", "-i", str(video_path),
+            "-stream_loop", "-1", "-i", str(render_video_path),
             "-i", str(audio_path), "-i", str(srt_path),
             "-map", "0:v:0", "-map", "1:a:0", "-map", "2:s:0",
             "-vf",
