@@ -95,3 +95,41 @@ def render_licensed_preview(source: dict, output_path: str | Path, platform: str
         if result.returncode or not target.exists() or not target.stat().st_size:
             raise LicensedClipError("Commons Video ကို MP4 ပြောင်းမရပါ။")
     return target
+
+
+def download_licensed_source(source: dict, output_path: str | Path) -> Path:
+    """Download only a license-allowlisted Wikimedia Commons upload file."""
+    from urllib.request import Request, HTTPRedirectHandler, build_opener
+
+    license_name = str(source.get("license", "")).strip()
+    if not re.match(r"^(?:CC0(?:\s|$)|CC BY(?:-SA)?(?:\s|$)|Public domain$)", license_name, re.IGNORECASE):
+        raise LicensedClipError("လိုင်စင်ကို အတည်မပြုနိုင်သောကြောင့် Download ပိတ်ထားပါတယ်။")
+    parsed = urlparse(str(source.get("url", "")))
+    if parsed.scheme != "https" or parsed.hostname != ALLOWED_HOST or parsed.username or parsed.password:
+        raise LicensedClipError("Wikimedia Commons တရားဝင် upload host မဟုတ်ပါ။")
+    declared_size = int(source.get("size", 0) or 0)
+    if declared_size > 20 * 1024 * 1024:
+        raise LicensedClipError("ဒီ Bot ရဲ့ Telegram Source Video လက်ခံနိုင်မှုအတွက် ၂၀ MB ထက်ကြီးနေပါတယ်။")
+    class SafeRedirect(HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            target = urlparse(newurl)
+            if target.scheme != "https" or target.hostname != ALLOWED_HOST:
+                raise LicensedClipError("ခွင့်မပြုထားသော Download Redirect ကို ပိတ်ထားပါတယ်။")
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+    request = Request(str(source["url"]), headers={"User-Agent": "NEXORA-Myanmar-Recap/1.0 (licensed download)"})
+    try:
+        with build_opener(SafeRedirect).open(request, timeout=30) as response:
+            content_type = str(response.headers.get("Content-Type", "")).lower()
+            if not content_type.startswith("video/"):
+                raise LicensedClipError("Server က Video Content-Type မပေးပါ။")
+            data = response.read(20 * 1024 * 1024 + 1)
+    except LicensedClipError:
+        raise
+    except Exception as exc:
+        raise LicensedClipError("ခွင့်ပြုထားသော Commons Video ကို Download မလုပ်နိုင်ပါ။") from exc
+    if not data or len(data) > 20 * 1024 * 1024:
+        raise LicensedClipError("Download ဖိုင်သည် ဗလာဖြစ်နေခြင်း သို့မဟုတ် ၂၀ MB ကျော်နေပါတယ်။")
+    target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(data)
+    return target

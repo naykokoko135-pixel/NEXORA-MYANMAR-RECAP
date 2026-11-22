@@ -37,7 +37,7 @@ from europeana_video_finder import search_europeana_licensed_video, EuropeanaSea
 from youtube_cc_finder import search_youtube_cc_videos, YouTubeCCSearchError
 from youtube_movie_recap_research import search_youtube_movie_recaps, format_youtube_movie_recaps, YouTubeRecapResearchError
 from recap_studio import build_original_recap_notes
-from licensed_video_pipeline import choose_matching_source, render_licensed_preview, LicensedClipError
+from licensed_video_pipeline import choose_matching_source, render_licensed_preview, download_licensed_source, LicensedClipError
 from licensed_narrated_clip import render_licensed_narrated_preview, build_licensed_attribution_note, _subtitle_duration_seconds
 from wikidata_metadata import fetch_wikidata_metadata
 from kitsu_anime_research import fetch_kitsu_episode_summaries
@@ -619,6 +619,48 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     if errors:
         await update.message.reply_text("တချို့ရင်းမြစ်များကို မရရှိပါ:\n" + "\n".join(errors)[:900])
+
+
+async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Search and download a title-matching, explicitly reusable Commons video."""
+    if not update.message:
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text("အသုံးပြုပုံ: /licensedownload <ခေါင်းစဉ်>\nခေါင်းစဉ်တိတိကျကျ ကိုက်ညီပြီး CC/Public Domain လိုင်စင်ရှိသော Commons Video ကိုသာ Download ဆွဲပေးပါမယ်။")
+        return
+    await update.message.reply_text("Wikimedia Commons မှ လိုင်စင်နဲ့ ခေါင်းစဉ်ကိုက်ညီမှု စစ်ပြီး Download လုပ်နေပါတယ်...")
+    try:
+        sources = await asyncio.to_thread(search_licensed_video, query, 8)
+        source = choose_matching_source(query, sources)
+        if not source:
+            await update.message.reply_text("ခေါင်းစဉ်နဲ့ ကိုက်ညီတဲ့ CC/Public Domain Video မတွေ့ပါ။ မဆိုင်တဲ့ Video ကို မဒေါင်းပါ။")
+            return
+        import tempfile
+        suffix = ".webm" if str(source.get("mime", "")).lower() == "video/webm" else ".mp4"
+        with tempfile.TemporaryDirectory(prefix="nexora_licensed_download_") as temp:
+            output = os.path.join(temp, "licensed_source" + suffix)
+            await asyncio.to_thread(download_licensed_source, source, output)
+            with open(output, "rb") as video_file:
+                await update.message.reply_document(
+                    document=InputFile(video_file, filename=os.path.basename(output)),
+                    caption=(
+                        f"ခွင့်ပြုထားသော Video Download ပြီးပါပြီ။\n"
+                        f"ခေါင်းစဉ်: {source.get('title', '')}\n"
+                        f"လိုင်စင်: {source.get('license', '')}\n"
+                        f"ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\n"
+                        f"Attribution: {str(source.get('attribution', ''))[:300]}\n"
+                        f"မူရင်းရင်းမြစ်: {source.get('source_page', '')}\n"
+                        "ထုတ်ဝေမီ လိုင်စင်စည်းကမ်းနဲ့ Attribution ကို လိုက်နာပါ။"
+                    ),
+                    read_timeout=120,
+                    write_timeout=120,
+                )
+    except (ClipSourceError, LicensedClipError) as exc:
+        await update.message.reply_text(str(exc))
+    except Exception:
+        log.exception("Licensed source video download failed")
+        await update.message.reply_text("ခွင့်ပြုထားသော Video ကို Download မလုပ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
 
 
 async def autoclip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2863,6 +2905,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("clipsource", clipsource_cmd))
     telegram_app.add_handler(CommandHandler("recapchannels", recapchannels_cmd))
     telegram_app.add_handler(CommandHandler("recapstudio", recapstudio_cmd))
+    telegram_app.add_handler(CommandHandler("licensedownload", licensedownload_cmd))
     telegram_app.add_handler(CommandHandler("autoclip", autoclip_cmd))
     telegram_app.add_handler(CommandHandler("autonarrateclip", autonarrateclip_cmd))
     telegram_app.add_handler(CommandHandler("autofactsclip", autofactsclip_cmd))
