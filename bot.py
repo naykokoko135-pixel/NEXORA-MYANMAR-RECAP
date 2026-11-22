@@ -629,33 +629,43 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not query:
         await update.message.reply_text("အသုံးပြုပုံ: /licensedownload <ခေါင်းစဉ်>\nခေါင်းစဉ်တိတိကျကျ ကိုက်ညီပြီး CC/Public Domain လိုင်စင်ရှိသော Commons Video ကိုသာ Download ဆွဲပေးပါမယ်။")
         return
-    await update.message.reply_text("Wikimedia Commons မှ လိုင်စင်နဲ့ ခေါင်းစဉ်ကိုက်ညီမှု စစ်ပြီး Download လုပ်နေပါတယ်...")
+    await update.message.reply_text("Wikimedia Commons မှ CC/Public Domain Video ကို Server ပေါ်သို့ တိုက်ရိုက် Download လုပ်နေပါတယ်...")
     try:
         sources = await asyncio.to_thread(search_licensed_video, query, 8)
         source = choose_matching_source(query, sources)
         if not source:
             await update.message.reply_text("ခေါင်းစဉ်နဲ့ ကိုက်ညီတဲ့ CC/Public Domain Video မတွေ့ပါ။ မဆိုင်တဲ့ Video ကို မဒေါင်းပါ။")
             return
-        import tempfile
         suffix = ".webm" if str(source.get("mime", "")).lower() == "video/webm" else ".mp4"
-        with tempfile.TemporaryDirectory(prefix="nexora_licensed_download_") as temp:
-            output = os.path.join(temp, "licensed_source" + suffix)
-            await asyncio.to_thread(download_licensed_source, source, output)
-            with open(output, "rb") as video_file:
-                await update.message.reply_document(
-                    document=InputFile(video_file, filename=os.path.basename(output)),
-                    caption=(
-                        f"ခွင့်ပြုထားသော Video Download ပြီးပါပြီ။\n"
-                        f"ခေါင်းစဉ်: {source.get('title', '')}\n"
-                        f"လိုင်စင်: {source.get('license', '')}\n"
-                        f"ဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\n"
-                        f"Attribution: {str(source.get('attribution', ''))[:300]}\n"
-                        f"မူရင်းရင်းမြစ်: {source.get('source_page', '')}\n"
-                        "ထုတ်ဝေမီ လိုင်စင်စည်းကမ်းနဲ့ Attribution ကို လိုက်နာပါ။"
-                    ),
-                    read_timeout=120,
-                    write_timeout=120,
-                )
+        work_root = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work"))
+        work_root.mkdir(parents=True, exist_ok=True)
+        chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
+        safe_chat = re.sub(r"[^0-9-]", "", chat_id)
+        session_dir = work_root / safe_chat
+        session_dir.mkdir(parents=True, exist_ok=True)
+        output = session_dir / ("licensed_source" + suffix)
+        await asyncio.to_thread(download_licensed_source, source, output)
+        context.user_data["video_render"] = {
+            "mode": "source_video",
+            "platform": context.user_data.get("platform", "youtube"),
+            "source_video_path": str(output),
+            "source_metadata": {
+                "title": str(source.get("title", "")),
+                "license": str(source.get("license", "")),
+                "artist": str(source.get("artist", "Unknown")),
+                "attribution": str(source.get("attribution", "")),
+                "source_page": str(source.get("source_page", "")),
+            },
+            "narration_audio": None,
+            "subtitles": None,
+        }
+        await update.message.reply_text(
+            f"Server-side Download ပြီးပါပြီ။\nခေါင်းစဉ်: {source.get('title', '')}\n"
+            f"လိုင်စင်: {source.get('license', '')}\nဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\n"
+            f"Attribution: {str(source.get('attribution', ''))[:300]}\nSource: {source.get('source_page', '')}\n\n"
+            "ဒီဖိုင်ကို Telegram ကတစ်ဆင့် ပြန်ပို့စရာမလိုပါ။ အခု မြန်မာ Narration MP3 နဲ့ UTF-8 SRT ကို ပို့ပြီး /sourcevideo finish လုပ်ပါ။\n"
+            "မှတ်ချက်: Render Free ရဲ့ /tmp ဖိုင်တွေဟာ restart/deploy လုပ်ရင် ပျောက်နိုင်ပါတယ်။ Persistent Disk မချိတ်ရသေးပါ။"
+        )
     except (ClipSourceError, LicensedClipError) as exc:
         await update.message.reply_text(str(exc))
     except Exception:
@@ -1577,12 +1587,13 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "mode": "source_video",
         "platform": platform,
         "source_video": None,
+        "source_video_path": None,
         "narration_audio": None,
         "subtitles": None,
     }
     await update.message.reply_text(
         "Source Video Recap စတင်ပါပြီ။ သင်ပိုင်ဆိုင်သော သို့မဟုတ် အသုံးပြုခွင့်ရထားသော Video ကိုသာ ပို့ပါ။\n"
-        "၁) MP4/MOV/M4V/WEBM Video (၂၀ MB အောက်)\n"
+        "၁) MP4/MOV/M4V/WEBM Video (၂၀ MB အောက်) သို့မဟုတ် /licensedownload ဖြင့် Commons မှ Server-side Download\n"
         "၂) မြန်မာ Narration MP3/M4A/WAV/OGG (၂၀ MB အောက်)\n"
         "၃) UTF-8 .SRT စာတန်းထိုး (၁ MB အောက်)\n"
         "ဖိုင် ၃ မျိုးလုံးပို့ပြီး /sourcevideo finish ပို့ပါ။ /sourcevideo cancel ဖြင့် ရပ်နိုင်ပါတယ်။"
