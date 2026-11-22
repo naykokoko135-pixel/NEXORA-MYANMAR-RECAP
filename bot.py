@@ -35,6 +35,7 @@ from research_draft import matching_cached_research
 from voiceover_builder import generate_voiceover_draft, generate_voiceover_part_files
 from video_renderer import render_slideshow, render_scene_timeline, VideoRenderError, classify_render_document
 from source_video_renderer import render_user_source_video, SourceVideoRenderError
+from recap_partitioner import render_three_part_longform, RecapPartitionError
 from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
 from youtube_cc_finder import search_youtube_cc_videos, YouTubeCCSearchError
@@ -1688,56 +1689,82 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("မရသေးသောဖိုင်: " + "၊ ".join(missing))
             return
         await update.message.reply_text("သင်ပေးထားသော မူရင်း Video ကို Narration/SRT နှင့် ပေါင်းပြီး MP4 ထုတ်နေပါတယ်...")
-        output = None
+        output_paths = []
         try:
             work_root = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work"))
             chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
             safe_chat = re.sub(r"[^0-9-]", "", chat_id) or "unknown"
             output_dir = work_root / safe_chat / "exports"
             output_dir.mkdir(parents=True, exist_ok=True)
-            output = output_dir / ("nexora_recap_" + secrets.token_hex(8) + ".mp4")
-            await asyncio.to_thread(
-                render_user_source_video,
-                session.get("source_video") or session.get("source_video_path"),
-                session["narration_audio"],
-                session["subtitles"],
-                output,
-                session.get("platform", "youtube"),
-            )
+            platform = session.get("platform", "youtube")
+            source_video = session.get("source_video") or session.get("source_video_path")
+            if platform in {"youtube", "facebook"}:
+                batch_dir = output_dir / ("nexora_recap_" + secrets.token_hex(8))
+                output_paths = await asyncio.to_thread(
+                    render_three_part_longform,
+                    source_video,
+                    session["narration_audio"],
+                    session["subtitles"],
+                    batch_dir,
+                    platform,
+                )
+            else:
+                single_output = output_dir / ("nexora_recap_" + secrets.token_hex(8) + ".mp4")
+                await asyncio.to_thread(
+                    render_user_source_video,
+                    source_video,
+                    session["narration_audio"],
+                    session["subtitles"],
+                    single_output,
+                    platform,
+                )
+                output_paths = [single_output]
             now = time.time()
             for old_token, record in list(DOWNLOAD_LINKS.items()):
                 if float(record.get("expires_at", 0)) <= now:
-                    old_path = Path(str(record.get("path", "")))
-                    old_path.unlink(missing_ok=True)
+                    Path(str(record.get("path", ""))).unlink(missing_ok=True)
                     DOWNLOAD_LINKS.pop(old_token, None)
-            if len(DOWNLOAD_LINKS) >= MAX_DOWNLOAD_LINKS:
+            while len(DOWNLOAD_LINKS) + len(output_paths) > MAX_DOWNLOAD_LINKS:
                 oldest = min(DOWNLOAD_LINKS, key=lambda key: float(DOWNLOAD_LINKS[key].get("created_at", 0)))
                 old_record = DOWNLOAD_LINKS.pop(oldest)
                 Path(str(old_record.get("path", ""))).unlink(missing_ok=True)
             base_url = (PUBLIC_URL or "").rstrip("/")
             if not base_url:
                 raise SourceVideoRenderError("Download Link ထုတ်ရန် Public URL မရှိပါ။")
-            token = secrets.token_urlsafe(32)
-            DOWNLOAD_LINKS[token] = {
-                "path": str(output),
-                "filename": "nexora_myanmar_recap.mp4",
-                "created_at": now,
-                "expires_at": now + DOWNLOAD_LINK_TTL_SECONDS,
-            }
+            links = []
+            for index, rendered_path in enumerate(output_paths, 1):
+                token = secrets.token_urlsafe(32)
+                filename = (
+                    f"nexora_{platform}_part_{index}.mp4"
+                    if len(output_paths) == 3 else "nexora_tiktok_recap.mp4"
+                )
+                DOWNLOAD_LINKS[token] = {
+                    "path": str(rendered_path),
+                    "filename": filename,
+                    "created_at": now,
+                    "expires_at": now + DOWNLOAD_LINK_TTL_SECONDS,
+                }
+                label = f"Part {index}" if len(output_paths) == 3 else "TikTok"
+                links.append(f"{label}: {base_url}/download/{token}")
+            description = (
+                "YouTube/Facebook Recap MP4 သုံးပိုင်းလုံး ပြီးပါပြီ။ တစ်ပိုင်းစီ ၁၅–၂၀ မိနစ်၊ "
+                "Narration/SRT ကို အချိန်အလိုက် ခွဲထားပြီး မူရင်း Video အပိုင်းမတူများကို အသုံးပြုထားပါတယ်။"
+                if len(output_paths) == 3 else
+                "TikTok Recap MP4 ပြီးပါပြီ။ မြန်မာ Narration နှင့် SRT ထည့်ထားပြီး မူရင်း Video အသံကို အစားထိုးထားပါတယ်။"
+            )
             await update.message.reply_text(
-                "NEXORA Recap MP4 ပြီးပါပြီ။ မြန်မာ Narration နှင့် SRT ထည့်ထားပြီး မူရင်း Video အသံကို အစားထိုးထားပါတယ်။\n"
-                f"လုံခြုံသော Download Link (၂၄ နာရီအတွင်းသာ အသုံးပြုနိုင်သည်):\n{base_url}/download/{token}\n"
-                "ဖိုင်သည် Render server storage ပေါ်တွင် ယာယီသိမ်းထားခြင်းဖြစ်ပြီး service restart/deploy လုပ်ပါက link ပျက်နိုင်ပါတယ်။ "
+                description + "\n" + "\n".join(links) + "\n"
+                "Download Link များသည် ၂၄ နာရီသာ အသုံးပြုနိုင်ပြီး Render restart/deploy လုပ်ပါက ပျက်နိုင်ပါတယ်။ "
                 "ထုတ်ဝေမီ မူပိုင်ခွင့်၊ အသုံးပြုခွင့်နှင့် Attribution ကို စစ်ဆေးပါ။"
             )
-        except SourceVideoRenderError as exc:
-            if output:
-                Path(output).unlink(missing_ok=True)
+        except (SourceVideoRenderError, RecapPartitionError) as exc:
+            for path in output_paths:
+                Path(path).unlink(missing_ok=True)
             await update.message.reply_text(str(exc))
             return
         except Exception:
-            if output:
-                Path(output).unlink(missing_ok=True)
+            for path in output_paths:
+                Path(path).unlink(missing_ok=True)
             log.exception("User source video recap render failed")
             await update.message.reply_text("MP4 ထုတ်လုပ်မှု မအောင်မြင်ပါ။ Video/Audio/SRT ဖိုင်များနှင့် Server Storage ကို ပြန်စစ်ပါ။")
             return
