@@ -66,6 +66,17 @@ class InternalDailyRecapTriggerTests(unittest.IsolatedAsyncioTestCase):
                 await bot.trigger_internal_daily_recap(request, x_nexora_daily_token=TOKEN)
         self.assertEqual(raised.exception.status_code, 409)
 
+    def test_scheduled_workflow_triggers_and_monitors_render(self):
+        from pathlib import Path
+        workflow = (
+            Path(__file__).resolve().parent / ".github" / "workflows" / "daily-auto.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("NEXORA_DAILY_RECAP_URL", workflow)
+        self.assertIn("NEXORA_DAILY_RECAP_TOKEN", workflow)
+        self.assertIn("/internal/daily-recap", workflow)
+        self.assertIn("/internal/daily-recap/status", workflow)
+        self.assertIn("timeout-minutes: 120", workflow)
+
     async def test_status_route_requires_token_and_returns_minimal_state(self):
         with patch.dict(os.environ, {"NEXORA_DAILY_RECAP_TOKEN": TOKEN}), patch.object(
             bot, "daily_recap_state", {"status": "running", "started_at": 123, "completed_at": None}
