@@ -53,6 +53,14 @@
 4. Resolve the immediate planetary crisis.
 5. Close with the film's themes: family, cooperation, sacrifice, and humanity's future.
 
+## Voice reference supplied by the user
+- Use the user's uploaded Burmese WAV as the intended reference voice for this recap.
+- Technical inspection: 16 kHz, mono, 67.2 seconds, PCM WAV; peak and RMS are within usable digital range and no clipping was detected.
+- The reference recording is not the finished narration track and must not be reused as the scene narration audio.
+- Do not commit or publish the private reference recording to this public repository. Keep it in the user's private Colab/session or approved private storage.
+- Voice generation/cloning requires a compatible inference runtime. Render Free has no GPU; do not enable paid GPU services or paid AI APIs without the user's explicit approval. If a compatible free Colab GPU is available, generate narration in separate scene/part files there, then upload those outputs to Telegram.
+- Create SRT only after final narration audio exists; align timestamps to the generated audio, not to the reference sample.
+
 ## Scene asset plan
 Create original, non-infringing visuals for each scene:
 1. Sun becoming a red giant — original astronomy-inspired illustration.
@@ -82,6 +90,6 @@ Attach the matching SRT subtitle file for timed captions. A single repeated imag
 - [ ] Human approval before publishing.
 
 ## Current blockers
-- No final Burmese narration MP3/WAV is attached to this project yet.
+- A private 67.2-second Burmese voice-reference WAV was supplied in chat; it is not stored in this public repository. Final Burmese narration MP3/WAV is not generated yet.
 - No verified licensed scene-image/video pack is attached yet.
 - Therefore this pack is a production plan and source-checked outline, NOT a completed MP4 or a claim that publishing rights have been cleared.
