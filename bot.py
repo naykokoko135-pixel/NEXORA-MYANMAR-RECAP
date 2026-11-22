@@ -956,7 +956,8 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Commons Preview renderer သည် ၂၀ မိနစ်အထိသာ ထောက်ပံ့သောကြောင့် "
                 "အတိုချုံ့ထားသော MP4 ကို Long-form ဟု မထုတ်ပါ။\\n"
                 "ကိုယ်ပိုင်/လိုင်စင်ရ မူရင်းဗီဒီယိုဖြင့် /sourcevideo ကို အသုံးပြုပါ။ "
-                "ဒီ workflow သည် ၆၀ မိနစ်အထိ Render လုပ်နိုင်ပါတယ်။"
+                "ဒီ workflow သည် MP4 တစ်ဖိုင်ကို ၆၀ မိနစ်အထိ Render လုပ်နိုင်သော်လည်း "
+                "၃ ပိုင်းခွဲပြီး အလိုအလျောက်ထုတ်ပေးသည့် စနစ်ကို မပြီးစီးသေးပါ။"
             )
             return
         await update.message.reply_text("လိုင်စင်အမျိုးအစားနှင့် ခေါင်းစဉ်ကို စစ်ပြီး licensed footage + narration + SRT + MP4 ပြင်ဆင်နေပါတယ်...")
