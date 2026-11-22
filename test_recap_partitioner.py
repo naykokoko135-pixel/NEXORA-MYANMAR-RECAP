@@ -12,7 +12,7 @@ def stamp(seconds):
 def sample_srt(total_seconds=2760):
     cues = []
     for index, start in enumerate(range(0, total_seconds, 60), 1):
-        end = min(start + 59, total_seconds)
+        end = min(start + 60, total_seconds)
         cues.extend([
             str(index),
             f"{stamp(start)} --> {stamp(end)}",
