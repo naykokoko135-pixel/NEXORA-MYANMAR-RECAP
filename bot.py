@@ -967,63 +967,79 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                     if len(rendered_paths) != 3:
                         raise RecapPartitionError("သုံးပိုင်း MP4 အပြည့်အစုံ မရရှိပါ။")
-                    now = time.time()
-                    for old_token, record in list(DOWNLOAD_LINKS.items()):
-                        if float(record.get("expires_at", 0)) <= now:
-                            Path(str(record.get("path", ""))).unlink(missing_ok=True)
-                            DOWNLOAD_LINKS.pop(old_token, None)
-                    while len(DOWNLOAD_LINKS) + len(rendered_paths) > MAX_DOWNLOAD_LINKS:
-                        oldest = min(
-                            DOWNLOAD_LINKS,
-                            key=lambda key: float(DOWNLOAD_LINKS[key].get("created_at", 0)),
-                        )
-                        old_record = DOWNLOAD_LINKS.pop(oldest)
-                        Path(str(old_record.get("path", ""))).unlink(missing_ok=True)
-                    links = []
-                    for index, rendered_path in enumerate(rendered_paths, 1):
-                        token = secrets.token_urlsafe(32)
-                        DOWNLOAD_LINKS[token] = {
-                            "path": str(rendered_path),
-                            "filename": f"nexora_{platform}_part_{index}.mp4",
-                            "created_at": now,
-                            "expires_at": now + DOWNLOAD_LINK_TTL_SECONDS,
-                        }
-                        links.append(f"Part {index}: {PUBLIC_URL.rstrip('/')}/download/{token}")
+                except Exception as exc:
+                    for rendered_path in rendered_paths:
+                        Path(rendered_path).unlink(missing_ok=True)
+                    rendered_paths = []
+                    log.exception("Automatic three-part licensed longform render failed")
+                    render_failure = str(exc)[:350]
+            elif source:
+                render_failure = "Render download link အတွက် HTTPS Public URL မသတ်မှတ်ရသေးပါ။"
+
+            if rendered_paths:
+                voice_file = BytesIO(audio_bytes)
+                voice_file.name = "nexora_recap_voiceover.mp3"
+                await update.message.reply_document(
+                    document=InputFile(voice_file, filename=voice_file.name),
+                    caption="အလိုအလျောက်ထုတ်ထားသော Recap Narration MP3 မူရင်းဖိုင်ပါ။",
+                )
+                subtitle_file = BytesIO(subtitle_bytes)
+                subtitle_file.name = "nexora_recap_subtitles.srt"
+                await update.message.reply_document(
+                    document=InputFile(subtitle_file, filename=subtitle_file.name),
+                    caption="အလိုအလျောက်ထုတ်ထားသော အချိန်ကိုက် မြန်မာ SRT မူရင်းဖိုင်ပါ။",
+                )
+                attribution = build_licensed_attribution_note(
+                    source, metadata.get("title", query), metadata.get("source", "")
+                )
+                credit_file = BytesIO(attribution.encode("utf-8-sig"))
+                credit_file.name = "nexora_footage_attribution.txt"
+                await update.message.reply_document(
+                    document=InputFile(credit_file, filename=credit_file.name),
+                    caption="အသုံးပြုထားသော CC/Public Domain footage အတွက် Attribution/လိုင်စင်မှတ်တမ်းပါ။ မထုတ်ဝေမီ ပြန်စစ်ပါ။",
+                )
+
+                now = time.time()
+                for old_token, record in list(DOWNLOAD_LINKS.items()):
+                    if float(record.get("expires_at", 0)) <= now:
+                        Path(str(record.get("path", ""))).unlink(missing_ok=True)
+                        DOWNLOAD_LINKS.pop(old_token, None)
+                while len(DOWNLOAD_LINKS) + len(rendered_paths) > MAX_DOWNLOAD_LINKS:
+                    if not DOWNLOAD_LINKS:
+                        break
+                    oldest = min(
+                        DOWNLOAD_LINKS,
+                        key=lambda key: float(DOWNLOAD_LINKS[key].get("created_at", 0)),
+                    )
+                    old_record = DOWNLOAD_LINKS.pop(oldest)
+                    Path(str(old_record.get("path", ""))).unlink(missing_ok=True)
+                links = []
+                created_tokens = []
+                for index, rendered_path in enumerate(rendered_paths, 1):
+                    token = secrets.token_urlsafe(32)
+                    created_tokens.append(token)
+                    DOWNLOAD_LINKS[token] = {
+                        "path": str(rendered_path),
+                        "filename": f"nexora_{platform}_part_{index}.mp4",
+                        "created_at": now,
+                        "expires_at": now + DOWNLOAD_LINK_TTL_SECONDS,
+                    }
+                    links.append(f"Part {index}: {PUBLIC_URL.rstrip('/')}/download/{token}")
+                try:
                     await update.message.reply_text(
                         "ပြီးပါပြီ — YouTube/Facebook အတွက် ၁၅–၂၀ မိနစ်စီ သုံးပိုင်း MP4 ထုတ်ပြီးပါပြီ။ "
                         "အပိုင်းတစ်ခုစီတွင် သီးခြား narration၊ SRT နှင့် မူရင်း licensed footage အပိုင်းမတူ ပါဝင်ပါတယ်။\n"
                         + "\n".join(links)
                         + "\nDownload Link များသည် ၂၄ နာရီသာ အသုံးပြုနိုင်ပြီး Render restart/deploy လုပ်ပါက ပျက်နိုင်ပါတယ်။"
                     )
-                    voice_file = BytesIO(audio_bytes)
-                    voice_file.name = "nexora_recap_voiceover.mp3"
-                    await update.message.reply_document(
-                        document=InputFile(voice_file, filename=voice_file.name),
-                        caption="အလိုအလျောက်ထုတ်ထားသော Recap Narration MP3 မူရင်းဖိုင်ပါ။",
-                    )
-                    subtitle_file = BytesIO(subtitle_bytes)
-                    subtitle_file.name = "nexora_recap_subtitles.srt"
-                    await update.message.reply_document(
-                        document=InputFile(subtitle_file, filename=subtitle_file.name),
-                        caption="အလိုအလျောက်ထုတ်ထားသော အချိန်ကိုက် မြန်မာ SRT မူရင်းဖိုင်ပါ။",
-                    )
-                    attribution = build_licensed_attribution_note(
-                        source, metadata.get("title", query), metadata.get("source", "")
-                    )
-                    credit_file = BytesIO(attribution.encode("utf-8-sig"))
-                    credit_file.name = "nexora_footage_attribution.txt"
-                    await update.message.reply_document(
-                        document=InputFile(credit_file, filename=credit_file.name),
-                        caption="အသုံးပြုထားသော CC/Public Domain footage အတွက် Attribution/လိုင်စင်မှတ်တမ်းပါ။ မထုတ်ဝေမီ ပြန်စစ်ပါ။",
-                    )
-                    return
-                except Exception as exc:
+                except Exception:
+                    for token in created_tokens:
+                        DOWNLOAD_LINKS.pop(token, None)
                     for rendered_path in rendered_paths:
                         Path(rendered_path).unlink(missing_ok=True)
-                    log.exception("Automatic three-part licensed longform render failed")
-                    render_failure = str(exc)[:350]
-            elif source:
-                render_failure = "Render download link အတွက် HTTPS Public URL မသတ်မှတ်ရသေးပါ။"
+                    raise
+                return
+
             voice_file = BytesIO(audio_bytes)
             voice_file.name = "nexora_recap_voiceover.mp3"
             await update.message.reply_document(
