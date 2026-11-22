@@ -62,8 +62,6 @@ from production_qa import analyze_production_package, format_production_qa_repor
 from audio_duration_qa import inspect_audio_file, evaluate_audio_duration, evaluate_audio_parts, format_audio_qa_report, format_audio_parts_qa_report, MAX_AUDIO_BYTES
 from recap_voice_pack import parse_recap_voice_request, parse_recap_voice_parts_request
 from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message, format_original_visual_fallback_notice
-from original_visual_recap import build_original_visual_cards
-
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
 from openai_script_provider import generate_burmese_recap_script, openai_script_status, AIScriptError
 from gemini_script_provider import gemini_script_status
@@ -764,45 +762,17 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             raise ValueError(f"ဒီ Platform အတွက် Narration သည် {max_duration} စက္ကန့်ထက် မကျော်ရပါ။ Script ကို အတိုချုံ့ပါ။")
         import tempfile
         if not source:
-            fallback_notice = format_original_visual_fallback_notice(
-                metadata.get("title", query), search_failed=source_search_failed
+            # Never substitute generic abstract cards for a movie recap.
+            # A recap must use verified, relevant footage supplied with reuse
+            # permission; otherwise stop before rendering and avoid misleading output.
+            await update.message.reply_text(
+                f"{metadata.get('title', query)} အတွက် ခေါင်းစဉ်နှင့် ကိုက်ညီပြီး "
+                "ပြန်လည်အသုံးပြုခွင့်ကို အတည်ပြုနိုင်သော မူရင်းဗီဒီယို မရရှိပါ။\n"
+                "မသက်ဆိုင်သော Abstract ပုံများဖြင့် Recap MP4 ကို အစားထိုးမထုတ်တော့ပါ။\n\n"
+                "မူရင်းဗီဒီယိုကို အသုံးပြုခွင့်ရှိပါက ဖိုင်ကို ပေးပို့ပြီး "
+                "မူရင်းဗီဒီယိုအပိုင်းများကို Scene အလိုက် ဖြတ်တောက်တည်းဖြတ်နိုင်သော "
+                "Source-Video workflow ဖြင့် ဆက်လုပ်ရန် လိုအပ်ပါသည်။ ယခုအကြိမ် MP4 မထုတ်ထားပါ။"
             )
-            await update.message.reply_text(fallback_notice)
-            with tempfile.TemporaryDirectory(prefix="nexora_original_recap_") as temp:
-                output = os.path.join(temp, "nexora_recap_original_visuals.mp4")
-                cards = await asyncio.to_thread(build_original_visual_cards, metadata.get("title", query), 8)
-                await asyncio.to_thread(
-                    render_slideshow, cards, ("nexora_narration.mp3", audio), output,
-                    platform, ("captions.srt", srt_text.encode("utf-8-sig"))
-                )
-                with open(output, "rb") as video_file:
-                    await update.message.reply_video(
-                        video=InputFile(video_file, filename="nexora_recap_original_visuals.mp4"),
-                        supports_streaming=True,
-                        caption=(
-                            f"NEXORA {platform.upper()} — Original Visual Recap\n"
-                            f"ခေါင်းစဉ်: {metadata.get('title', query)} | နိုင်ငံ: {', '.join(countries)}\n"
-                            f"ဇာတ်လမ်းရင်းမြစ်: {plot_source}\n"
-                            "Visuals: NEXORA မှ ကိုယ်တိုင်ဖန်တီးထားသော Abstract Graphics ဖြစ်ပြီး "
-                            "မူရင်း Anime/Film ဇာတ်ဝင်ခန်းများ မဟုတ်ပါ။\n"
-                            "မြန်မာ Narration နှင့် SRT ကို MP4 ထဲတွင် ထည့်သွင်းထားသည်။"
-                        ),
-                        read_timeout=900,
-                        write_timeout=900,
-                    )
-                audio_bytes, subtitle_bytes = build_recap_video_sidecars(audio, srt_text)
-                voice_file = BytesIO(audio_bytes)
-                voice_file.name = "nexora_recap_voiceover.mp3"
-                await update.message.reply_document(
-                    document=InputFile(voice_file, filename=voice_file.name),
-                    caption="MP4 တွင် အသုံးပြုထားသော မြန်မာ Narration MP3 မူရင်းဖိုင်ပါ။",
-                )
-                subtitle_file = BytesIO(subtitle_bytes)
-                subtitle_file.name = "nexora_recap_subtitles.srt"
-                await update.message.reply_document(
-                    document=InputFile(subtitle_file, filename=subtitle_file.name),
-                    caption="မြန်မာ SRT သီးခြားဖိုင်ပါ။",
-                )
             return
         await update.message.reply_text("လိုင်စင်အမျိုးအစားနှင့် ခေါင်းစဉ်ကို စစ်ပြီး licensed footage + narration + SRT + MP4 ပြင်ဆင်နေပါတယ်...")
         with tempfile.TemporaryDirectory(prefix="nexora_recap_video_") as temp:
