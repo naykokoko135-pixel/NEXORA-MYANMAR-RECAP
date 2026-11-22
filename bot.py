@@ -1557,7 +1557,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 output = os.path.join(temp, "nexora_source_recap.mp4")
                 await asyncio.to_thread(
                     render_user_source_video,
-                    session["source_video"],
+                    session.get("source_video") or session.get("source_video_path"),
                     session["narration_audio"],
                     session["subtitles"],
                     output,
@@ -1583,7 +1583,24 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("MP4 ထုတ်လုပ်မှု မအောင်မြင်ပါ။ Video/Audio/SRT ဖိုင်များကို ပြန်စစ်ပါ။")
             return
         finally:
+            downloaded_source = session.get("source_video_path")
+            if downloaded_source:
+                try:
+                    Path(downloaded_source).unlink(missing_ok=True)
+                except OSError:
+                    log.warning("Could not remove temporary licensed source video")
             context.user_data.pop("video_render", None)
+        metadata = session.get("source_metadata") or {}
+        if metadata:
+            attribution_lines = [
+                "Source attribution (လိုင်စင်စည်းကမ်းအရ ထည့်သွင်းရန်):",
+                f"Title: {str(metadata.get('title', ''))[:250]}",
+                f"License: {str(metadata.get('license', ''))[:120]}",
+                f"Creator: {str(metadata.get('artist', 'Unknown'))[:200]}",
+                f"Attribution: {str(metadata.get('attribution', ''))[:350]}",
+                f"Source: {str(metadata.get('source_page', ''))[:500]}",
+            ]
+            await update.message.reply_text("\\n".join(attribution_lines), disable_web_page_preview=True)
         return
     platform = context.user_data.get("platform", "youtube")
     context.user_data["video_render"] = {
