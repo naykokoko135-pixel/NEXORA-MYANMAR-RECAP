@@ -970,7 +970,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     video=InputFile(video_file, filename="nexora_recap_preview.mp4"),
                     supports_streaming=True,
                     caption=(
-                        f"NEXORA {platform.upper()} — Recap Video (အများဆုံး {3 if platform == 'tiktok' else 15 if platform == 'facebook' else 20} မိနစ်)\n"
+                        f"NEXORA {platform.upper()} — Recap Preview (ကြာချိန် ၄–၇ မိနစ်)\n"
                         f"ခေါင်းစဉ်: {metadata.get('title', query)} | နိုင်ငံ: {', '.join(countries)}\n"
                         f"ဇာတ်လမ်းရင်းမြစ်: {plot_source}\n"
                         f"Footage: {source.get('source_page', '')}\n"
