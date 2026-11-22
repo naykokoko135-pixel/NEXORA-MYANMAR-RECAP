@@ -97,7 +97,7 @@ def render_user_source_video(
                 capture_output=True, text=True, timeout=30, check=False,
             )
             probe_text = probe.stderr or probe.stdout
-            match = re.search(r"Duration: (\d+):(\d+):(\d+(?:\\.\d+)?)", probe_text)
+            match = re.search(r"Duration: (\d+):(\d+):(\d+(?:\.\d+)?)", probe_text)
             if not match:
                 raise SourceVideoRenderError("မူရင်း Video ကြာချိန်ကို အတည်မပြုနိုင်ပါ။")
             source_duration = int(match.group(1)) * 3600 + int(match.group(2)) * 60 + float(match.group(3))
