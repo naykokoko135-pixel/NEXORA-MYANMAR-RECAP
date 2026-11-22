@@ -100,6 +100,7 @@ PUBLIC_URL = os.getenv("RENDER_EXTERNAL_URL")
 telegram_app: Application | None = None
 comment_autoreply_task: asyncio.Task | None = None
 daily_recap_task: asyncio.Task | None = None
+daily_recap_state: dict[str, object] = {"status": "idle"}
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3404,6 +3405,7 @@ class _DailyRecapTelegramProxy:
 
 async def _run_scheduled_daily_recap(chat_id: int):
     global daily_recap_task
+    daily_recap_state.update(status="running", chat_id=chat_id, started_at=time.time(), completed_at=None)
     try:
         if telegram_app is None:
             raise RuntimeError("Telegram bot is not ready")
@@ -3415,7 +3417,12 @@ async def _run_scheduled_daily_recap(chat_id: int):
         )
         context = SimpleNamespace(args=["all"], user_data={})
         await dailyrecap_cmd(update, context)
-    except Exception:
+        daily_recap_state.update(status="completed", completed_at=time.time())
+    except asyncio.CancelledError:
+        daily_recap_state.update(status="failed", completed_at=time.time(), error="service_shutdown")
+        raise
+    except Exception as exc:
+        daily_recap_state.update(status="failed", completed_at=time.time(), error=type(exc).__name__)
         log.exception("Scheduled daily recap execution failed")
         if telegram_app is not None:
             try:
@@ -3429,6 +3436,11 @@ async def _run_scheduled_daily_recap(chat_id: int):
         daily_recap_task = None
 
 
+def _daily_trigger_authorized(token: str) -> bool:
+    expected = os.getenv("NEXORA_DAILY_RECAP_TOKEN", "").strip()
+    return len(expected) >= 32 and bool(token) and hmac.compare_digest(token, expected)
+
+
 @web_app.post("/internal/daily-recap", status_code=202)
 async def trigger_internal_daily_recap(
     request: Request,
@@ -3439,7 +3451,7 @@ async def trigger_internal_daily_recap(
     expected = os.getenv("NEXORA_DAILY_RECAP_TOKEN", "").strip()
     if len(expected) < 32:
         raise HTTPException(status_code=503, detail="Daily recap trigger token is not configured")
-    if not x_nexora_daily_token or not hmac.compare_digest(x_nexora_daily_token, expected):
+    if not _daily_trigger_authorized(x_nexora_daily_token):
         raise HTTPException(status_code=401, detail="Unauthorized")
     if telegram_app is None:
         raise HTTPException(status_code=503, detail="Telegram bot is not ready")
@@ -3453,8 +3465,24 @@ async def trigger_internal_daily_recap(
         raise HTTPException(status_code=400, detail="A valid Telegram chat_id is required")
     if daily_recap_task is not None and not daily_recap_task.done():
         raise HTTPException(status_code=409, detail="A daily recap run is already active")
+    daily_recap_state.update(status="queued", chat_id=int(chat_id_text), queued_at=time.time())
     daily_recap_task = asyncio.create_task(_run_scheduled_daily_recap(int(chat_id_text)))
     return {"status": "accepted", "message": "Daily recap job queued"}
+
+
+@web_app.get("/internal/daily-recap/status")
+async def internal_daily_recap_status(
+    x_nexora_daily_token: str = Header(default=""),
+):
+    """Expose only minimal job state to the authenticated GitHub Actions keepalive."""
+    if not _daily_trigger_authorized(x_nexora_daily_token):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return {
+        "status": daily_recap_state.get("status", "idle"),
+        "started_at": daily_recap_state.get("started_at"),
+        "completed_at": daily_recap_state.get("completed_at"),
+        "error": daily_recap_state.get("error"),
+    }
 
 
 @web_app.get("/download/{token}")
