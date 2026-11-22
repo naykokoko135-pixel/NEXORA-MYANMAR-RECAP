@@ -1557,7 +1557,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 output = os.path.join(temp, "nexora_source_recap.mp4")
                 await asyncio.to_thread(
                     render_user_source_video,
-                    session["source_video"],
+                    session.get("source_video") or session.get("source_video_path"),
                     session["narration_audio"],
                     session["subtitles"],
                     output,
