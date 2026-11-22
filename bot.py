@@ -41,6 +41,7 @@ from automatic_longform_pipeline import render_licensed_longform_parts
 from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
 from youtube_cc_finder import search_youtube_cc_videos, YouTubeCCSearchError
+from internet_archive_video_finder import search_internet_archive_licensed_video, InternetArchiveSearchError
 from youtube_movie_recap_research import search_youtube_movie_recaps, format_youtube_movie_recaps, YouTubeRecapResearchError
 from recap_studio import build_original_recap_notes
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, download_licensed_source, LicensedClipError
@@ -921,7 +922,23 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         fallback_source_errors = []
         if not source:
             # Try independent discovery providers when Commons has no exact reusable match.
-            # Europeana and YouTube CC results are discovery leads only; neither is auto-downloaded.
+            # Internet Archive, Europeana and YouTube CC results are leads only; none is auto-downloaded.
+            try:
+                archive_leads = await asyncio.to_thread(
+                    search_internet_archive_licensed_video, query, 4
+                )
+                for item in archive_leads[:3]:
+                    files = ", ".join(
+                        f"{entry.get('name')} ({round((entry.get('duration_seconds') or 0) / 60, 1)} min)"
+                        for entry in item.get("files", [])[:2]
+                    )
+                    fallback_source_notes.append(
+                        f"Internet Archive: {item.get('title', 'Untitled')} | {item.get('license', 'rights unknown')} | "
+                        f"{item.get('source_page', '')} | Files: {files} "
+                        "(Uploader license metadata; copyright ကို လူကိုယ်တိုင်အတည်ပြုရန်၊ auto-download ပိတ်ထားသည်)"
+                    )
+            except Exception as exc:
+                fallback_source_errors.append("Internet Archive: " + str(exc)[:140])
             try:
                 europeana_leads = await asyncio.to_thread(
                     search_europeana_licensed_video, query, 4, search_titles
