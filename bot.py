@@ -3269,7 +3269,7 @@ async def on_telegram_error(update: object, context: ContextTypes.DEFAULT_TYPE):
 
 @asynccontextmanager
 async def lifespan(web_app: FastAPI):
-    global telegram_app, comment_autoreply_task
+    global telegram_app, comment_autoreply_task, daily_recap_task
     if not TOKEN:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is missing")
     if not WEBHOOK_SECRET:
@@ -3367,6 +3367,13 @@ async def lifespan(web_app: FastAPI):
             except asyncio.CancelledError:
                 pass
             comment_autoreply_task = None
+        if daily_recap_task is not None:
+            daily_recap_task.cancel()
+            try:
+                await daily_recap_task
+            except asyncio.CancelledError:
+                pass
+            daily_recap_task = None
         await telegram_app.stop()
         await telegram_app.shutdown()
         telegram_app = None
