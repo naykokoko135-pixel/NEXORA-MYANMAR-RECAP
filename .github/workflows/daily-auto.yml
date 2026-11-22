@@ -30,3 +30,19 @@ jobs:
           YOUTUBE_CHANNEL_URL: ${{ vars.YOUTUBE_CHANNEL_URL }}
           FACEBOOK_PAGE_URL: ${{ vars.FACEBOOK_PAGE_URL }}
         run: python daily_auto.py
+      - name: Trigger Render daily recap production
+        env:
+          NEXORA_DAILY_RECAP_URL: ${{ vars.NEXORA_DAILY_RECAP_URL }}
+          NEXORA_DAILY_RECAP_TOKEN: ${{ secrets.NEXORA_DAILY_RECAP_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$NEXORA_DAILY_RECAP_URL" ] || [ -z "$NEXORA_DAILY_RECAP_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "::warning::Daily research was delivered, but Render production trigger is not configured. Set the NEXORA_DAILY_RECAP_URL repository variable and NEXORA_DAILY_RECAP_TOKEN / TELEGRAM_CHAT_ID secrets."
+            exit 0
+          fi
+          BASE_URL="${NEXORA_DAILY_RECAP_URL%/}"
+          curl --fail-with-body --silent --show-error --max-time 30 \
+            --request POST "$BASE_URL/internal/daily-recap" \
+            --header "X-NEXORA-Daily-Token: $NEXORA_DAILY_RECAP_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data "{\\"chat_id\\":\\"$TELEGRAM_CHAT_ID\\"}"
