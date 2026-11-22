@@ -120,8 +120,6 @@ class OriginalVisualRecapTests(unittest.TestCase):
         self.assertEqual(len(cards), 1)
         self.assertTrue(cards[0][1].startswith(b"\x89PNG"))
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class PlatformRecapDurationTests(unittest.TestCase):
@@ -144,3 +142,6 @@ class PlatformRecapDurationTests(unittest.TestCase):
         for value in (None, 0, -1, float("nan"), float("inf"), True):
             with self.subTest(value=value):
                 self.assertFalse(validate_platform_recap_duration("youtube", value)["ok"])
+
+if __name__ == "__main__":
+    unittest.main()
