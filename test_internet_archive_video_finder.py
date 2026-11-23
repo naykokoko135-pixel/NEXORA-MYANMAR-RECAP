@@ -45,6 +45,27 @@ class InternetArchiveVideoFinderTests(unittest.TestCase):
         self.assertFalse(result[0]["reuse_ready"])
         self.assertIn("uploader", result[0]["notice"].lower())
 
+    def test_cc0_and_public_domain_mark_are_auto_render_eligible(self):
+        for license_uri in (
+            "https://creativecommons.org/publicdomain/zero/1.0/",
+            "https://creativecommons.org/publicdomain/mark/1.0/",
+        ):
+            search = {"response": {"docs": [{"identifier": "public-film-123", "title": "Public Film"}]}}
+            metadata = {
+                "metadata": {
+                    "title": "Public Film", "mediatype": "movies",
+                    "licenseurl": license_uri, "creator": "Archive uploader",
+                },
+                "files": [
+                    {"name": "public-film.mp4", "source": "original", "format": "MPEG4", "size": "1000000", "length": "3000"},
+                ],
+            }
+            with patch("internet_archive_video_finder.urllib.request.urlopen",
+                       side_effect=[_response(search), _response(metadata)]):
+                result = search_internet_archive_licensed_video("Public Film")
+            self.assertEqual(len(result), 1)
+            self.assertTrue(result[0]["download_enabled"])
+
     def test_rejects_unlicensed_or_non_reusable_item(self):
         search = {"response": {"docs": [{"identifier": "restricted-123", "title": "Restricted Film"}]}}
         metadata = {
