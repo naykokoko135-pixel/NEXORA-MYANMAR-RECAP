@@ -71,6 +71,20 @@ class InternetArchiveVideoFinderTests(unittest.TestCase):
                    side_effect=[_response(search), _response(metadata)]):
             self.assertEqual(search_internet_archive_licensed_video("Open Film"), [])
 
+    def test_explicit_year_must_match_archive_record(self):
+        search = {"response": {"docs": [{"identifier": "open-film-2020", "title": "Open Film (2020)"}]}}
+        metadata = {
+            "metadata": {
+                "title": "Open Film (2020)", "mediatype": "movies",
+                "licenseurl": "https://creativecommons.org/licenses/by/4.0/",
+                "year": "2020",
+            },
+            "files": [{"name": "film.mp4", "source": "original", "size": "100"}],
+        }
+        with patch("internet_archive_video_finder.urllib.request.urlopen",
+                   side_effect=[_response(search), _response(metadata)]):
+            self.assertEqual(search_internet_archive_licensed_video("Open Film (2021)"), [])
+
     def test_skips_items_without_original_video_file_or_with_oversize_file(self):
         search = {"response": {"docs": [{"identifier": "large-video-123", "title": "Open Film"}]}}
         metadata = {
