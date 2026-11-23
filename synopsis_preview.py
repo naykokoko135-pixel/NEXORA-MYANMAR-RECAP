@@ -4,9 +4,12 @@ A series synopsis is not an episode plot. This fallback is deliberately limited
 to a short overview and never claims to be a full season/episode recap.
 """
 import json
+import os
 import re
-from urllib.parse import urlencode
+import uuid
 from html import unescape
+from urllib.error import HTTPError
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from openai_script_provider import generate_burmese_recap_script, AIScriptError
@@ -19,9 +22,16 @@ from gemini_script_provider import (
 GOOGLE_TRANSLATE_URL = "https://translate.googleapis.com/translate_a/single"
 TRANSLATION_TIMEOUT_SECONDS = 20
 MAX_TRANSLATION_CHARS = 3500
+MYMEMORY_MAX_BYTES = 450
+
+
+def _read_json(request: Request):
+    with urlopen(request, timeout=TRANSLATION_TIMEOUT_SECONDS) as response:
+        return json.loads(response.read(1_000_000).decode("utf-8"))
 
 
 def _translate_google_chunk(chunk: str) -> str:
+    """Unofficial, keyless Google endpoint; it can throttle or change."""
     params = urlencode({
         "client": "gtx",
         "sl": "auto",
@@ -33,8 +43,7 @@ def _translate_google_chunk(chunk: str) -> str:
         GOOGLE_TRANSLATE_URL + "?" + params,
         headers={"User-Agent": "NEXORA-Myanmar-Recap/1.0"},
     )
-    with urlopen(request, timeout=TRANSLATION_TIMEOUT_SECONDS) as response:
-        payload = json.loads(response.read(1_000_000).decode("utf-8"))
+    payload = _read_json(request)
     segments = payload[0] if isinstance(payload, list) and payload else []
     return "".join(
         str(segment[0]) for segment in segments
@@ -42,22 +51,151 @@ def _translate_google_chunk(chunk: str) -> str:
     ).strip()
 
 
+def _split_utf8_chunks(text: str, max_bytes: int = MYMEMORY_MAX_BYTES):
+    """Split on word boundaries without exceeding a provider's byte limit."""
+    words = str(text or "").split()
+    chunks = []
+    current = ""
+
+    for word in words:
+        if len(word.encode("utf-8")) > max_bytes:
+            if current:
+                chunks.append(current)
+                current = ""
+            piece = ""
+            for char in word:
+                if piece and len((piece + char).encode("utf-8")) > max_bytes:
+                    chunks.append(piece)
+                    piece = ""
+                piece += char
+            if piece:
+                chunks.append(piece)
+            continue
+
+        candidate = f"{current} {word}".strip()
+        if current and len(candidate.encode("utf-8")) > max_bytes:
+            chunks.append(current)
+            current = word
+        else:
+            current = candidate
+
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def _translate_mymemory_chunk(chunk: str) -> str:
-    """Secondary no-key translation provider; subject to its public free quota."""
-    params = urlencode({"q": chunk, "langpair": "en|my"})
+    """Keyless secondary provider; its anonymous daily quota is limited."""
+    email = os.getenv("MYMEMORY_EMAIL", "").strip()
+    translated_parts = []
+    for part in _split_utf8_chunks(chunk):
+        query = {"q": part, "langpair": "en|my", "mt": "1"}
+        if email:
+            # MyMemory documents a higher daily quota when a contact email is supplied.
+            query["de"] = email
+        request = Request(
+            "https://api.mymemory.translated.net/get?" + urlencode(query),
+            headers={"User-Agent": "NEXORA-Myanmar-Recap/1.0"},
+        )
+        payload = _read_json(request)
+        status = str(payload.get("responseStatus", "")) if isinstance(payload, dict) else ""
+        if status != "200":
+            raise ValueError("MyMemory unavailable")
+        translated = unescape(
+            str((payload.get("responseData") or {}).get("translatedText") or "")
+        ).strip()
+        if not translated or translated.casefold() == part.casefold():
+            raise ValueError("MyMemory returned no translation")
+        translated_parts.append(translated)
+    return " ".join(translated_parts).strip()
+
+
+def _translate_libretranslate_chunk(chunk: str) -> str:
+    """Optional self-hosted or owner-configured LibreTranslate endpoint."""
+    base_url = os.getenv("NEXORA_LIBRETRANSLATE_URL", "").strip().rstrip("/")
+    if not base_url:
+        raise RuntimeError("LibreTranslate is not configured")
+    payload = {"q": chunk, "source": "en", "target": "my", "format": "text"}
+    api_key = os.getenv("NEXORA_LIBRETRANSLATE_API_KEY", "").strip()
+    if api_key:
+        payload["api_key"] = api_key
     request = Request(
-        "https://api.mymemory.translated.net/get?" + params,
-        headers={"User-Agent": "NEXORA-Myanmar-Recap/1.0"},
+        base_url + "/translate",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "NEXORA-Myanmar-Recap/1.0",
+        },
+        method="POST",
     )
-    with urlopen(request, timeout=TRANSLATION_TIMEOUT_SECONDS) as response:
-        payload = json.loads(response.read(1_000_000).decode("utf-8"))
-    status = str(payload.get("responseStatus", "")) if isinstance(payload, dict) else ""
-    if status != "200":
-        raise ValueError("MyMemory translation unavailable")
-    translated = unescape(str((payload.get("responseData") or {}).get("translatedText") or "")).strip()
-    if not translated or translated.casefold() == chunk.casefold():
-        raise ValueError("MyMemory returned no translated text")
-    return translated
+    result = _read_json(request)
+    translated = str((result or {}).get("translatedText") or "").strip()
+    if not translated:
+        raise ValueError("LibreTranslate returned no text")
+    return unescape(translated)
+
+
+def _translate_azure_chunk(chunk: str) -> str:
+    """Optional Microsoft Translator F0/free-tier integration; key stays server-side."""
+    key = os.getenv("AZURE_TRANSLATOR_KEY", "").strip()
+    if not key:
+        raise RuntimeError("Azure Translator is not configured")
+    region = os.getenv("AZURE_TRANSLATOR_REGION", "").strip()
+    url = "https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=en&to=my"
+    headers = {
+        "Ocp-Apim-Subscription-Key": key,
+        "Content-Type": "application/json; charset=UTF-8",
+        "X-ClientTraceId": str(uuid.uuid4()),
+        "User-Agent": "NEXORA-Myanmar-Recap/1.0",
+    }
+    if region:
+        headers["Ocp-Apim-Subscription-Region"] = region
+    request = Request(
+        url,
+        data=json.dumps([{"text": chunk}]).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    result = _read_json(request)
+    try:
+        translated = str(result[0]["translations"][0]["text"]).strip()
+    except (TypeError, KeyError, IndexError):
+        translated = ""
+    if not translated:
+        raise ValueError("Azure Translator returned no text")
+    return unescape(translated)
+
+
+def _translate_google_cloud_chunk(chunk: str) -> str:
+    """Optional Google Cloud Translation integration; billing/key are user-managed."""
+    key = os.getenv("GOOGLE_CLOUD_TRANSLATE_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError("Google Cloud Translation is not configured")
+    url = "https://translation.googleapis.com/language/translate/v2?" + urlencode({"key": key})
+    request = Request(
+        url,
+        data=json.dumps({
+            "q": [chunk],
+            "source": "en",
+            "target": "my",
+            "format": "text",
+        }).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "NEXORA-Myanmar-Recap/1.0",
+        },
+        method="POST",
+    )
+    result = _read_json(request)
+    try:
+        translated = str(result["data"]["translations"][0]["translatedText"]).strip()
+    except (TypeError, KeyError, IndexError):
+        translated = ""
+    if not translated:
+        raise ValueError("Google Cloud Translation returned no text")
+    return unescape(translated)
 
 
 def _has_myanmar_text(value: str) -> bool:
@@ -65,52 +203,80 @@ def _has_myanmar_text(value: str) -> bool:
     if not text:
         return False
     myanmar_chars = sum(1 for char in text if "\u1000" <= char <= "\u109f")
-    # Reject empty/English-only provider responses before accepting that provider.
     return myanmar_chars >= max(1, int(len(text) * 0.12))
 
 
-def _translate_synopsis_to_burmese(synopsis: str) -> str:
-    """Translate a public catalogue synopsis using two best-effort free providers.
+def _split_translation_chunks(text: str, max_chars: int = 3000):
+    chunks = []
+    remaining = text
+    while remaining:
+        if len(remaining) <= max_chars:
+            chunks.append(remaining)
+            break
+        split_at = max(
+            remaining.rfind(". ", 0, max_chars),
+            remaining.rfind("! ", 0, max_chars),
+            remaining.rfind("? ", 0, max_chars),
+            remaining.rfind(" ", 0, max_chars),
+        )
+        if split_at < 300:
+            split_at = max_chars
+        chunks.append(remaining[:split_at].strip())
+        remaining = remaining[split_at:].strip()
+    return chunks
 
-    Google Translate's public no-key endpoint is tried first. MyMemory is a
-    secondary provider with its own public quota. Empty, English-only, or
-    otherwise unusable Google responses also trigger MyMemory. Neither provider
-    is guaranteed; callers fail closed if neither returns Burmese text.
-    """
+
+def _provider_error_label(error: Exception) -> str:
+    """Return a safe diagnostic label without URLs, request bodies, or secrets."""
+    if isinstance(error, HTTPError):
+        return f"HTTP {error.code}"
+    return type(error).__name__
+
+
+def _configured_translation_providers():
+    providers = [
+        ("Google Translate (keyless)", _translate_google_chunk),
+        ("MyMemory (keyless)", _translate_mymemory_chunk),
+    ]
+    if os.getenv("NEXORA_LIBRETRANSLATE_URL", "").strip():
+        providers.append(("LibreTranslate (configured endpoint)", _translate_libretranslate_chunk))
+    if os.getenv("AZURE_TRANSLATOR_KEY", "").strip():
+        providers.append(("Microsoft Translator (configured key)", _translate_azure_chunk))
+    if os.getenv("GOOGLE_CLOUD_TRANSLATE_API_KEY", "").strip():
+        providers.append(("Google Cloud Translation (configured key)", _translate_google_cloud_chunk))
+    return providers
+
+
+def _translate_synopsis_to_burmese(synopsis: str) -> str:
+    """Try independent keyless and optional configured providers; fail closed."""
     text = " ".join(str(synopsis or "").split()).strip()
     if not text or len(text) > MAX_TRANSLATION_CHARS:
         raise AIScriptError("Synopsis ဘာသာပြန်ရန် စာသားအရွယ်အစား မမှန်ကန်ပါ။")
 
-    chunks = []
-    remaining = text
-    while remaining:
-        if len(remaining) <= 3500:
-            chunks.append(remaining)
-            break
-        split_at = max(remaining.rfind(". ", 0, 3500), remaining.rfind("! ", 0, 3500),
-                       remaining.rfind("? ", 0, 3500), remaining.rfind(" ", 0, 3500))
-        if split_at < 500:
-            split_at = 3500
-        chunks.append(remaining[:split_at].strip())
-        remaining = remaining[split_at:].strip()
-
     translated_chunks = []
-    for chunk in chunks:
+    provider_failures = {}
+    providers = _configured_translation_providers()
+    for chunk in _split_translation_chunks(text):
         translated = ""
-        for provider in (_translate_google_chunk, _translate_mymemory_chunk):
+        for name, provider in providers:
             try:
                 candidate = provider(chunk)
                 if _has_myanmar_text(candidate):
                     translated = candidate
                     break
-            except Exception:
-                # A provider outage, quota response, malformed payload, or timeout
-                # must not prevent trying the next independent free provider.
+                provider_failures[name] = "non-Burmese/empty response"
+            except Exception as error:
+                provider_failures[name] = _provider_error_label(error)
                 continue
         if not translated:
+            attempted = ", ".join(
+                f"{name}: {provider_failures.get(name, 'not successful')}"
+                for name, _ in providers
+            )
             raise AIScriptError(
-                "Google Translate နှင့် MyMemory အခမဲ့ဘာသာပြန်ရင်းမြစ်များမှ "
-                "အသုံးပြုနိုင်သော မြန်မာစာ မရရှိပါ။ ဇာတ်ကွက်ကို မခန့်မှန်းဘဲ ရပ်ထားပါတယ်။"
+                "ဘာသာပြန်ရင်းမြစ်အားလုံးမှ အသုံးပြုနိုင်သော မြန်မာစာ မရရှိပါ။ "
+                "ဇာတ်ကွက်ကို မခန့်မှန်းဘဲ ရပ်ထားပါတယ်။ "
+                f"စစ်ဆေးမှု: {attempted}"
             )
         translated_chunks.append(translated)
 
@@ -163,8 +329,6 @@ def generate_burmese_synopsis_preview(topic: str, synopsis: str, source_url: str
     except AIScriptError as openai_error:
         error_text = str(openai_error)
         if "Free-only mode" in error_text:
-            # No paid AI and no configured translation model: use a free,
-            # bounded translation path. It remains explicitly synopsis-only.
             script = _build_free_synopsis_preview(topic, synopsis)
         elif "Limit/Quota" in error_text:
             if not gemini_script_status()["configured"]:

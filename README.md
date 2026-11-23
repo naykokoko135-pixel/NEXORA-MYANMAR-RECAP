@@ -31,6 +31,20 @@ To enable it, the account owner/parent must create and manage an OpenAI API proj
 
 When `GEMINI_API_KEY` is configured in Render, Gemini is used as a fallback only when the OpenAI request returns a quota/limit error. Other OpenAI errors do not trigger fallback, and the bot does not retry a failed request. `/status` reports whether each provider is configured without exposing keys. Keep both keys private. API usage may incur charges; review each provider's current terms and billing controls before enabling.
 
+## Burmese synopsis translation fallback
+
+When free-only synopsis preview translation is needed, NEXORA tries these providers in order:
+
+1. Google Translate's unofficial no-key endpoint (best-effort; it can throttle or change).
+2. MyMemory's no-key EN→MY API. Requests are split to stay below its documented 500-byte input limit. Set `MYMEMORY_EMAIL` in Render Environment only if you want to provide a contact email for the provider's higher published daily quota; it is optional and is not a guarantee of availability.
+3. LibreTranslate, only when `NEXORA_LIBRETRANSLATE_URL` is configured. This should be an endpoint you trust or self-host. Set `NEXORA_LIBRETRANSLATE_API_KEY` only if that endpoint requires it. The hosted LibreTranslate service may require a paid key; self-hosting is the free/open-source route.
+4. Microsoft Translator, only when `AZURE_TRANSLATOR_KEY` is configured. Set `AZURE_TRANSLATOR_REGION` when required by the Azure resource. Microsoft offers an F0 free tier subject to its current eligibility, region, and quota terms; it is not an unlimited anonymous API.
+5. Google Cloud Translation, only when `GOOGLE_CLOUD_TRANSLATE_API_KEY` is configured. This requires a Google Cloud project and billing configuration; any free monthly allowance is subject to current Google Cloud terms and can incur charges after the allowance.
+
+All keys and endpoint settings belong in Render Environment, never in GitHub source, Telegram messages, or ChatGPT. Optional providers are skipped unless configured. NEXORA checks that each provider actually returns Myanmar-script text before accepting it, records safe provider/error-class diagnostics without exposing secrets, and fails closed if every provider fails. It does not fabricate plot facts. A successful translation still creates only a short catalogue-synopsis preview, not an episode-by-episode or 46–60 minute full recap.
+
+Public Lingva mirrors and random public translation proxies are intentionally not enabled as defaults: they are unofficial, unstable, and would send synopsis text to an unverified third party. Apertium is not enabled as an English→Burmese fallback because that language pair is not established by the available provider documentation.
+
 TMDB movie research uses the existing `TMDB_API_READ_ACCESS_TOKEN` Render variable. The token must be created by the account owner in TMDB API settings and stored only in Render Environment. TMDB attribution is required; see https://developer.themoviedb.org/docs/faq.
 
 ## Mobile web command console
