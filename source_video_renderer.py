@@ -38,7 +38,7 @@ def render_user_source_video(
     output_path: str | Path,
     platform: str = "youtube",
     source_start_seconds: float = 0.0,
-    require_source_coverage: bool = False,
+    require_source_coverage: bool = True,
     expected_duration_seconds: float | None = None,
 ) -> Path:
     """Use only the exact uploaded video; loop visuals if needed and replace source audio."""
@@ -91,22 +91,20 @@ def render_user_source_video(
             render_video_path.write_bytes(video_data)
         audio_path.write_bytes(audio_data)
         srt_path.write_bytes(srt_data)
-        if require_source_coverage:
-            probe = subprocess.run(
-                [ffmpeg, "-hide_banner", "-i", str(render_video_path)],
-                capture_output=True, text=True, timeout=30, check=False,
-            )
-            probe_text = probe.stderr or probe.stdout
-            match = re.search(r"Duration: (\d+):(\d+):(\d+(?:\.\d+)?)", probe_text)
-            if not match:
-                raise SourceVideoRenderError("မူရင်း Video ကြာချိန်ကို အတည်မပြုနိုင်ပါ။")
-            source_duration = int(match.group(1)) * 3600 + int(match.group(2)) * 60 + float(match.group(3))
-            required_end = float(source_start_seconds) + float(expected_duration_seconds or duration)
-            if source_start_seconds < 0 or source_duration + 0.5 < required_end:
-                raise SourceVideoRenderError("မူရင်း Video သည် အပိုင်းသုံးပိုင်းလုံးအတွက် လုံလောက်သော ကြာချိန်မရှိပါ။ ထပ်ခါတလဲလဲ footage မသုံးဘဲ ရပ်ထားပါတယ်။")
-            video_input = ["-ss", f"{source_start_seconds:.3f}", "-i", str(render_video_path)]
-        else:
-            video_input = ["-stream_loop", "-1", "-i", str(render_video_path)]
+        # Use only genuine source-video frames; never loop or freeze a short clip to fill narration.
+        probe = subprocess.run(
+            [ffmpeg, "-hide_banner", "-i", str(render_video_path)],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+        probe_text = probe.stderr or probe.stdout
+        match = re.search(r"Duration: (\d+):(\d+):(\d+(?:\.\d+)?)", probe_text)
+        if "Video:" not in probe_text or not match:
+            raise SourceVideoRenderError("မူရင်းဖိုင်သည် ဖတ်ရှုနိုင်သော Video Footage မဟုတ်ပါ။ Still Image ကို MP4 အဖြစ် မပြောင်းပါ။")
+        source_duration = int(match.group(1)) * 3600 + int(match.group(2)) * 60 + float(match.group(3))
+        required_end = float(source_start_seconds) + float(expected_duration_seconds or duration)
+        if source_start_seconds < 0 or source_duration + 0.5 < required_end:
+            raise SourceVideoRenderError("မူရင်း Video သည် Narration/SRT အတွက် လုံလောက်သော ကြာချိန်မရှိပါ။ Footage ကို loop မလုပ်ဘဲ MP4 ထုတ်မှု ရပ်ထားပါတယ်။ ပိုရှည်သော Video လိုအပ်ပါတယ်။")
+        video_input = ["-ss", f"{source_start_seconds:.3f}", "-i", str(render_video_path)] if source_start_seconds else ["-i", str(render_video_path)]
         command = [
             ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
             *video_input,
