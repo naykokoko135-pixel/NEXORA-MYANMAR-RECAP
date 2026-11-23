@@ -273,5 +273,57 @@ class RecapMetadataResolverTests(unittest.TestCase):
         tmdb.assert_not_called()
         anime.assert_called_once_with("Haikyu!!")
 
+    @patch("recap_metadata_resolver.research_anime_sources")
+    @patch("recap_metadata_resolver.fetch_tmdb_movie")
+    @patch("recap_metadata_resolver.fetch_wikidata_metadata")
+    def test_exact_query_synopsis_is_kept_when_wikidata_year_is_missing(self, wikidata, tmdb, anime):
+        wikidata.return_value = {
+            "found": True, "title": "Naruto", "countries": ["Japan"],
+            "year": None, "description": "Japanese anime television series",
+            "source": "https://www.wikidata.org/wiki/Q1",
+            "enwiki_title": "", "mywiki_title": "",
+        }
+        anime.return_value = {
+            "title": "Naruto", "india_excluded": False, "year_conflict": False,
+            "anilist": {
+                "found": True, "provider": "AniList", "title": "Naruto",
+                "country": "JP", "year": 2002,
+                "synopsis": "A sufficiently detailed Naruto series synopsis for a safe short preview, with enough verified descriptive detail to support an introduction without inventing episode events.",
+                "provider_url": "https://anilist.co/anime/20",
+            },
+            "tenrai": {"found": False},
+        }
+        result = resolve_recap_metadata("Naruto")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["anime_synopsis_provider"], "AniList")
+        self.assertEqual(result["anime_synopsis_source"], "https://anilist.co/anime/20")
+        self.assertEqual(result["anime_synopsis"], anime.return_value["anilist"]["synopsis"])
+        tmdb.assert_not_called()
+        anime.assert_called_once_with("Naruto")
+
+    @patch("recap_metadata_resolver.research_anime_sources")
+    @patch("recap_metadata_resolver.fetch_tmdb_movie")
+    @patch("recap_metadata_resolver.fetch_wikidata_metadata")
+    def test_exact_tenrai_match_uses_tenrai_country_and_synopsis_source(self, wikidata, tmdb, anime):
+        wikidata.return_value = {"found": False, "status": "no exact Wikidata match"}
+        tmdb.return_value = {"found": False, "status": "no exact movie"}
+        anime.return_value = {
+            "india_excluded": False, "year_conflict": False,
+            "anilist": {"found": False},
+            "tenrai": {
+                "found": True, "provider": "Tenrai", "title": "Example Series",
+                "country": "JP", "year": 2021, "format": "TV",
+                "synopsis": "A sufficiently detailed series synopsis for a safe short preview, with enough verified descriptive detail to support an introduction without inventing episode events.",
+                "provider_url": "https://myanimelist.net/anime/123",
+            },
+            "wikidata": {"found": False},
+        }
+        result = resolve_recap_metadata("Example Series")
+        self.assertTrue(result["found"])
+        self.assertEqual(result["countries"], ["Japan"])
+        self.assertEqual(result["anime_synopsis_source"], "https://myanimelist.net/anime/123")
+        self.assertEqual(result["anime_synopsis_provider"], "Tenrai")
+        tmdb.assert_called_once_with("Example Series")
+
 if __name__ == "__main__":
     unittest.main()
