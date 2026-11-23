@@ -92,6 +92,16 @@ class SynopsisPreviewTests(unittest.TestCase):
         self.assertGreater(len(seen), 1)
         self.assertTrue(all(len(part.encode("utf-8")) <= preview.MYMEMORY_MAX_BYTES for part in seen))
 
+    def test_configured_gemini_translation_is_first_provider(self):
+        translated = "မြန်မာဘာသာပြန်စာသား အဆင်ပြေစွာ ရရှိပါသည်။"
+        with patch.object(preview, "gemini_script_status", return_value={"configured": True}):
+            with patch.object(preview, "generate_gemini_translation", return_value=translated) as gemini:
+                with patch.object(preview, "_translate_google_chunk") as google:
+                    result = preview._translate_synopsis_to_burmese("A detailed English synopsis.")
+        self.assertEqual(result, translated)
+        gemini.assert_called_once()
+        google.assert_not_called()
+
     def test_optional_providers_are_enabled_only_when_configured(self):
         with patch.dict(os.environ, {}, clear=True):
             names = [name for name, _ in preview._configured_translation_providers()]
