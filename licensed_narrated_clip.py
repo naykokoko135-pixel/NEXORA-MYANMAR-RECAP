@@ -135,10 +135,28 @@ def render_licensed_narrated_preview(
         video_path.write_bytes(source_data)
         audio_path.write_bytes(narration_mp3)
         srt_path.write_bytes(srt_data)
-        # Loop the visual source to narration length, but never retain its original soundtrack.
+        # Require real moving-video footage to cover the narration. Never freeze/loop a still or short clip.
+        probe = subprocess.run(
+            [ffmpeg, "-hide_banner", "-i", str(video_path)],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+        probe_text = probe.stderr or probe.stdout
+        duration_match = re.search(r"Duration: (\d+):(\d+):(\d+(?:\.\d+)?)", probe_text)
+        if "Video:" not in probe_text or not duration_match:
+            raise LicensedClipError("ရင်းမြစ်သည် ဖတ်ရှုနိုင်သော Video Footage မဟုတ်ပါ။ Still Image ကို MP4 အဖြစ် မပြောင်းပါ။")
+        source_duration = (
+            int(duration_match.group(1)) * 3600
+            + int(duration_match.group(2)) * 60
+            + float(duration_match.group(3))
+        )
+        if source_duration + 0.5 < subtitle_duration:
+            raise LicensedClipError(
+                f"မူရင်း Video ကြာချိန် ({source_duration:.1f}s) သည် Narration/SRT ({subtitle_duration:.1f}s) ထက်တိုနေပါတယ်။ "
+                "Footage ကို loop မလုပ်ဘဲ MP4 ထုတ်မှု ရပ်ထားပါတယ်။ ပိုရှည်သော Video လိုအပ်ပါတယ်။"
+            )
         command = [
             ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
-            "-stream_loop", "-1", "-i", str(video_path),
+            "-i", str(video_path),
             "-i", str(audio_path), "-i", str(srt_path),
             "-map", "0:v:0", "-map", "1:a:0", "-map", "2:s:0",
             "-vf",
