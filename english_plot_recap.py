@@ -48,8 +48,8 @@ def generate_burmese_recap_from_english_plot(
                 excerpt = excerpt[:boundary + 1]
             translated = _translate_synopsis_to_burmese(excerpt)
             script = (
-                f"ဒီနေ့ NEXORA မှာ {topic} ရဲ့ ဇာတ်လမ်းအကျဉ်းကို မိတ်ဆက်ပေးပါမယ်။\\n"
-                f"{translated}\\n\\n"
+                f"ဒီနေ့ NEXORA မှာ {topic} ရဲ့ ဇာတ်လမ်းအကျဉ်းကို မိတ်ဆက်ပေးပါမယ်။\n"
+                f"{translated}\n\n"
                 "သတိပြုရန် — ဤသည် English Wikipedia Plot section မှ ရရှိသော "
                 "အချက်အလက်ကို မြန်မာဘာသာပြန်ထားသည့် အတိုချုံး Preview သာဖြစ်သည်။ "
                 "လူထုတည်းဖြတ်ရင်းမြစ်ဖြစ်ပြီး Full Recap မဟုတ်ပါ။ "
