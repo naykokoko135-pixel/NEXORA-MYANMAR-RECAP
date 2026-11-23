@@ -46,7 +46,7 @@ def _extract_interaction_text(result: dict) -> str:
         for part in step.get("content", []):
             if isinstance(part, dict) and part.get("type") == "text" and part.get("text"):
                 chunks.append(str(part["text"]).strip())
-    return "\\n".join(chunk for chunk in chunks if chunk).strip()
+    return "\n".join(chunk for chunk in chunks if chunk).strip()
 
 
 
@@ -65,8 +65,8 @@ def generate_burmese_translation(text: str) -> str:
         "Translate the following English catalogue synopsis into natural, readable Burmese. "
         "Translation only: preserve every factual detail, names, sequence, and uncertainty. "
         "Do not summarize, expand, explain, add plot facts, invent scenes, or add headings. "
-        "Return only the Burmese translation. If a proper name is unclear, keep its original spelling.\\n\\n"
-        f"ENGLISH SOURCE:\\n{source}"
+        "Return only the Burmese translation. If a proper name is unclear, keep its original spelling.\n\n"
+        f"ENGLISH SOURCE:\n{source}"
     )
     payload = json.dumps({
         "model": model, "input": prompt, "store": False,
@@ -93,7 +93,7 @@ def generate_burmese_translation(text: str) -> str:
     translated = _extract_interaction_text(result)
     if not translated:
         raise GeminiScriptError("Gemini မှ ဘာသာပြန်စာသား မရရှိပါ။")
-    myanmar_chars = sum(1 for char in translated if "\\u1000" <= char <= "\\u109f")
+    myanmar_chars = sum(1 for char in translated if "\u1000" <= char <= "\u109f")
     if myanmar_chars < max(8, int(len(translated) * 0.12)):
         raise GeminiScriptError("Gemini တုံ့ပြန်မှုတွင် မြန်မာစာ မလုံလောက်ပါ။")
     return translated.strip()
@@ -130,9 +130,9 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
         "ဖြစ်ရပ်အစဉ်လိုက် narration, transition, ကိုယ်ပိုင်သုံးသပ်ချက်နှင့် closing ရေးပါ။ "
         "ဇာတ်လမ်းအချက်အလက် မလုံလောက်လျှင် စာသားထပ်ဖြည့်မည့်အစား အချက်အလက်လိုအပ်ကြောင်း ဖော်ပြပါ။ "
         + longform_instruction
-        + "အချက်အလက်မရှိလျှင် အရှည်ပြည့်စေရန် မတီထွင်ပါနှင့်။ ရည်မှန်းကြာချိန်နှင့် ကိုက်ညီအောင် ပြည့်စုံစွာရေးပါ။\\n\\n"
-        f"ခေါင်းစဉ်: {topic}\\nPlatform: {platform}\\nရည်မှန်းကြာချိန်: {duration} မိနစ်\\n"
-        f"Verified research notes:\\n{notes}"
+        + "အချက်အလက်မရှိလျှင် အရှည်ပြည့်စေရန် မတီထွင်ပါနှင့်။ ရည်မှန်းကြာချိန်နှင့် ကိုက်ညီအောင် ပြည့်စုံစွာရေးပါ။\n\n"
+        f"ခေါင်းစဉ်: {topic}\nPlatform: {platform}\nရည်မှန်းကြာချိန်: {duration} မိနစ်\n"
+        f"Verified research notes:\n{notes}"
     )
     payload = json.dumps({
         "model": model,
