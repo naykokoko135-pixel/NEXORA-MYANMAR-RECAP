@@ -912,24 +912,11 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not duration_gate["ok"]:
             # Preserve useful narration assets, but never label a short synopsis
             # as the requested platform-length final recap.
-            audio_bytes, subtitle_bytes = build_recap_video_sidecars(audio, srt_text)
-            voice_file = BytesIO(audio_bytes)
-            voice_file.name = "nexora_recap_voiceover.mp3"
-            await update.message.reply_document(
-                document=InputFile(voice_file, filename=voice_file.name),
-                caption="Narration MP3 မူကြမ်းပါ။ သတ်မှတ်ထားသော Platform ကြာချိန်မပြည့်သေးသောကြောင့် Final Recap အဖြစ် မသတ်မှတ်ထားပါ။",
-            )
-            subtitle_file = BytesIO(subtitle_bytes)
-            subtitle_file.name = "nexora_recap_subtitles.srt"
-            await update.message.reply_document(
-                document=InputFile(subtitle_file, filename=subtitle_file.name),
-                caption="Narration အတွက် SRT မူကြမ်းပါ။ Final Recap မဟုတ်သေးပါ။",
-            )
             minimum = duration_gate.get("minimum_seconds", 0) // 60
             maximum = duration_gate.get("maximum_seconds", 0) // 60
             actual = round(duration_seconds / 60, 1)
             await update.message.reply_text(
-                f"{platform.upper()} အတွက် Narration ကြာချိန် {actual} မိနစ်သာ ရှိပါတယ်။ "
+                f"{platform.upper()} အတွက် Movie MP4 မထုတ်နိုင်သေးပါ။ Narration ကြာချိန် {actual} မိနစ်သာ ရှိပါတယ်။ "
                 f"လိုအပ်ချက်မှာ {minimum}–{maximum} မိနစ် ဖြစ်ပါတယ်။\\n"
                 "မပြည့်မီသေးသော Narration ကို အတင်းဖြည့်ခြင်း၊ ဇာတ်ကွက်ဖန်တီးဖြည့်ခြင်း မလုပ်ထားပါ။ "
                 "Verified Plot Notes ပိုမိုရရှိမှသာ Long-form ကို ဆက်ထုတ်ပါမယ်။"
@@ -955,7 +942,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     fallback_source_notes.append(
                         f"Internet Archive: {item.get('title', 'Untitled')} | {item.get('license', 'rights unknown')} | "
                         f"{item.get('source_page', '')} | Files: {files} "
-                        "(Uploader license metadata; copyright ကို လူကိုယ်တိုင်အတည်ပြုရန်၊ auto-download ပိတ်ထားသည်)"
+                        ("(CC0/Public Domain Mark candidate; uploader rights ကို ထုတ်ဝေမီစစ်ပါ)" if item.get("download_enabled") else "(Uploader license metadata; auto-download မလုပ်ပါ)")
                     )
             except Exception as exc:
                 fallback_source_errors.append("Internet Archive: " + str(exc)[:140])
@@ -985,20 +972,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 fallback_source_errors.append("YouTube CC: " + str(exc)[:140])
 
         if not source and not archive_source:
-            # Preserve MP3/SRT only when neither Commons nor public-domain Archive footage exists.
-            audio_bytes, subtitle_bytes = build_recap_video_sidecars(audio, srt_text)
-            voice_file = BytesIO(audio_bytes)
-            voice_file.name = "nexora_recap_voiceover.mp3"
-            await update.message.reply_document(
-                document=InputFile(voice_file, filename=voice_file.name),
-                caption="ခွင့်ပြုထားသော footage မရသေးပါ။ ဒီ MP3 ကို ကိုယ်ပိုင်/လိုင်စင်ရ Video နှင့် တွဲသုံးနိုင်ပါတယ်။",
-            )
-            subtitle_file = BytesIO(subtitle_bytes)
-            subtitle_file.name = "nexora_recap_subtitles.srt"
-            await update.message.reply_document(
-                document=InputFile(subtitle_file, filename=subtitle_file.name),
-                caption="အထက်ပါ Narration အတွက် SRT ဖိုင်ပါ။",
-            )
+            # Do not send audio-only deliverables when the requested movie footage is unavailable.
             await update.message.reply_text(
                 f"{metadata.get('title', query)} အတွက် ခေါင်းစဉ်နှင့် ကိုက်ညီပြီး "
                 "ပြန်လည်အသုံးပြုခွင့်ကို အတည်ပြုနိုင်သော မူရင်းဗီဒီယို မရရှိပါ။\\n"
@@ -1124,18 +1098,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     raise
                 return
 
-            voice_file = BytesIO(audio_bytes)
-            voice_file.name = "nexora_recap_voiceover.mp3"
-            await update.message.reply_document(
-                document=InputFile(voice_file, filename=voice_file.name),
-                caption="Long-form Recap Narration MP3 မူကြမ်းပါ။",
-            )
-            subtitle_file = BytesIO(subtitle_bytes)
-            subtitle_file.name = "nexora_recap_subtitles.srt"
-            await update.message.reply_document(
-                document=InputFile(subtitle_file, filename=subtitle_file.name),
-                caption="Long-form Recap အတွက် အချိန်ကိုက် SRT မူကြမ်းပါ။",
-            )
+            # The user requested a movie MP4, not an audio-only fallback.
             if not source and not archive_source:
                 await update.message.reply_text(
                     "Commons တွင် ခေါင်းစဉ်ကိုက်ညီသော ပြန်လည်အသုံးပြုခွင့်ရှိသည့် Video မတွေ့ပါ။ "
