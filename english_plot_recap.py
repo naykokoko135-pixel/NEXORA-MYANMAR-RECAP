@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 from openai_script_provider import generate_burmese_recap_script, AIScriptError
 from gemini_script_provider import generate_burmese_recap_script as generate_gemini_recap_script, gemini_script_status, GeminiScriptError
+from synopsis_preview import _translate_synopsis_to_burmese
 
 MAX_SOURCE_NOTES_CHARS = 5500
 MIN_SOURCE_NOTES_CHARS = 80
@@ -38,6 +39,23 @@ def generate_burmese_recap_from_english_plot(
             topic, notes, platform=platform, duration=PLATFORM_DURATIONS[platform]
         )
     except AIScriptError as openai_error:
+        # Free-only mode must not block a short, source-derived Burmese preview.
+        # Translate only a bounded excerpt; never stretch it to long-form duration.
+        if "Free-only mode" in str(openai_error):
+            excerpt = source_text[:MAX_SOURCE_NOTES_CHARS]
+            boundary = max(excerpt.rfind(". "), excerpt.rfind("! "), excerpt.rfind("? "))
+            if boundary >= 700:
+                excerpt = excerpt[:boundary + 1]
+            translated = _translate_synopsis_to_burmese(excerpt)
+            script = (
+                f"ဒီနေ့ NEXORA မှာ {topic} ရဲ့ ဇာတ်လမ်းအကျဉ်းကို မိတ်ဆက်ပေးပါမယ်။\\n"
+                f"{translated}\\n\\n"
+                "သတိပြုရန် — ဤသည် English Wikipedia Plot section မှ ရရှိသော "
+                "အချက်အလက်ကို မြန်မာဘာသာပြန်ထားသည့် အတိုချုံး Preview သာဖြစ်သည်။ "
+                "လူထုတည်းဖြတ်ရင်းမြစ်ဖြစ်ပြီး Full Recap မဟုတ်ပါ။ "
+                "ရင်းမြစ်တွင် မပါသော ဖြစ်ရပ်များကို မထည့်ထားပါ။"
+            )
+            return script.strip(), source_url
         # Switch providers only for quota exhaustion; never retry OpenAI.
         if "Limit/Quota" not in str(openai_error):
             raise
