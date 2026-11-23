@@ -1,4 +1,6 @@
+import os
 import unittest
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
 
 import synopsis_preview as preview
@@ -68,8 +70,53 @@ class SynopsisPreviewTests(unittest.TestCase):
     def test_both_free_translation_providers_unavailable_fails_closed(self):
         with patch.object(preview, "_translate_google_chunk", side_effect=RuntimeError("Google unavailable")):
             with patch.object(preview, "_translate_mymemory_chunk", side_effect=RuntimeError("MyMemory unavailable")):
-                with self.assertRaisesRegex(AIScriptError, "Google Translate နှင့် MyMemory"):
+                with self.assertRaisesRegex(AIScriptError, "ဘာသာပြန်ရင်းမြစ်အားလုံး"):
                     preview._translate_synopsis_to_burmese("A detailed English synopsis for fallback testing.")
+
+    def test_mymemory_splits_long_text_to_provider_byte_limit(self):
+        seen = []
+
+        def fake_read_json(request):
+            query = parse_qs(urlparse(request.full_url).query)
+            part = query["q"][0]
+            seen.append(part)
+            return {
+                "responseStatus": 200,
+                "responseData": {"translatedText": "မြန်မာဘာသာပြန်စာသား"},
+            }
+
+        with patch.object(preview, "_read_json", side_effect=fake_read_json):
+            result = preview._translate_mymemory_chunk("A fairly long English synopsis. " * 35)
+
+        self.assertTrue(preview._has_myanmar_text(result))
+        self.assertGreater(len(seen), 1)
+        self.assertTrue(all(len(part.encode("utf-8")) <= preview.MYMEMORY_MAX_BYTES for part in seen))
+
+    def test_optional_providers_are_enabled_only_when_configured(self):
+        with patch.dict(os.environ, {}, clear=True):
+            names = [name for name, _ in preview._configured_translation_providers()]
+        self.assertEqual(names, ["Google Translate (keyless)", "MyMemory (keyless)"])
+
+        with patch.dict(os.environ, {
+            "NEXORA_LIBRETRANSLATE_URL": "https://translate.example",
+            "AZURE_TRANSLATOR_KEY": "test-key",
+            "GOOGLE_CLOUD_TRANSLATE_API_KEY": "test-key",
+        }, clear=True):
+            names = [name for name, _ in preview._configured_translation_providers()]
+        self.assertEqual(len(names), 5)
+        self.assertIn("LibreTranslate (configured endpoint)", names)
+        self.assertIn("Microsoft Translator (configured key)", names)
+        self.assertIn("Google Cloud Translation (configured key)", names)
+
+    def test_mymemory_optional_email_is_sent_as_quota_contact(self):
+        with patch.dict(os.environ, {"MYMEMORY_EMAIL": "owner@example.com"}, clear=True):
+            with patch.object(preview, "_read_json", return_value={
+                "responseStatus": "200",
+                "responseData": {"translatedText": "မြန်မာဘာသာပြန်စာသား"},
+            }) as mocked:
+                preview._translate_mymemory_chunk("A short English sentence.")
+        query = parse_qs(urlparse(mocked.call_args.args[0].full_url).query)
+        self.assertEqual(query["de"], ["owner@example.com"])
 
     def test_google_translation_success_does_not_call_mymemory(self):
         translated = "ဇာတ်လမ်းသည် လူငယ်များ၏ ကြိုးစားမှုနှင့် ရည်မှန်းချက်ကို ဖော်ပြထားသည်။"
