@@ -131,7 +131,7 @@ def render_internet_archive_narrated_preview(
     import re
     if not isinstance(srt_text, str) or not srt_text.strip():
         raise InternetArchiveRenderError("အချိန်ကိုက် SRT မရှိပါ။")
-    matches = re.findall(r"-->\\s*(\\d{2}):(\\d{2}):(\\d{2}),(\\d{3})", srt_text)
+    matches = re.findall(r"-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})", srt_text)
     if not matches:
         raise InternetArchiveRenderError("SRT Timestamp မမှန်ပါ။")
     h, m, s, ms = matches[-1]
