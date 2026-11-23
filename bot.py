@@ -139,7 +139,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/sourcevideo - ကိုယ်ပိုင်/ခွင့်ပြုထားသော Video + မြန်မာအသံ + SRT မှ MP4 ထုတ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
-            "/render - လက်ရှိ Platform အချိုးအစားဖြင့် ပုံ/အသံမှ MP4 ထုတ်ရန်\n"
+            "/render - Video Footage + မြန်မာ Narration + SRT မှ MP4 ထုတ်ရန်\n"
             "/mode free|ai - Mode ရွေးရန်\n"
             "/srt - Timestamp ပါသော စာတန်းမှ SRT ဖိုင်ထုတ်ရန်\n"
             "/srtmy - မြန်မာစာသားမှ SRT ထုတ်ရန်\n"
@@ -1987,129 +1987,8 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def render_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message:
-        return
-    action = context.args[0].lower() if context.args else "start"
-    if action == "cancel":
-        context.user_data.pop("video_render", None)
-        await update.message.reply_text("Video ပြင်ဆင်မှုကို ပယ်ဖျက်ပြီးပါပြီ။")
-        return
-    if action == "finish":
-        session = context.user_data.get("video_render")
-        if not session:
-            await update.message.reply_text("/render ဖြင့် Video session စတင်ပါ။")
-            return
-        is_timeline = session.get("mode") == "timeline"
-        scenes = session.get("scenes", [])
-        if is_timeline:
-            if not scenes or any(not scene.get("image") or not scene.get("audio") for scene in scenes):
-                await update.message.reply_text("Scene တစ်ခုစီမှာ ပုံနဲ့ အသံ နှစ်မျိုးလုံး ထည့်ပြီးမှ /render finish ပို့ပါ။")
-                return
-        elif not session.get("images") or not (session.get("audio") or session.get("audio_tracks")):
-            await update.message.reply_text("ပုံအနည်းဆုံး ၁ ပုံနဲ့ အသံဖိုင်/Voice Profile အနည်းဆုံး ၁ ခု လိုပါတယ်။ /render ဖြင့် ပြန်စပါ။")
-            return
-        await update.message.reply_text("MP4 ထုတ်လုပ်နေပါတယ်။ ခဏစောင့်ပါ...")
-        import tempfile
-        try:
-            with tempfile.TemporaryDirectory(prefix="nexora_video_") as temp:
-                output = os.path.join(temp, "nexora_video.mp4")
-                if is_timeline:
-                    await asyncio.to_thread(render_scene_timeline, scenes, output, session.get("platform", "youtube"), session.get("subtitle"))
-                else:
-                    audio_input = session["audio_tracks"] if session.get("audio_tracks") else session["audio"]
-                    await asyncio.to_thread(render_slideshow, session["images"], audio_input, output, session.get("platform", "youtube"), session.get("subtitle"))
-                with open(output, "rb") as video_file:
-                    await update.message.reply_video(
-                        video=InputFile(video_file, filename="nexora_video.mp4"),
-                        supports_streaming=True,
-                        caption=f"NEXORA {session.get('platform', 'youtube').upper()} MP4 ပြီးပါပြီ။ " + ("မြန်မာစာတန်းထိုး ထည့်သွင်းထားပါတယ်။ " if session.get("subtitle") else "") + "အသုံးပြုခွင့်ရှိသော ပုံ/အသံများကိုသာ ထည့်သုံးပါ။",
-                        read_timeout=120,
-                        write_timeout=120,
-                    )
-        except VideoRenderError as exc:
-            await update.message.reply_text(str(exc))
-        except Exception:
-            log.exception("Video render delivery failed")
-            await update.message.reply_text("MP4 ပို့မရပါ။ ပိုသေးသောဖိုင်များဖြင့် ထပ်စမ်းပါ။")
-        finally:
-            context.user_data.pop("video_render", None)
-        return
-    if action == "timeline":
-        platform = context.user_data.get("platform", "youtube")
-        context.user_data["video_render"] = {"mode": "timeline", "scenes": [], "active_scene": None, "platform": platform}
-        await update.message.reply_text(
-            f"Scene Timeline စတင်ပါပြီ။ Platform: {PLATFORM_NAMES.get(platform, platform)}\n"
-            "Scene အသစ်တစ်ခုစီအတွက် /render scene <အမည်> ပို့ပါ။ ပြီးလျှင် အဲဒီ Scene ရဲ့ ပုံတစ်ပုံနဲ့ Narration အသံဖိုင်တစ်ခုစီ ပို့ပါ။\n"
-            "Scene များကို အစဉ်လိုက် ပေါင်းမည်။ Scene တစ်ခု၏ ပုံသည် ၎င်း Scene အသံကြာချိန်အတိုင်း ပြမည်။ အများဆုံး ၁၂ Scene။\n"
-            "စာတန်းထိုးလိုပါက .srt ဖိုင်ပို့ပါ။ အားလုံးပြီးလျှင် /render finish ပို့ပါ။ /render cancel ဖြင့် ပယ်ဖျက်နိုင်သည်။"
-        )
-        return
-    if action == "scene":
-        session = context.user_data.get("video_render")
-        title = " ".join(context.args[1:]).strip()
-        if not session or session.get("mode") != "timeline":
-            await update.message.reply_text("အရင်ဆုံး /render timeline ပို့ပါ။")
-            return
-        if not title:
-            await update.message.reply_text("အသုံးပြုပုံ: /render scene <အခန်းအမည်>")
-            return
-        if len(session["scenes"]) >= 12:
-            await update.message.reply_text("Scene ၁၂ ခု ပြည့်ပါပြီ။")
-            return
-        session["scenes"].append({"title": title[:80], "image": None, "audio": None})
-        session["active_scene"] = len(session["scenes"]) - 1
-        await update.message.reply_text(f"Scene {len(session['scenes'])}: {title[:80]} ဖန်တီးပြီးပါပြီ။ ဒီ Scene အတွက် ပုံတစ်ပုံနဲ့ အသံတစ်ခု ပို့ပါ။")
-        return
-    if action == "voice":
-        session = context.user_data.get("video_render")
-        if not session:
-            await update.message.reply_text("အရင်ဆုံး /render ပို့ပြီး Video session စတင်ပါ။")
-            return
-        if len(context.args) < 2:
-            await update.message.reply_text("အသုံးပြုပုံ: /render voice <profile အမည်>")
-            return
-        try:
-            profile_name = normalize_profile_name(" ".join(context.args[1:]))
-        except ValueError as exc:
-            await update.message.reply_text(str(exc))
-            return
-        try:
-            profiles = load_voice_profiles(update.effective_user.id)
-            context.user_data["custom_voice_profiles"] = profiles
-        except (OSError, ValueError) as exc:
-            await update.message.reply_text(f"Voice Storage ကို ဖတ်မရပါ: {exc}")
-            return
-        profile = profiles.get(profile_name)
-        if not profile:
-            await update.message.reply_text("အဲဒီ Voice Profile မတွေ့ပါ။ /voiceprofile list ဖြင့် စစ်ပါ။")
-            return
-        if session.get("mode") == "timeline":
-            active = session.get("active_scene")
-            if active is None or session["scenes"][active].get("audio"):
-                await update.message.reply_text("Voice Profile မထည့်မီ /render scene <အမည်> ဖြင့် Scene အသစ်ဖွင့်ပါ။")
-                return
-            session["scenes"][active]["audio"] = (profile["filename"], profile["audio"])
-            await update.message.reply_text(f"Scene {active + 1} အတွက် Voice Profile အသံ ထည့်ပြီးပါပြီ။")
-            return
-        tracks = session.setdefault("audio_tracks", [])
-        if len(tracks) >= 12:
-            await update.message.reply_text("Voice Track ၁၂ ခု ပြည့်ပါပြီ။")
-            return
-        tracks.append((profile["filename"], profile["audio"]))
-        await update.message.reply_text(f"{profile_name} အသံ Track ထည့်ပြီးပါပြီ။ လက်ရှိ Track {len(tracks)}/12။ ထပ်ထည့်ရန် /render voice <အမည်> ကို သုံးပါ။")
-        return
-    platform = context.user_data.get("platform", "youtube")
-    context.user_data["video_render"] = {"images": [], "audio": None, "audio_tracks": [], "platform": platform}
-    await update.message.reply_text(
-        f"Video ဖန်တီးမှု စတင်ပါပြီ။\nPlatform: {PLATFORM_NAMES.get(platform, platform)}\n"
-        "၁) ပုံ JPG/PNG/WEBP အများဆုံး ၁၂ ပုံ ပို့ပါ။\n"
-        "၂) Narration အသံဖိုင် ပို့ပါ၊ သို့မဟုတ် /render voice <profile အမည်> ဖြင့် သိမ်းထားသော အသံ Track များရွေးပါ။\n"
-        "၃) Voice Track များကို အစဉ်လိုက် ပေါင်းစပ်မည်။ Track စုစုပေါင်း ၂၀ MB/၁၀ မိနစ်အောက် ဖြစ်ရပါမယ်။\n"
-        "၄) မြန်မာစာတန်းထိုးလိုပါက .srt ဖိုင် (၁ MB အောက်) ပို့ပါ။ MP4 ထဲတွင် ရွေးဖွင့်နိုင်သော Subtitle Track အဖြစ် ထည့်ပေးမည်။\n"
-        "၅) ပြီးရင် /render finish ပို့ပါ။ မလုပ်တော့ပါက /render cancel ပို့ပါ။\n"
-        "ကိုယ်ပိုင် သို့မဟုတ် အသုံးပြုခွင့်ရှိသော ပုံ/အသံကိုသာ သုံးပါ။"
-    )
-
+    """Use the video-footage-only source-video workflow; still-image rendering is disabled."""
+    await sourcevideo_cmd(update, context)
 
 async def send_voice_profile_backup(update: Update, profiles: dict, reason: str):
     """Send a fresh ZIP to the user's Telegram chat as a free off-container backup."""
