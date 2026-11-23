@@ -910,8 +910,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         duration_seconds = _subtitle_duration_seconds(srt_text)
         duration_gate = validate_platform_recap_duration(platform, duration_seconds)
         if not duration_gate["ok"]:
-            # Preserve useful narration assets, but never label a short synopsis
-            # as the requested platform-length final recap.
+            # Do not produce an MP4 from an under-length synopsis or narration.
             minimum = duration_gate.get("minimum_seconds", 0) // 60
             maximum = duration_gate.get("maximum_seconds", 0) // 60
             actual = round(duration_seconds / 60, 1)
