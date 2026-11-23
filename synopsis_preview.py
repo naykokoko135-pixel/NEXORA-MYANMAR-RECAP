@@ -51,7 +51,8 @@ def _translate_mymemory_chunk(chunk: str) -> str:
     )
     with urlopen(request, timeout=TRANSLATION_TIMEOUT_SECONDS) as response:
         payload = json.loads(response.read(1_000_000).decode("utf-8"))
-    if not isinstance(payload, dict) or payload.get("responseStatus") != 200:
+    status = str(payload.get("responseStatus", "")) if isinstance(payload, dict) else ""
+    if status != "200":
         raise ValueError("MyMemory translation unavailable")
     translated = unescape(str((payload.get("responseData") or {}).get("translatedText") or "")).strip()
     if not translated or translated.casefold() == chunk.casefold():
@@ -59,12 +60,22 @@ def _translate_mymemory_chunk(chunk: str) -> str:
     return translated
 
 
+def _has_myanmar_text(value: str) -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return False
+    myanmar_chars = sum(1 for char in text if "\u1000" <= char <= "\u109f")
+    # Reject empty/English-only provider responses before accepting that provider.
+    return myanmar_chars >= max(1, int(len(text) * 0.12))
+
+
 def _translate_synopsis_to_burmese(synopsis: str) -> str:
     """Translate a public catalogue synopsis using two best-effort free providers.
 
     Google Translate's public no-key endpoint is tried first. MyMemory is a
-    secondary provider with its own public quota. Neither is guaranteed; callers
-    fail closed if neither returns a sufficiently Burmese result.
+    secondary provider with its own public quota. Empty, English-only, or
+    otherwise unusable Google responses also trigger MyMemory. Neither provider
+    is guaranteed; callers fail closed if neither returns Burmese text.
     """
     text = " ".join(str(synopsis or "").split()).strip()
     if not text or len(text) > MAX_TRANSLATION_CHARS:
@@ -85,19 +96,21 @@ def _translate_synopsis_to_burmese(synopsis: str) -> str:
 
     translated_chunks = []
     for chunk in chunks:
-        try:
-            translated = _translate_google_chunk(chunk)
-        except Exception:
+        translated = ""
+        for provider in (_translate_google_chunk, _translate_mymemory_chunk):
             try:
-                translated = _translate_mymemory_chunk(chunk)
-            except Exception as exc:
-                raise AIScriptError(
-                    "Google Translate နှင့် MyMemory အခမဲ့ဘာသာပြန်ရင်းမြစ် နှစ်ခုလုံး "
-                    "ယခုချိန်တွင် မရရှိနိုင်ပါ။ ဇာတ်ကွက်ကို မခန့်မှန်းဘဲ ရပ်ထားပါတယ်။"
-                ) from exc
+                candidate = provider(chunk)
+                if _has_myanmar_text(candidate):
+                    translated = candidate
+                    break
+            except Exception:
+                # A provider outage, quota response, malformed payload, or timeout
+                # must not prevent trying the next independent free provider.
+                continue
         if not translated:
             raise AIScriptError(
-                "ဘာသာပြန်ရလဒ် မရရှိပါ။ မှားယွင်းသော Narration မထုတ်ဘဲ ရပ်ထားပါတယ်။"
+                "Google Translate နှင့် MyMemory အခမဲ့ဘာသာပြန်ရင်းမြစ်များမှ "
+                "အသုံးပြုနိုင်သော မြန်မာစာ မရရှိပါ။ ဇာတ်ကွက်ကို မခန့်မှန်းဘဲ ရပ်ထားပါတယ်။"
             )
         translated_chunks.append(translated)
 
@@ -109,6 +122,7 @@ def _translate_synopsis_to_burmese(synopsis: str) -> str:
             "မှားယွင်းသော Narration မထုတ်ဘဲ ရပ်ထားပါတယ်။"
         )
     return result
+
 
 def _build_free_synopsis_preview(topic: str, synopsis: str) -> str:
     translated = _translate_synopsis_to_burmese(synopsis)
