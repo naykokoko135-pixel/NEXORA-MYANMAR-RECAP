@@ -33,6 +33,9 @@ When `GEMINI_API_KEY` is configured in Render, Gemini is used as a fallback only
 
 ## Burmese synopsis translation fallback
 
+When the owner has configured `GEMINI_API_KEY` and explicitly enabled `NEXORA_ALLOW_PAID_AI=1`, NEXORA tries Gemini API first for synopsis translation, using a translation-only prompt and a Myanmar-script quality check. If Gemini is unavailable or returns unusable text, the existing keyless and optional configured translation providers remain as fallbacks. Gemini API usage is separate from a Gemini app subscription and may be billable; keep paid AI disabled unless the owner has reviewed API billing and quota settings.
+
+
 When free-only synopsis preview translation is needed, NEXORA tries these providers in order:
 
 1. Google Translate's unofficial no-key endpoint (best-effort; it can throttle or change).

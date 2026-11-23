@@ -46,7 +46,57 @@ def _extract_interaction_text(result: dict) -> str:
         for part in step.get("content", []):
             if isinstance(part, dict) and part.get("type") == "text" and part.get("text"):
                 chunks.append(str(part["text"]).strip())
-    return "\\n".join(chunk for chunk in chunks if chunk).strip()
+    return "\n".join(chunk for chunk in chunks if chunk).strip()
+
+
+
+def generate_burmese_translation(text: str) -> str:
+    """Translate verified English synopsis text into Burmese without adding facts."""
+    if not paid_ai_allowed():
+        raise GeminiScriptError("Free-only mode ဖွင့်ထားသည်။ Gemini translation API ကို ပိတ်ထားသည်။")
+    key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not key:
+        raise GeminiScriptError("Gemini API မချိတ်ရသေးပါ။ Render Environment တွင် GEMINI_API_KEY လိုအပ်ပါတယ်။")
+    source = str(text or "").strip()
+    if not source or len(source) > 3500:
+        raise GeminiScriptError("ဘာသာပြန်မည့်စာသားသည် ဗလာမဖြစ်ရ၊ စာလုံး 3,500 ထက် မကျော်ရပါ။")
+    model = os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    prompt = (
+        "Translate the following English catalogue synopsis into natural, readable Burmese. "
+        "Translation only: preserve every factual detail, names, sequence, and uncertainty. "
+        "Do not summarize, expand, explain, add plot facts, invent scenes, or add headings. "
+        "Return only the Burmese translation. If a proper name is unclear, keep its original spelling.\n\n"
+        f"ENGLISH SOURCE:\n{source}"
+    )
+    payload = json.dumps({
+        "model": model, "input": prompt, "store": False,
+        "generation_config": {"max_output_tokens": 5000},
+    }).encode("utf-8")
+    request = Request(API_URL, data=payload, headers={
+        "x-goog-api-key": key, "Content-Type": "application/json", "Accept": "application/json",
+    }, method="POST")
+    try:
+        with urlopen(request, timeout=90) as response:
+            result = json.loads(response.read(1_000_000).decode("utf-8"))
+    except HTTPError as exc:
+        if exc.code == 429:
+            raise GeminiScriptError("Gemini API Limit/Quota ပြည့်နေပါတယ်။") from None
+        if exc.code in (401, 403):
+            raise GeminiScriptError("Gemini API Key သို့မဟုတ် permission မမှန်ပါ။") from None
+        if exc.code == 404:
+            raise GeminiScriptError("Gemini model သို့မဟုတ် Interactions API မရရှိပါ (HTTP 404)။") from None
+        raise GeminiScriptError(f"Gemini API ဘာသာပြန်မှု မအောင်မြင်ပါ (HTTP {exc.code})။") from None
+    except (URLError, TimeoutError, OSError):
+        raise GeminiScriptError("Gemini API သို့ ချိတ်ဆက်မရပါ။") from None
+    except (ValueError, TypeError, KeyError):
+        raise GeminiScriptError("Gemini API မှ ဖတ်ရှုနိုင်သော ဘာသာပြန်ရလဒ် မရရှိပါ။") from None
+    translated = _extract_interaction_text(result)
+    if not translated:
+        raise GeminiScriptError("Gemini မှ ဘာသာပြန်စာသား မရရှိပါ။")
+    myanmar_chars = sum(1 for char in translated if "\u1000" <= char <= "\u109f")
+    if myanmar_chars < max(8, int(len(translated) * 0.12)):
+        raise GeminiScriptError("Gemini တုံ့ပြန်မှုတွင် မြန်မာစာ မလုံလောက်ပါ။")
+    return translated.strip()
 
 
 def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtube",
@@ -80,9 +130,9 @@ def generate_burmese_recap_script(topic: str, notes: str, platform: str = "youtu
         "ဖြစ်ရပ်အစဉ်လိုက် narration, transition, ကိုယ်ပိုင်သုံးသပ်ချက်နှင့် closing ရေးပါ။ "
         "ဇာတ်လမ်းအချက်အလက် မလုံလောက်လျှင် စာသားထပ်ဖြည့်မည့်အစား အချက်အလက်လိုအပ်ကြောင်း ဖော်ပြပါ။ "
         + longform_instruction
-        + "အချက်အလက်မရှိလျှင် အရှည်ပြည့်စေရန် မတီထွင်ပါနှင့်။ ရည်မှန်းကြာချိန်နှင့် ကိုက်ညီအောင် ပြည့်စုံစွာရေးပါ။\\n\\n"
-        f"ခေါင်းစဉ်: {topic}\\nPlatform: {platform}\\nရည်မှန်းကြာချိန်: {duration} မိနစ်\\n"
-        f"Verified research notes:\\n{notes}"
+        + "အချက်အလက်မရှိလျှင် အရှည်ပြည့်စေရန် မတီထွင်ပါနှင့်။ ရည်မှန်းကြာချိန်နှင့် ကိုက်ညီအောင် ပြည့်စုံစွာရေးပါ။\n\n"
+        f"ခေါင်းစဉ်: {topic}\nPlatform: {platform}\nရည်မှန်းကြာချိန်: {duration} မိနစ်\n"
+        f"Verified research notes:\n{notes}"
     )
     payload = json.dumps({
         "model": model,

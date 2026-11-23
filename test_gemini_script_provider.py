@@ -44,6 +44,24 @@ class GeminiScriptProviderTests(unittest.TestCase):
             with self.assertRaises(provider.GeminiScriptError):
                 provider.generate_burmese_recap_script("Example", "too short")
 
+    def test_gemini_translation_uses_translation_only_prompt_and_validates_burmese(self):
+        translated = "ဇာတ်လမ်းသည် လူငယ်တစ်ဦး၏ ကြိုးစားမှုကို ဖော်ပြထားသည်။"
+        result = {"steps": [{"type": "model_output", "content": [{"type": "text", "text": translated}]}]}
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key", "NEXORA_ALLOW_PAID_AI": "1"}, clear=True):
+            with patch.object(provider, "urlopen", return_value=_FakeResponse(result)) as mocked:
+                output = provider.generate_burmese_translation("A young person pursues a dream.")
+        self.assertEqual(output, translated)
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertIn("Translation only", payload["input"])
+        self.assertFalse(payload["store"])
+
+    def test_gemini_translation_rejects_english_only_response(self):
+        result = {"steps": [{"type": "model_output", "content": [{"type": "text", "text": "This is English only."}]}]}
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key", "NEXORA_ALLOW_PAID_AI": "1"}, clear=True):
+            with patch.object(provider, "urlopen", return_value=_FakeResponse(result)):
+                with self.assertRaisesRegex(provider.GeminiScriptError, "မြန်မာစာ"):
+                    provider.generate_burmese_translation("A young person pursues a dream.")
+
     def test_extracts_only_model_output_text(self):
         result = {
             "steps": [
