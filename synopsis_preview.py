@@ -17,6 +17,7 @@ from gemini_script_provider import (
     generate_burmese_recap_script as generate_gemini_recap_script,
     gemini_script_status,
     GeminiScriptError,
+    generate_burmese_translation as generate_gemini_translation,
 )
 
 GOOGLE_TRANSLATE_URL = "https://translate.googleapis.com/translate_a/single"
