@@ -172,7 +172,12 @@ def search_internet_archive_licensed_video(query: str, limit: int = 6) -> list[d
             "year": str(metadata.get("year") or metadata.get("date") or ""),
             "runtime_seconds": _duration_seconds(metadata.get("runtime")),
             "files": files[:3],
-            "download_enabled": False,
+            "download_enabled": license_uri in {
+                "https://creativecommons.org/publicdomain/mark/1.0/",
+                "http://creativecommons.org/publicdomain/mark/1.0/",
+                "https://creativecommons.org/publicdomain/zero/1.0/",
+                "http://creativecommons.org/publicdomain/zero/1.0/",
+            },
             "reuse_ready": False,
             "notice": (
                 "လိုင်စင်သည် uploader ထည့်သွင်းထားသော metadata ဖြစ်ပြီး Internet Archive က "
