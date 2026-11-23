@@ -97,5 +97,21 @@ class EnglishPlotRecapTests(unittest.TestCase):
                 generate_burmese_recap_from_english_plot("Sample Film", plot)
 
 
+    @patch("english_plot_recap._translate_synopsis_to_burmese")
+    @patch("english_plot_recap.generate_burmese_recap_script")
+    def test_free_only_returns_bounded_burmese_plot_preview(self, mock_openai, mock_translate):
+        mock_openai.side_effect = AIScriptError("Free-only mode ဖွင့်ထားသည်။")
+        mock_translate.return_value = "ဇာတ်လမ်းသည် အဓိကဇာတ်ကောင်၏ ရည်မှန်းချက်ကို ဖော်ပြထားသည်။"
+        script, source = generate_burmese_recap_from_english_plot(
+            "Sample Film", self.sample_plot(), "youtube"
+        )
+        self.assertEqual(source, "https://en.wikipedia.org/wiki/Sample_Film")
+        self.assertIn("အတိုချုံး Preview", script)
+        self.assertIn("Full Recap မဟုတ်ပါ", script)
+        mock_translate.assert_called_once()
+        mock_openai.assert_called_once()
+
+
+
 if __name__ == "__main__":
     unittest.main()
