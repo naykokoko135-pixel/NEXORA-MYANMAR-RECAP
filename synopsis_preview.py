@@ -101,8 +101,8 @@ def _translate_synopsis_to_burmese(synopsis: str) -> str:
             )
         translated_chunks.append(translated)
 
-    result = "\\n".join(translated_chunks).strip()
-    myanmar_chars = sum(1 for char in result if "\\u1000" <= char <= "\\u109f")
+    result = "\n".join(translated_chunks).strip()
+    myanmar_chars = sum(1 for char in result if "\u1000" <= char <= "\u109f")
     if myanmar_chars < max(25, int(len(result) * 0.12)):
         raise AIScriptError(
             "ဘာသာပြန်ရလဒ်သည် မြန်မာစာအဖြစ် မလုံလောက်ပါ။ "
