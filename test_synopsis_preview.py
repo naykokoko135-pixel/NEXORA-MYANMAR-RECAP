@@ -41,6 +41,28 @@ class SynopsisPreviewTests(unittest.TestCase):
         self.assertIn("Full Recap မဟုတ်ပါ", script)
         ai.assert_called_once()
 
+    def test_google_failure_uses_mymemory_fallback(self):
+        translated = "ဇာတ်လမ်းသည် လူငယ်များ၏ ကြိုးစားမှုနှင့် ရည်မှန်းချက်ကို ဖော်ပြထားသည်။"
+        with patch.object(preview, "_translate_google_chunk", side_effect=RuntimeError("Google unavailable")):
+            with patch.object(preview, "_translate_mymemory_chunk", return_value=translated) as fallback:
+                result = preview._translate_synopsis_to_burmese("A detailed English synopsis for fallback testing.")
+        self.assertEqual(result, translated)
+        fallback.assert_called_once()
+
+    def test_both_free_translation_providers_unavailable_fails_closed(self):
+        with patch.object(preview, "_translate_google_chunk", side_effect=RuntimeError("Google unavailable")):
+            with patch.object(preview, "_translate_mymemory_chunk", side_effect=RuntimeError("MyMemory unavailable")):
+                with self.assertRaisesRegex(AIScriptError, "Google Translate နှင့် MyMemory"):
+                    preview._translate_synopsis_to_burmese("A detailed English synopsis for fallback testing.")
+
+    def test_google_translation_success_does_not_call_mymemory(self):
+        translated = "ဇာတ်လမ်းသည် လူငယ်များ၏ ကြိုးစားမှုနှင့် ရည်မှန်းချက်ကို ဖော်ပြထားသည်။"
+        with patch.object(preview, "_translate_google_chunk", return_value=translated):
+            with patch.object(preview, "_translate_mymemory_chunk") as fallback:
+                result = preview._translate_synopsis_to_burmese("A detailed English synopsis for fallback testing.")
+        self.assertEqual(result, translated)
+        fallback.assert_not_called()
+
     def test_free_translation_failure_does_not_fabricate_script(self):
         with patch.object(
             preview, "generate_burmese_recap_script",
