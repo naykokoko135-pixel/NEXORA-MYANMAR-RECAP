@@ -176,10 +176,12 @@ def resolve_recap_metadata(title):
                     continue
                 anime_year = str(candidate.get("year") or "").strip()
                 anime_title = " ".join(str(candidate.get("title") or "").casefold().split())
-                if not wikidata_year or not anime_year or wikidata_year != anime_year:
+                # Reject a year conflict when both catalogues provide a year.
+                # A missing year is not itself a conflict: the anime record must
+                # still be an exact query match (or exact canonical-title match
+                # for legacy callers without query provenance).
+                if wikidata_year and anime_year and wikidata_year != anime_year:
                     continue
-                # Backward-compatible test/fixture support: when query
-                # provenance is absent, require the old exact canonical title.
                 if not query_provenance_matches and (
                     not wikidata_title or not anime_title or wikidata_title != anime_title
                 ):
@@ -238,7 +240,7 @@ def resolve_recap_metadata(title):
                     f"Anime ရင်းမြစ်၏နှစ် ({selected_year or 'မရရှိပါ'}) မကိုက်ညီပါ။"
                 ),
             }
-        country_code = str(anilist.get("country") or "").upper()
+        country_code = str(selected.get("country") or "").upper()
         if country_code == "IN":
             return {"found": False, "status": "ဒီ Project မှာ အိန္ဒိယမူရင်းခေါင်းစဉ်များကို မထည့်ပါ။"}
         countries = [COUNTRY_NAMES[country_code]] if country_code in COUNTRY_NAMES else []
@@ -264,6 +266,8 @@ def resolve_recap_metadata(title):
             "enwiki_title": "",
             "mywiki_title": "",
             "anime_synopsis": selected.get("synopsis") or "",
+            "anime_synopsis_source": selected.get("provider_url") or "",
+            "anime_synopsis_provider": selected.get("provider") or "",
         }
 
     statuses = [
