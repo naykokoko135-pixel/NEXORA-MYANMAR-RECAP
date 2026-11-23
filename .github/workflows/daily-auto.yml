@@ -15,7 +15,7 @@ concurrency:
 jobs:
   daily-research:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 120
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -30,3 +30,57 @@ jobs:
           YOUTUBE_CHANNEL_URL: ${{ vars.YOUTUBE_CHANNEL_URL }}
           FACEBOOK_PAGE_URL: ${{ vars.FACEBOOK_PAGE_URL }}
         run: python daily_auto.py
+      - name: Trigger and monitor Render daily recap production
+        env:
+          NEXORA_DAILY_RECAP_URL: ${{ vars.NEXORA_DAILY_RECAP_URL }}
+          NEXORA_DAILY_RECAP_TOKEN: ${{ secrets.NEXORA_DAILY_RECAP_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$NEXORA_DAILY_RECAP_URL" ] || [ -z "$NEXORA_DAILY_RECAP_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "::warning::Daily research was delivered, but Render production trigger is not configured. Set the NEXORA_DAILY_RECAP_URL repository variable and NEXORA_DAILY_RECAP_TOKEN / TELEGRAM_CHAT_ID secrets."
+            exit 0
+          fi
+          BASE_URL="${NEXORA_DAILY_RECAP_URL%/}"
+          TRIGGERED=0
+          for attempt in 1 2 3 4 5 6; do
+            CODE=$(curl --silent --show-error --output /tmp/nexora-trigger-response.json --write-out "%{http_code}" --max-time 30 \
+              --request POST "$BASE_URL/internal/daily-recap" \
+              --header "X-NEXORA-Daily-Token: $NEXORA_DAILY_RECAP_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data '{"chat_id":"'"$TELEGRAM_CHAT_ID"'"}' || true)
+            if [ "$CODE" = "202" ] || [ "$CODE" = "409" ]; then
+              TRIGGERED=1
+              break
+            fi
+            if [ -n "$CODE" ] && [ "$CODE" != "000" ] && [ "$CODE" != "503" ]; then
+              cat /tmp/nexora-trigger-response.json
+              echo "Render daily recap trigger failed with HTTP $CODE"
+              exit 1
+            fi
+            echo "Render is waking up or unavailable (attempt $attempt); retrying..."
+            sleep 10
+          done
+          if [ "$TRIGGERED" != "1" ]; then
+            echo "Render daily recap trigger did not accept the job."
+            exit 1
+          fi
+          for attempt in $(seq 1 120); do
+            STATUS_JSON=$(curl --fail --silent --show-error --max-time 20 \
+              --header "X-NEXORA-Daily-Token: $NEXORA_DAILY_RECAP_TOKEN" \
+              "$BASE_URL/internal/daily-recap/status") || {
+                echo "Waiting for Render status endpoint..."
+                sleep 10
+                continue
+              }
+            JOB_STATUS=$(printf '%s' "$STATUS_JSON" | python -c 'import json,sys; print(json.load(sys.stdin).get("status", "unknown"))')
+            echo "NEXORA daily recap status: $JOB_STATUS"
+            if [ "$JOB_STATUS" = "completed" ]; then
+              exit 0
+            elif [ "$JOB_STATUS" = "failed" ]; then
+              echo "$STATUS_JSON"
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "NEXORA daily recap exceeded the 60-minute workflow monitor window."
+          exit 1

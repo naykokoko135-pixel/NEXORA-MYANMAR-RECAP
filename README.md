@@ -555,3 +555,28 @@ To render from your own or licensed full-length media:
 4. Review rights, attribution, narration, subtitle timing, and the rendered files before publishing.
 
 Render Free uses temporary storage; download links expire after 24 hours and can stop working after a restart or deploy. For reliable long-term media storage, configure an appropriate persistent storage/hosting setup. Never provide streaming-service credentials or attempt DRM bypass.
+
+
+### Automatic three-part output from fully licensed source footage
+
+For YouTube/Facebook, `/recapvideo <exact title>` now attempts a complete automatic render when all gates pass: verified title/country and plot research, narration/SRT within 46–60 minutes, a strong exact-title Commons video match with an allowed CC0/CC BY/CC BY-SA/Public Domain license, and an HTTPS Render public URL. NEXORA downloads that Commons file server-side, checks that the actual source video covers the entire narration, then renders three non-overlapping 15–20 minute MP4 parts with matching narration and SRT. It also sends the source attribution note and short-lived download links.
+
+This automatic path is intentionally narrow. A trailer, short clip, Europeana record, or YouTube CC search result is not treated as a downloadable full movie. Europeana and YouTube CC are fallback discovery leads only; obtain the original file and confirm the uploader/provider's rights before using it. If no full-length reusable source is found, or the source is too short, NEXORA sends the MP3/SRT draft and explains why it did not create an MP4. It never loops short footage or downloads DRM-protected Netflix/Crunchyroll streams. TikTok remains a single 4–7 minute output.
+
+
+Internet Archive is also queried as a discovery-only fallback when Commons has no exact reusable match. NEXORA requires an exact title, `mediatype=movies`, an explicit CC0/CC BY/CC BY-SA/Public Domain Mark `licenseurl`, and an original video file within the metadata size limit. It does **not** auto-download Internet Archive items: license metadata is uploader supplied and is not a guarantee of copyright ownership. Inspect the item page and obtain rights confirmation before manually supplying any file. See the [Internet Archive Metadata API](https://doc-tools.readthedocs.io/en/ia-test-gsod/md-read.html) and [metadata field guidance](https://internetarchive.readthedocs.io/en/stable/metadata.html).
+
+
+### Enable the scheduled Render production trigger
+
+The daily GitHub Actions workflow sends its research report first, then calls the authenticated Render endpoint `POST /internal/daily-recap` and polls `GET /internal/daily-recap/status` while the three-platform run is active. The status polling also keeps a sleeping Render Free web service awake during a long background run.
+
+Configure these values without posting secrets in chat:
+
+- Render environment variable: `NEXORA_DAILY_RECAP_TOKEN` — a randomly generated secret of at least 32 characters.
+- GitHub Actions secret: `NEXORA_DAILY_RECAP_TOKEN` — the exact same value as the Render variable.
+- GitHub Actions variable: `NEXORA_DAILY_RECAP_URL` — the Render service base URL, for example `https://your-service.onrender.com` (no endpoint path).
+- GitHub Actions secret: `TELEGRAM_CHAT_ID` — the destination chat ID already used by Daily Auto.
+- Existing GitHub Actions secret `TELEGRAM_BOT_TOKEN` remains required for the research report.
+
+If the trigger URL/token/chat ID is missing, the workflow still sends the research report but skips production and emits a warning. The internal trigger uses constant-time token comparison, rejects invalid chat IDs, and prevents a second run while one is active. The GitHub workflow monitors the job for up to 60 minutes; Render restarts/deploys can still interrupt an in-memory background task. Render Free has ephemeral storage, so download finished MP4s promptly.
