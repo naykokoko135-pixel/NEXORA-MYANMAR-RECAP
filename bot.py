@@ -71,7 +71,8 @@ from audio_duration_qa import inspect_audio_file, evaluate_audio_duration, evalu
 from recap_voice_pack import parse_recap_voice_request, parse_recap_voice_parts_request
 from recap_video_pack import parse_recap_video_request, validate_non_indian_wikidata_metadata, build_recap_video_sidecars, format_no_licensed_footage_message, format_original_visual_fallback_notice, validate_platform_recap_duration
 from script_writer import (generate_recap_outline, generate_all_platform_plan, PLATFORM_NAMES, PLATFORM_DURATIONS, DURATION_PRESETS, DEFAULT_DURATIONS)
-from openai_script_provider import generate_burmese_recap_script, openai_script_status, AIScriptError
+from openai_script_provider import openai_script_status, AIScriptError
+from script_provider_router import generate_burmese_recap_script, script_provider_status
 from gemini_script_provider import gemini_script_status
 from error_reporter import report_error_to_github
 from comment_autoreply import build_reply, platform_comment_capabilities, run_comment_autoreply_cycle
@@ -186,16 +187,23 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             ai_line = "OpenAI Script API: မချိတ်ရသေးပါ (Render တွင် OPENAI_API_KEY လိုအပ်သည်)"
         gemini_status = gemini_script_status()
+        script_status = script_provider_status()
+        script_line = (
+            f"AI Script Primary: {script_status['provider'].upper()} ({script_status['model']})"
+            if script_status["configured"]
+            else f"AI Script Primary: {script_status['provider'].upper()} မပြင်ဆင်ရသေးပါ"
+        )
         gemini_line = (
-            "Gemini Fallback: Free-only mode ကြောင့် ပိတ်ထားသည်"
+            "Gemini API: Free-only mode ကြောင့် ပိတ်ထားသည်"
             if not paid_ai_allowed()
-            else f"Gemini Fallback: ချိတ်ထားသည် ({gemini_status['model']})"
+            else f"Gemini API: ချိတ်ထားသည် ({gemini_status['model']})"
             if gemini_status["configured"]
-            else "Gemini Fallback: မချိတ်ရသေးပါ (OpenAI Quota ပြည့်လျှင် GEMINI_API_KEY လိုအပ်သည်)"
+            else "Gemini API: မချိတ်ရသေးပါ (GEMINI_API_KEY နှင့် Paid AI ခွင့်ပြုချက် လိုအပ်သည်)"
         )
         await update.message.reply_text(
             "NEXORA Bot: အလုပ်လုပ်နေပါတယ်။\n"
             f"{ai_line}\n"
+            f"{script_line}\n"
             f"{gemini_line}\n"
             "AI Script: /aiscript <title> ပြီးနောက် Verified Research Notes ထည့်ပါ။\n"
             "လုပ်ဆောင်နိုင်မှု: Auto research + Worksheets + Voice-over TXT + TTS MP3 + အချိန်ကိုက် SRT + Image/Audio MP4 render\n"

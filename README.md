@@ -31,6 +31,10 @@ To enable it, the account owner/parent must create and manage an OpenAI API proj
 
 When `GEMINI_API_KEY` is configured in Render, Gemini is used as a fallback only when the OpenAI request returns a quota/limit error. Other OpenAI errors do not trigger fallback, and the bot does not retry a failed request. `/status` reports whether each provider is configured without exposing keys. Keep both keys private. API usage may incur charges; review each provider's current terms and billing controls before enabling.
 
+## AI script provider selection
+
+Set `NEXORA_SCRIPT_PROVIDER=auto` (default) to prefer Gemini when `GEMINI_API_KEY` is configured and paid AI is explicitly enabled; otherwise NEXORA uses OpenAI. Set it to `gemini` or `openai` to force one provider. NEXORA does not silently call a second paid provider after the selected provider fails, avoiding unexpected duplicate charges. `/status` reports the selected provider and model. Gemini API access is separate from the Gemini app subscription.
+
 ## Burmese synopsis translation fallback
 
 When the owner has configured `GEMINI_API_KEY` and explicitly enabled `NEXORA_ALLOW_PAID_AI=1`, NEXORA tries Gemini API first for synopsis translation, using a translation-only prompt and a Myanmar-script quality check. If Gemini is unavailable or returns unusable text, the existing keyless and optional configured translation providers remain as fallbacks. Gemini API usage is separate from a Gemini app subscription and may be billable; keep paid AI disabled unless the owner has reviewed API billing and quota settings.
