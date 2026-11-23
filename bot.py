@@ -42,6 +42,7 @@ from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
 from youtube_cc_finder import search_youtube_cc_videos, YouTubeCCSearchError
 from internet_archive_video_finder import search_internet_archive_licensed_video, InternetArchiveSearchError
+from internet_archive_pipeline import render_internet_archive_longform_parts, render_internet_archive_narrated_preview
 from youtube_movie_recap_research import search_youtube_movie_recaps, format_youtube_movie_recaps, YouTubeRecapResearchError
 from recap_studio import build_original_recap_notes
 from licensed_video_pipeline import choose_matching_source, render_licensed_preview, download_licensed_source, LicensedClipError
@@ -937,6 +938,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         import tempfile
         fallback_source_notes = []
         fallback_source_errors = []
+        archive_source = None
         if not source:
             # Try independent discovery providers when Commons has no exact reusable match.
             # Internet Archive, Europeana and YouTube CC results are leads only; none is auto-downloaded.
@@ -944,6 +946,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 archive_leads = await asyncio.to_thread(
                     search_internet_archive_licensed_video, query, 4
                 )
+                archive_source = next((item for item in archive_leads if item.get("download_enabled") and item.get("files")), None)
                 for item in archive_leads[:3]:
                     files = ", ".join(
                         f"{entry.get('name')} ({round((entry.get('duration_seconds') or 0) / 60, 1)} min)"
@@ -1018,7 +1021,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             public = urlparse(str(PUBLIC_URL or ""))
             rendered_paths = []
             render_failure = ""
-            if source and public.scheme == "https" and public.netloc:
+            if (source or archive_source) and public.scheme == "https" and public.netloc:
                 try:
                     work_root = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work"))
                     chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
@@ -1027,13 +1030,14 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     output_dir.mkdir(parents=True, exist_ok=True)
                     batch_dir = output_dir / ("nexora_auto_" + secrets.token_hex(8))
                     await update.message.reply_text(
-                        "ခေါင်းစဉ်ကိုက်ညီသော CC/Public Domain Commons ရင်းမြစ် ရရှိပါပြီ။ "
-                        "Server ပေါ်သို့ လိုင်စင်စစ်ပြီး Download လုပ်ကာ အရှည်အပြည့် လုံလောက်မှုကို စစ်ပြီး "
-                        "သုံးပိုင်း MP4 အလိုအလျောက် Render လုပ်နေပါတယ်..."
+                        ("Commons" if source else "Internet Archive Public Domain/CC0")
+                        + " မှ ခေါင်းစဉ်ကိုက်ညီသော Video ရင်းမြစ် ရရှိပါပြီ။ Server ပေါ်သို့ Download လုပ်ပြီး "
+                        "မူရင်း footage ကြာချိန် လုံလောက်မှုကို စစ်ကာ သုံးပိုင်း MP4 Render လုပ်နေပါတယ်..."
                     )
+                    render_longform = render_licensed_longform_parts if source else render_internet_archive_longform_parts
                     rendered_paths = await asyncio.to_thread(
-                        render_licensed_longform_parts,
-                        source,
+                        render_longform,
+                        source if source else archive_source,
                         ("nexora_recap_voiceover.mp3", audio_bytes),
                         ("nexora_recap_subtitles.srt", subtitle_bytes),
                         batch_dir,
@@ -1063,8 +1067,14 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     document=InputFile(subtitle_file, filename=subtitle_file.name),
                     caption="အလိုအလျောက်ထုတ်ထားသော အချိန်ကိုက် မြန်မာ SRT မူရင်းဖိုင်ပါ။",
                 )
-                attribution = build_licensed_attribution_note(
-                    source, metadata.get("title", query), metadata.get("source", "")
+                attribution = (
+                    build_licensed_attribution_note(source, metadata.get("title", query), metadata.get("source", ""))
+                    if source else (
+                        f"Title: {metadata.get('title', query)}\\nSource: {archive_source.get('source_page', '')}\\n"
+                        f"License: {archive_source.get('license', '')} ({archive_source.get('license_uri', '')})\\n"
+                        f"Uploader/Creator: {archive_source.get('artist', 'Unknown')}\\n"
+                        "Note: Internet Archive license metadata is uploader-supplied; independently verify rights before publishing.\\n"
+                    )
                 )
                 credit_file = BytesIO(attribution.encode("utf-8-sig"))
                 credit_file.name = "nexora_footage_attribution.txt"
@@ -1126,7 +1136,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 document=InputFile(subtitle_file, filename=subtitle_file.name),
                 caption="Long-form Recap အတွက် အချိန်ကိုက် SRT မူကြမ်းပါ။",
             )
-            if not source:
+            if not source and not archive_source:
                 await update.message.reply_text(
                     "Commons တွင် ခေါင်းစဉ်ကိုက်ညီသော ပြန်လည်အသုံးပြုခွင့်ရှိသည့် Video မတွေ့ပါ။ "
                     "Europeana/YouTube CC ရှာဖွေမှုများသည် မှတ်တမ်း/Provider link သာဖြစ်ပြီး အလိုအလျောက် Download ခွင့်မပြုသောကြောင့် "
@@ -1135,7 +1145,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             else:
                 await update.message.reply_text(
-                    "လိုင်စင်ရှိသော Commons ရင်းမြစ်ကို တွေ့သော်လည်း ၄၆–၆၀ မိနစ် အပြည့်အဝ မလုံလောက်ခြင်း၊ "
+                    "ခွင့်ပြုထားသော Video ရင်းမြစ်ကို တွေ့သော်လည်း ၄၆–၆၀ မိနစ် အပြည့်အဝ မလုံလောက်ခြင်း၊ "
                     "သို့မဟုတ် Render/Download အမှားကြောင့် သုံးပိုင်း MP4 မထုတ်နိုင်ပါ။ "
                     "အတိုဗီဒီယိုကို loop မလုပ်ဘဲ MP3/SRT မူကြမ်းအဖြစ်သာ ထားပါတယ်။"
                     + (f"\nအကြောင်းရင်း: {render_failure}" if render_failure else "")
@@ -1145,7 +1155,8 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         with tempfile.TemporaryDirectory(prefix="nexora_recap_video_") as temp:
             output = os.path.join(temp, "nexora_recap_preview.mp4")
             await asyncio.to_thread(
-                render_licensed_narrated_preview, source, audio, srt_text, output, platform, max_duration
+                (render_licensed_narrated_preview if source else render_internet_archive_narrated_preview),
+                (source if source else archive_source), audio, srt_text, output, platform, max_duration
             )
             with open(output, "rb") as video_file:
                 await update.message.reply_video(
