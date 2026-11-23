@@ -6,6 +6,7 @@ to a short overview and never claims to be a full season/episode recap.
 import json
 import re
 from urllib.parse import urlencode
+from html import unescape
 from urllib.request import Request, urlopen
 
 from openai_script_provider import generate_burmese_recap_script, AIScriptError
@@ -20,17 +21,55 @@ TRANSLATION_TIMEOUT_SECONDS = 20
 MAX_TRANSLATION_CHARS = 3500
 
 
-def _translate_synopsis_to_burmese(synopsis: str) -> str:
-    """Translate public catalogue synopsis text through Google's no-key web endpoint.
+def _translate_google_chunk(chunk: str) -> str:
+    params = urlencode({
+        "client": "gtx",
+        "sl": "auto",
+        "tl": "my",
+        "dt": "t",
+        "q": chunk,
+    })
+    request = Request(
+        GOOGLE_TRANSLATE_URL + "?" + params,
+        headers={"User-Agent": "NEXORA-Myanmar-Recap/1.0"},
+    )
+    with urlopen(request, timeout=TRANSLATION_TIMEOUT_SECONDS) as response:
+        payload = json.loads(response.read(1_000_000).decode("utf-8"))
+    segments = payload[0] if isinstance(payload, list) and payload else []
+    return "".join(
+        str(segment[0]) for segment in segments
+        if isinstance(segment, list) and segment and segment[0]
+    ).strip()
 
-    This is a best-effort free fallback, not a guaranteed or official API. The
-    caller fails closed if the response is unavailable or is not Burmese.
+
+def _translate_mymemory_chunk(chunk: str) -> str:
+    """Secondary no-key translation provider; subject to its public free quota."""
+    params = urlencode({"q": chunk, "langpair": "en|my"})
+    request = Request(
+        "https://api.mymemory.translated.net/get?" + params,
+        headers={"User-Agent": "NEXORA-Myanmar-Recap/1.0"},
+    )
+    with urlopen(request, timeout=TRANSLATION_TIMEOUT_SECONDS) as response:
+        payload = json.loads(response.read(1_000_000).decode("utf-8"))
+    if not isinstance(payload, dict) or payload.get("responseStatus") != 200:
+        raise ValueError("MyMemory translation unavailable")
+    translated = unescape(str((payload.get("responseData") or {}).get("translatedText") or "")).strip()
+    if not translated or translated.casefold() == chunk.casefold():
+        raise ValueError("MyMemory returned no translated text")
+    return translated
+
+
+def _translate_synopsis_to_burmese(synopsis: str) -> str:
+    """Translate a public catalogue synopsis using two best-effort free providers.
+
+    Google Translate's public no-key endpoint is tried first. MyMemory is a
+    secondary provider with its own public quota. Neither is guaranteed; callers
+    fail closed if neither returns a sufficiently Burmese result.
     """
     text = " ".join(str(synopsis or "").split()).strip()
     if not text or len(text) > MAX_TRANSLATION_CHARS:
         raise AIScriptError("Synopsis ဘာသာပြန်ရန် စာသားအရွယ်အစား မမှန်ကန်ပါ။")
 
-    # Keep chunks bounded and split at sentence/space boundaries.
     chunks = []
     remaining = text
     while remaining:
@@ -45,44 +84,31 @@ def _translate_synopsis_to_burmese(synopsis: str) -> str:
         remaining = remaining[split_at:].strip()
 
     translated_chunks = []
-    try:
-        for chunk in chunks:
-            params = urlencode({
-                "client": "gtx",
-                "sl": "auto",
-                "tl": "my",
-                "dt": "t",
-                "q": chunk,
-            })
-            request = Request(
-                GOOGLE_TRANSLATE_URL + "?" + params,
-                headers={"User-Agent": "NEXORA-Myanmar-Recap/1.0"},
+    for chunk in chunks:
+        try:
+            translated = _translate_google_chunk(chunk)
+        except Exception:
+            try:
+                translated = _translate_mymemory_chunk(chunk)
+            except Exception as exc:
+                raise AIScriptError(
+                    "Google Translate နှင့် MyMemory အခမဲ့ဘာသာပြန်ရင်းမြစ် နှစ်ခုလုံး "
+                    "ယခုချိန်တွင် မရရှိနိုင်ပါ။ ဇာတ်ကွက်ကို မခန့်မှန်းဘဲ ရပ်ထားပါတယ်။"
+                ) from exc
+        if not translated:
+            raise AIScriptError(
+                "ဘာသာပြန်ရလဒ် မရရှိပါ။ မှားယွင်းသော Narration မထုတ်ဘဲ ရပ်ထားပါတယ်။"
             )
-            with urlopen(request, timeout=TRANSLATION_TIMEOUT_SECONDS) as response:
-                payload = json.loads(response.read(1_000_000).decode("utf-8"))
-            segments = payload[0] if isinstance(payload, list) and payload else []
-            translated = "".join(
-                str(segment[0]) for segment in segments
-                if isinstance(segment, list) and segment and segment[0]
-            ).strip()
-            if not translated:
-                raise ValueError("empty translation")
-            translated_chunks.append(translated)
-    except Exception as exc:
-        raise AIScriptError(
-            "Free Burmese translation service ကို ယခုချိန်တွင် မရရှိနိုင်ပါ။ "
-            "ဇာတ်ကွက်ကို မခန့်မှန်းဘဲ ရပ်ထားပါတယ်။"
-        ) from exc
+        translated_chunks.append(translated)
 
-    result = "\n".join(translated_chunks).strip()
-    myanmar_chars = sum(1 for char in result if "\u1000" <= char <= "\u109f")
+    result = "\\n".join(translated_chunks).strip()
+    myanmar_chars = sum(1 for char in result if "\\u1000" <= char <= "\\u109f")
     if myanmar_chars < max(25, int(len(result) * 0.12)):
         raise AIScriptError(
             "ဘာသာပြန်ရလဒ်သည် မြန်မာစာအဖြစ် မလုံလောက်ပါ။ "
             "မှားယွင်းသော Narration မထုတ်ဘဲ ရပ်ထားပါတယ်။"
         )
     return result
-
 
 def _build_free_synopsis_preview(topic: str, synopsis: str) -> str:
     translated = _translate_synopsis_to_burmese(synopsis)
