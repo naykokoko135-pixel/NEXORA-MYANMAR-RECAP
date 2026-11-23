@@ -120,7 +120,7 @@ def search_internet_archive_licensed_video(query: str, limit: int = 6) -> list[d
             continue
         requested_year_match = re.search(r"\((\d{4})\)\s*$", clean)
         if requested_year_match:
-            title_year_match = re.search(r"\\((\\d{4})\\)\\s*$", title)
+            title_year_match = re.search(r"\((\d{4})\)\s*$", title)
             metadata_year = str(metadata.get("year") or metadata.get("date") or "")
             matched_year = (
                 title_year_match.group(1) if title_year_match
