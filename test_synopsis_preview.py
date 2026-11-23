@@ -25,6 +25,37 @@ class SynopsisPreviewTests(unittest.TestCase):
         self.assertIn("SERIES-LEVEL SYNOPSIS ONLY", mocked.call_args.args[1])
         self.assertIn("Episode တစ်ခုချင်း", mocked.call_args.args[1])
 
+    def test_free_only_uses_burmese_translation_without_paid_ai(self):
+        translated = "ဇာတ်လမ်းသည် အားကစားသမားများ၏ ရည်မှန်းချက်နှင့် ကြိုးစားအားထုတ်မှုကို ဖော်ပြထားသည်။"
+        with patch.object(
+            preview, "generate_burmese_recap_script",
+            side_effect=AIScriptError("Free-only mode ဖွင့်ထားသည်။"),
+        ) as ai:
+            with patch.object(preview, "_translate_synopsis_to_burmese", return_value=translated):
+                script, source = preview.generate_burmese_synopsis_preview(
+                    "Haikyu!!", "A detailed series synopsis. " * 8,
+                    "https://anilist.co/anime/20464",
+                )
+        self.assertEqual(source, "https://anilist.co/anime/20464")
+        self.assertIn(translated, script)
+        self.assertIn("Full Recap မဟုတ်ပါ", script)
+        ai.assert_called_once()
+
+    def test_free_translation_failure_does_not_fabricate_script(self):
+        with patch.object(
+            preview, "generate_burmese_recap_script",
+            side_effect=AIScriptError("Free-only mode ဖွင့်ထားသည်။"),
+        ):
+            with patch.object(
+                preview, "_translate_synopsis_to_burmese",
+                side_effect=AIScriptError("translation unavailable"),
+            ):
+                with self.assertRaisesRegex(AIScriptError, "translation unavailable"):
+                    preview.generate_burmese_synopsis_preview(
+                        "Haikyu!!", "A detailed series synopsis. " * 8,
+                        "https://anilist.co/anime/20464",
+                    )
+
     def test_only_quota_error_uses_gemini(self):
         with patch.object(preview, "generate_burmese_recap_script", side_effect=AIScriptError("OpenAI Limit/Quota")):
             with patch.object(preview, "gemini_script_status", return_value={"configured": True}):
