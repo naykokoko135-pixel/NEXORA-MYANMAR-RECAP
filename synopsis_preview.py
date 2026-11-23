@@ -234,10 +234,14 @@ def _provider_error_label(error: Exception) -> str:
 
 
 def _configured_translation_providers():
-    providers = [
+    providers = []
+    # Prefer Gemini when configured and paid AI has been explicitly enabled.
+    if gemini_script_status()["configured"]:
+        providers.append(("Gemini API (configured key)", generate_gemini_translation))
+    providers.extend([
         ("Google Translate (keyless)", _translate_google_chunk),
         ("MyMemory (keyless)", _translate_mymemory_chunk),
-    ]
+    ])
     if os.getenv("NEXORA_LIBRETRANSLATE_URL", "").strip():
         providers.append(("LibreTranslate (configured endpoint)", _translate_libretranslate_chunk))
     if os.getenv("AZURE_TRANSLATOR_KEY", "").strip():
