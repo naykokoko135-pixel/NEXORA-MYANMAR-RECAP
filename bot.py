@@ -135,7 +135,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/productionqa <Category>|<Title>|<Platform> - Script အပိုင်း၊ ကြာချိန်နှင့် SRT စစ်ရန်\n"
             "/audioqa <Platform> ကို Audio ဖိုင်အား reply လုပ်၍ တကယ့်ကြာချိန် စစ်ရန်\n"
-            "/recapvoice [preset|myvoice] - တစ်ဖိုင်တည်း narration MP3 + SRT ထုတ်ရန်\n"
+            "/recapvoice [preset|myvoice [profile_name]] - narration MP3 + SRT ထုတ်ရန်\n"
             "/recapvoice3 [preset|myvoice] - YouTube/Facebook Script ၃ ပိုင်းမှ MP3/SRT ၃ စုံထုတ်ပြီး Audio ကြာချိန် QA စစ်ရန်\n"
             "/recapvideo <title> - အလိုအလျောက် narration + ခွင့်ပြုထားသော Footage မရှိပါက ရပ်မည်; သင့် Video ကို /sourcevideo ဖြင့် MP4 ထုတ်ရန်\n"
             "/dailyrecap [youtube|facebook|tiktok|all] - ယနေ့ Daily Report ရွေးထားသော ခေါင်းစဉ်များကို Licensed Recap pipeline ဖြင့် စတင်ရန် (default all)\n"
@@ -3355,10 +3355,18 @@ async def recapvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     clone_duration = None
     try:
         if preset == "myvoice":
+            first_line = update.message.text.partition("\n")[0]
+            command_parts = first_line.strip().split(maxsplit=2)
+            profile_name = command_parts[2].strip() if len(command_parts) > 2 else "ကိုယ်ပိုင်အသံ"
+            profile_name = normalize_profile_name(profile_name)
             profiles = load_voice_profiles(update.effective_user.id)
-            profile = profiles.get("ကိုယ်ပိုင်အသံ")
+            profile = profiles.get(profile_name)
             if not profile:
-                raise ValueError("ကိုယ်ပိုင်အသံ Profile မရှိသေးပါ။ /myvoice start → /myvoice confirm → အသံဖိုင်ပို့ပါ။")
+                raise ValueError(
+                    f"'{profile_name}' အမည်ရှိ Voice Profile မတွေ့ပါ။ "
+                    "/voiceprofile list ဖြင့် သိမ်းထားသောအမည်များကို စစ်ပါ။ "
+                    "အသံအသစ်သိမ်းရန် /voiceprofile <name> ကို သုံးပါ။"
+                )
             audio, srt_text, clone_duration = await synthesize_recap_in_creator_voice(
                 script, profile["filename"], profile["audio"]
             )
