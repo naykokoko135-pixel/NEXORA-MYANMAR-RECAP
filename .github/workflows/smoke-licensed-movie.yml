@@ -1,0 +1,49 @@
+name: Licensed Movie Footage MP4 Smoke Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "smoke_licensed_movie_pipeline.py"
+      - ".github/workflows/smoke-licensed-movie.yml"
+      - "clip_source_finder.py"
+      - "licensed_video_pipeline.py"
+      - "source_video_renderer.py"
+      - "tts_builder.py"
+      - "video_effects.py"
+      - "audio_mastering.py"
+      - "motion_presets.py"
+      - "subtitle_styles.py"
+      - "fade_effects.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexora-licensed-movie-smoke
+  cancel-in-progress: false
+
+jobs:
+  licensed-movie-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install production dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Render real licensed movie footage with Burmese narration and SRT
+        run: python smoke_licensed_movie_pipeline.py
+      - name: Upload real-footage MP4 and attribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexora-licensed-movie-mp4-smoke
+          path: licensed-movie-smoke-artifacts/
+          if-no-files-found: error
+          retention-days: 3
