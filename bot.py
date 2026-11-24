@@ -955,6 +955,17 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
             except Exception as exc:
                 fallback_source_errors.append("Internet Archive: " + str(exc)[:140])
+            # Additional institutional film libraries for this exact title.
+            # These are search pages only; NEXORA never bypasses access controls
+            # or downloads files until a direct reusable-rights record is available.
+            from urllib.parse import quote_plus
+            fallback_source_notes.extend([
+                "Library of Congress Film & Video search: https://www.loc.gov/film-and-videos/?q="
+                + quote_plus(metadata.get("title", query)),
+                "US National Archives Catalog search: https://catalog.archives.gov/search?q="
+                + quote_plus(metadata.get("title", query)),
+                "Prelinger Archives collection: https://archive.org/details/prelinger",
+            ])
             try:
                 europeana_leads = await asyncio.to_thread(
                     search_europeana_licensed_video, query, 4, search_titles
