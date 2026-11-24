@@ -1824,7 +1824,11 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 Path(downloaded_source).unlink(missing_ok=True)
             except OSError:
                 log.warning("Could not remove cancelled licensed source video")
-        await update.message.reply_text("Source Video Recap ကို ပယ်ဖျက်ပြီး ယာယီ Video ဖိုင်ကို ရှင်းလင်းပြီးပါပြီ။")
+        clip_dir = cancelled.get("source_video_clip_dir")
+        if clip_dir:
+            import shutil
+            shutil.rmtree(clip_dir, ignore_errors=True)
+        await update.message.reply_text("Source Video Recap ကို ပယ်ဖျက်ပြီး ယာယီ Video ဖိုင်များကို ရှင်းလင်းပြီးပါပြီ။")
         return
     session = context.user_data.get("video_render")
     if action == "finish":
@@ -1844,6 +1848,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         await update.message.reply_text("သင်ပေးထားသော မူရင်း Video ကို Narration/SRT နှင့် ပေါင်းပြီး MP4 ထုတ်နေပါတယ်...")
         output_paths = []
+        combined_source_path = None
         try:
             work_root = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work"))
             chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
@@ -1851,15 +1856,15 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             output_dir = work_root / safe_chat / "exports"
             output_dir.mkdir(parents=True, exist_ok=True)
             platform = session.get("platform", "youtube")
-            source_video = session.get("source_video") or session.get("source_video_path")
-            batch_dir = output_dir / ("nexora_recap_" + secrets.token_hex(8))
             source_clips = session.get("source_videos") or []
-            if not source_video and source_clips:
+            source_video = None if source_clips else (session.get("source_video") or session.get("source_video_path"))
+            batch_dir = output_dir / ("nexora_recap_" + secrets.token_hex(8))
+            if source_clips:
                 from source_video_renderer import concatenate_source_video_clips
-                combined_source = batch_dir / "combined_source.mp4" if platform in {"youtube", "facebook"} else output_dir / ("nexora_source_" + secrets.token_hex(8) + ".mp4")
-                combined_source.parent.mkdir(parents=True, exist_ok=True)
-                await asyncio.to_thread(concatenate_source_video_clips, source_clips, combined_source)
-                source_video = combined_source
+                combined_source_path = batch_dir / "combined_source.mp4" if platform in {"youtube", "facebook"} else output_dir / ("nexora_source_" + secrets.token_hex(8) + ".mp4")
+                combined_source_path.parent.mkdir(parents=True, exist_ok=True)
+                await asyncio.to_thread(concatenate_source_video_clips, source_clips, combined_source_path)
+                source_video = combined_source_path
             if platform in {"youtube", "facebook"}:
                 output_paths = await asyncio.to_thread(
                     render_three_part_longform,
@@ -1936,6 +1941,15 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     Path(downloaded_source).unlink(missing_ok=True)
                 except OSError:
                     log.warning("Could not remove temporary licensed source video")
+            clip_dir = session.get("source_video_clip_dir")
+            if clip_dir:
+                import shutil
+                shutil.rmtree(clip_dir, ignore_errors=True)
+            if combined_source_path:
+                try:
+                    Path(combined_source_path).unlink(missing_ok=True)
+                except OSError:
+                    log.warning("Could not remove temporary concatenated source video")
             context.user_data.pop("video_render", None)
         metadata = session.get("source_metadata") or {}
         if metadata:
@@ -1949,13 +1963,23 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
             await update.message.reply_text("\n".join(attribution_lines), disable_web_page_preview=True)
         return
+    previous = context.user_data.get("video_render") or {}
+    if previous.get("source_video_path"):
+        Path(previous["source_video_path"]).unlink(missing_ok=True)
+    if previous.get("source_video_clip_dir"):
+        import shutil
+        shutil.rmtree(previous["source_video_clip_dir"], ignore_errors=True)
     platform = context.user_data.get("platform", "youtube")
+    chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
+    safe_chat = re.sub(r"[^0-9-]", "", chat_id) or "unknown"
+    clip_dir = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work")) / safe_chat / "source_clips" / secrets.token_hex(8)
     context.user_data["video_render"] = {
         "mode": "source_video",
         "platform": platform,
         "source_video": None,
         "source_videos": [],
         "source_video_path": None,
+        "source_video_clip_dir": str(clip_dir),
         "narration_audio": None,
         "subtitles": None,
     }
@@ -2138,22 +2162,30 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         if size <= 0 or size > limit:
             await message.reply_text("Video Clip သည် ၁၉ MiB အောက်၊ အသံသည် ၂၀ MB အောက်၊ SRT သည် ၁ MB အောက် ဖြစ်ရပါမယ်။")
             return
-        buffer = BytesIO()
-        await media_file.download_to_memory(out=buffer)
-        payload = (filename, buffer.getvalue())
         if kind == "video":
             clips = session.setdefault("source_videos", [])
             if len(clips) >= 30:
                 await message.reply_text("Video Clip ၃၀ ခု ပြည့်ပါပြီ။ /sourcevideo finish ပို့ပါ။")
                 return
-            total_bytes = sum(len(item[1]) for item in clips) + len(payload[1])
+            clip_dir = Path(session["source_video_clip_dir"])
+            clip_dir.mkdir(parents=True, exist_ok=True)
+            clip_path = clip_dir / f"clip_{len(clips) + 1:02d}{Path(filename).suffix.lower()}"
+            total_bytes = sum(Path(item[1]).stat().st_size for item in clips) + size
             if total_bytes > 180 * 1024 * 1024:
                 await message.reply_text("Video Clip စုစုပေါင်း ၁၈၀ MiB ကျော်နေပါတယ်။ ပိုသေးသော Clip များသုံးပါ။")
                 return
-            clips.append(payload)
+            await media_file.download_to_drive(custom_path=str(clip_path))
+            clips.append((filename, str(clip_path)))
             session["source_video"] = None
+            old_download = session.get("source_video_path")
+            if old_download:
+                Path(old_download).unlink(missing_ok=True)
+                session["source_video_path"] = None
             received = f"Video Clip {len(clips)}/30 လက်ခံပြီးပါပြီ။"
         else:
+            buffer = BytesIO()
+            await media_file.download_to_memory(out=buffer)
+            payload = (filename, buffer.getvalue())
             key = {"audio": "narration_audio", "subtitle": "subtitles"}[kind]
             session[key] = payload
             received = {
