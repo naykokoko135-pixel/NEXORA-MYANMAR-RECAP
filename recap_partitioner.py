@@ -157,6 +157,7 @@ def render_three_part_longform(
     logo_position: str = "bottom-right",
     subtitle_style: str = "classic",
     burn_subtitles: bool = False,
+    fade_seconds: float = 0.6,
 ) -> list[Path]:
     """Render three sequential source ranges with distinct audio/SRT files."""
     import tempfile
@@ -194,6 +195,7 @@ def render_three_part_longform(
                     logo_position=logo_position,
                     subtitle_style=subtitle_style,
                     burn_subtitles=burn_subtitles,
+                    fade_seconds=fade_seconds,
                 )
                 outputs.append(output)
         except Exception:
