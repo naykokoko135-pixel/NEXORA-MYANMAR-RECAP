@@ -48,6 +48,8 @@ def render_user_source_video(
     background_music: tuple[str, bytes] | None = None,
     music_volume: float = 0.18,
     music_ducking: bool = True,
+    brand_logo: tuple[str, bytes] | None = None,
+    logo_position: str = "bottom-right",
 ) -> Path:
     """Use only the exact uploaded video; loop visuals if needed and replace source audio."""
     import imageio_ffmpeg
@@ -69,6 +71,12 @@ def render_user_source_video(
             raise SourceVideoRenderError("Background Music သည် MP3/M4A/WAV/OGG ၂၀ MB အောက် ဖြစ်ရပါမယ်။")
     else:
         music_name, music_data = "", b""
+    if brand_logo is not None:
+        logo_name, logo_data = brand_logo
+        if Path(logo_name).suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"} or not logo_data or len(logo_data) > 5 * 1024 * 1024:
+            raise SourceVideoRenderError("Brand Logo သည် PNG/JPG/WEBP ၅ MB အောက် ဖြစ်ရပါမယ်။")
+    else:
+        logo_name, logo_data = "", b""
     video_suffix = Path(video_name).suffix.lower()
     audio_suffix = Path(audio_name).suffix.lower()
     if video_suffix not in ALLOWED_VIDEO_SUFFIXES or (video_path is None and not video_data):
@@ -126,6 +134,9 @@ def render_user_source_video(
         music_path = work / ("background_music" + Path(music_name).suffix.lower()) if music_data else None
         if music_path is not None:
             music_path.write_bytes(music_data)
+        logo_path = work / ("brand_logo" + Path(logo_name).suffix.lower()) if logo_data else None
+        if logo_path is not None:
+            logo_path.write_bytes(logo_data)
         if video_path is None:
             render_video_path.write_bytes(video_data)
         audio_path.write_bytes(audio_data)
@@ -149,6 +160,8 @@ def render_user_source_video(
             *video_input,
             "-i", str(audio_path), "-i", str(srt_path),
         ]
+        audio_graph = None
+        audio_label = "[aout]"
         if music_path is not None:
             command.extend(["-stream_loop", "-1", "-i", str(music_path)])
             from audio_mix import build_background_music_graph
@@ -156,9 +169,27 @@ def render_user_source_video(
                 audio_graph, audio_label = build_background_music_graph(music_volume, music_ducking)
             except ValueError as exc:
                 raise SourceVideoRenderError(str(exc)) from exc
-            command.extend(["-filter_complex", audio_graph, "-map", "0:v:0", "-map", audio_label, "-map", "2:s:0"])
+        logo_graph = None
+        if logo_path is not None:
+            logo_input_index = 4 if music_path is not None else 3
+            command.extend(["-i", str(logo_path)])
+            from logo_overlay import build_logo_overlay_graph
+            try:
+                logo_graph, _ = build_logo_overlay_graph(logo_input_index, logo_position)
+            except ValueError as exc:
+                raise SourceVideoRenderError(str(exc)) from exc
+        if audio_graph or logo_graph:
+            graphs = [item for item in (audio_graph, logo_graph) if item]
+            command.extend(["-filter_complex", ";".join(graphs)])
+        if logo_graph:
+            command.extend(["-map", "[vout]"])
         else:
-            command.extend(["-map", "0:v:0", "-map", "1:a:0", "-map", "2:s:0"])
+            command.extend(["-map", "0:v:0"])
+        if audio_graph:
+            command.extend(["-map", audio_label])
+        else:
+            command.extend(["-map", "1:a:0"])
+        command.extend(["-map", "2:s:0"])
         command.extend([
             "-vf",
             video_filter,
