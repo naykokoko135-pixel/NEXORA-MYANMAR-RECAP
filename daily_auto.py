@@ -12,8 +12,6 @@ from auto_research import search_movie_sources
 from wikidata_metadata import (fetch_wikidata_metadata, format_wikidata_metadata,
                                format_wikidata_episode_guide)
 from script_writer import generate_episode_selection_guide
-from trend_sources import fetch_anime_trends, format_anime_trends
-from pageview_trends import fetch_category_pageviews, format_category_pageviews
 from tvmaze_series import fetch_series_episode_guide, format_series_episode_guide
 from anilist_series import fetch_anilist_episode_guide, format_anilist_episode_guide
 from myanmar_plot_research import fetch_burmese_plot_section, PlotResearchError
@@ -420,8 +418,8 @@ def main() -> None:
     if not token or not chat_id:
         raise RuntimeError("Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID as GitHub Actions secrets.")
     local_today = datetime.now(ZoneInfo("Asia/Bangkok")).date()
-    # Compare public attention signals across the five editorial categories.
-    # Wikipedia pageviews are a proxy only, never represented as social-video views.
+    # Select exactly one title for each platform. Research only those three
+    # selected titles; do not append unrelated category-wide trend reports.
     pageview_result = _source_or_fallback(
         "Wikimedia pageviews",
         lambda: fetch_category_pageviews(TITLE_CATEGORIES),
@@ -429,10 +427,9 @@ def main() -> None:
     ) or {}
     selected = select_daily_platform_titles(local_today, pageview_result)
     messages = [
-        "🌅 NEXORA — နေ့စဉ် Platform သုံးခုအတွက် သီးခြား Trend Research",
+        "🎬 NEXORA — ဒီနေ့တင်မည့် ဇာတ်ကားများ",
         f"နေ့စွဲ (ထိုင်းစံတော်ချိန်): {local_today.isoformat()}",
-        "YouTube / Facebook / TikTok အတွက် category သုံးမျိုးနှင့် ခေါင်းစဉ်သုံးခုကို သီးခြားရွေးထားသည်။",
-        "ရွေးချယ်မှုသည် နောက်ဆုံးရရှိသော English Wikipedia article pageviews ကို trend proxy အဖြစ်သုံးပြီး data မရှိပါက curated rotation သို့ ပြန်သုံးသည်။",
+        "Platform တစ်ခုစီအတွက် ရွေးထားသော ဇာတ်ကားတစ်ကားချင်းစီကိုသာ သုတေသနလုပ်ထားသည်။",
     ]
     for platform in ("youtube", "facebook", "tiktok"):
         item = selected[platform]
@@ -516,10 +513,6 @@ def main() -> None:
         messages.extend(["", "━━━━━━━━━━━━━━━━━━", build_platform_daily_message(
             platform, item, research, metadata_report, series_report
         )])
-    trend_data = _source_or_fallback("anime trend", fetch_anime_trends, {})
-    trend_report = format_anime_trends(trend_data)
-    pageview_report = format_category_pageviews(pageview_result)
-    messages.extend(["", "━━━━━━━━━━━━━━━━━━", trend_report, "", pageview_report])
     send_telegram_message(token, chat_id, "\n".join(messages))
 
 
