@@ -3,7 +3,8 @@ from __future__ import annotations
 
 def build_background_music_graph(volume: float = 0.18, ducking: bool = True,
                                  music_input_index: int = 3,
-                                 narration_input_index: int = 1) -> tuple[str, str]:
+                                 narration_input_index: int = 1,
+                                 post_filter: str = "") -> tuple[str, str]:
     level = float(volume)
     if not 0.01 <= level <= 1.0:
         raise ValueError("Background music volume သည် 0.01 မှ 1.0 အတွင်း ဖြစ်ရပါမယ်။")
@@ -14,7 +15,11 @@ def build_background_music_graph(volume: float = 0.18, ducking: bool = True,
         graph = (music + ";"
                  + f"[{narration_input_index}:a]asplit=2[narration_sc][narration_mix];"
                  + "[bgm][narration_sc]sidechaincompress=threshold=0.025:ratio=8:attack=20:release=450[ducked];"
-                 + "[narration_mix][ducked]amix=inputs=2:duration=first:dropout_transition=2[aout]")
+                 + "[narration_mix][ducked]amix=inputs=2:duration=first:dropout_transition=2[mixed]")
     else:
-        graph = music + ";" + f"[{narration_input_index}:a][bgm]amix=inputs=2:duration=first:dropout_transition=2[aout]"
+        graph = music + ";" + f"[{narration_input_index}:a][bgm]amix=inputs=2:duration=first:dropout_transition=2[mixed]"
+    if post_filter:
+        graph += ";[mixed]" + post_filter + "[aout]"
+    else:
+        graph += ";[mixed]anull[aout]"
     return graph, "[aout]"
