@@ -153,6 +153,8 @@ def render_three_part_longform(
     audio_preset: str = "voice",
     motion_preset: str = "none",
     background_music: tuple[str, bytes] | None = None,
+    brand_logo: tuple[str, bytes] | None = None,
+    logo_position: str = "bottom-right",
 ) -> list[Path]:
     """Render three sequential source ranges with distinct audio/SRT files."""
     import tempfile
@@ -186,6 +188,8 @@ def render_three_part_longform(
                     audio_preset=audio_preset,
                     motion_preset=motion_preset,
                     background_music=background_music,
+                    brand_logo=brand_logo,
+                    logo_position=logo_position,
                 )
                 outputs.append(output)
         except Exception:
