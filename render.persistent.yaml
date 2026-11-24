@@ -1,0 +1,41 @@
+# Optional paid Render blueprint for durable creator voice profiles.
+# Deploy this blueprint only if you accept Render's paid Starter service + persistent disk costs.
+# The default render.yaml remains Free and intentionally has no persistent disk.
+services:
+  - type: web
+    name: nexora-myanmar-recap-bot
+    runtime: python
+    plan: starter
+    autoDeployTrigger: checksPass
+    healthCheckPath: /health
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn bot:web_app --host 0.0.0.0 --port $PORT
+    disk:
+      name: nexora-voice-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: VOICE_PROFILE_DB_PATH
+        value: /var/data/nexora_voice_profiles.sqlite3
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: ERROR_REPORT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        generateValue: true
+      - key: CHATGPT_BRIDGE_API_KEY
+        sync: false
+      - key: NEXORA_CONSOLE_PASSWORD
+        sync: false
+      - key: CHATGPT_BRIDGE_CHAT_ID
+        sync: false
+      - key: TMDB_API_READ_ACCESS_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_RESEARCH_MODEL
+        value: gemini-3.8-flash
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
