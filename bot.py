@@ -3495,20 +3495,6 @@ async def recapvoice3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 durations.append(duration)
                 generated.append((index, audio, srt_text))
-            combined_audio, combined_srt, _ = await combine_creator_voice_parts([
-                (audio, srt_text, duration)
-                for (_, audio, srt_text), duration in zip(generated, durations)
-            ])
-            voice_assets = {
-                "narration_audio": ("nexora_recap_voiceover.mp3", combined_audio),
-                "subtitles": ("nexora_recap_subtitles_estimated.srt", combined_srt.encode("utf-8-sig")),
-                "narration_voice": "ကိုယ်ပိုင်အသံ",
-                "platform": platform,
-            }
-            context.user_data["creator_voice_assets"] = voice_assets
-            render_session = context.user_data.get("video_render")
-            if render_session and render_session.get("mode") == "source_video":
-                render_session.update(voice_assets)
         else:
             for index in (1, 2, 3):
                 audio, srt_text = await synthesize_burmese_speech_with_srt(parts[index], preset)
@@ -3538,6 +3524,32 @@ async def recapvoice3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     evaluation = evaluate_audio_parts(platform, durations)
+    if preset == "myvoice" and evaluation["status"] == "DURATION PASS":
+        try:
+            combined_audio, combined_srt, _ = await combine_creator_voice_parts([
+                (audio, srt_text, duration)
+                for (_, audio, srt_text), duration in zip(generated, durations)
+            ])
+        except (ValueError, RuntimeError) as exc:
+            await update.message.reply_text("ကိုယ်ပိုင်အသံ သုံးပိုင်းကို MP4 အတွက် ပေါင်းစပ်မရပါ: " + str(exc))
+            return
+        voice_assets = {
+            "narration_audio": ("nexora_recap_voiceover.mp3", combined_audio),
+            "subtitles": ("nexora_recap_subtitles_estimated.srt", combined_srt.encode("utf-8-sig")),
+            "narration_voice": "ကိုယ်ပိုင်အသံ",
+            "platform": platform,
+        }
+        context.user_data["creator_voice_assets"] = voice_assets
+        render_session = context.user_data.get("video_render")
+        if render_session and render_session.get("mode") == "source_video":
+            render_session.update(voice_assets)
+    elif preset == "myvoice":
+        context.user_data.pop("creator_voice_assets", None)
+        render_session = context.user_data.get("video_render")
+        if render_session and render_session.get("mode") == "source_video":
+            render_session.pop("narration_audio", None)
+            render_session.pop("subtitles", None)
+            render_session.pop("narration_voice", None)
     await update.message.reply_text(format_audio_parts_qa_report(platform, evaluation))
     ready_label = (
         "DURATION PASS — လူကိုယ်တိုင် နောက်ဆုံးစစ်ဆေးရန်"
