@@ -138,6 +138,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/recapvideo <title> - အလိုအလျောက် narration + ခွင့်ပြုထားသော Footage မရှိပါက ရပ်မည်; သင့် Video ကို /sourcevideo ဖြင့် MP4 ထုတ်ရန်\n"
             "/dailyrecap [youtube|facebook|tiktok|all] - ယနေ့ Daily Report ရွေးထားသော ခေါင်းစဉ်များကို Licensed Recap pipeline ဖြင့် စတင်ရန် (default all)\n"
             "/sourcevideo - ကိုယ်ပိုင်/ခွင့်ပြုထားသော Video + မြန်မာအသံ + SRT မှ MP4 ထုတ်ရန်\n"
+            "/licensedownload <title> - Commons + Archive မှ ခွင့်ပြုထားသော မူရင်း Video ကို အလိုအလျောက် ရှာ/Download လုပ်ရန်\n"
             "/autoedit [category] - Genre အလိုက် Effect/Audio/Transition အလိုအလျောက်ရွေးရန်\n"
             "/effect [preset] - Visual Look ၂၀ မျိုး ရွေးရန်\n"
             "/audiofx [preset] - Voice/Cinematic/Podcast/Soft Audio Mastering ရွေးရန်\n"
