@@ -24,7 +24,7 @@ from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_bur
 from local_myanmar_tts import synthesize_local_burmese_speech
 from voxcpm_voice_design import VOICE_DESIGNS, synthesize_designed_burmese_voice
 from voxcpm_voice_clone import synthesize_cloned_burmese_voice
-from creator_voice_recap import synthesize_recap_in_creator_voice
+from creator_voice_recap import synthesize_recap_in_creator_voice, combine_creator_voice_parts
 from scene_tts import parse_scene_script, parse_voice_design_scene_script
 from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
 from voice_profile_storage import load_voice_profiles, save_voice_profiles
@@ -3453,6 +3453,20 @@ async def recapvoice3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 durations.append(duration)
                 generated.append((index, audio, srt_text))
+            combined_audio, combined_srt, _ = await combine_creator_voice_parts([
+                (audio, srt_text, duration)
+                for (_, audio, srt_text), duration in zip(generated, durations)
+            ])
+            voice_assets = {
+                "narration_audio": ("nexora_recap_voiceover.mp3", combined_audio),
+                "subtitles": ("nexora_recap_subtitles_estimated.srt", combined_srt.encode("utf-8-sig")),
+                "narration_voice": "ကိုယ်ပိုင်အသံ",
+                "platform": platform,
+            }
+            context.user_data["creator_voice_assets"] = voice_assets
+            render_session = context.user_data.get("video_render")
+            if render_session and render_session.get("mode") == "source_video":
+                render_session.update(voice_assets)
         else:
             for index in (1, 2, 3):
                 audio, srt_text = await synthesize_burmese_speech_with_srt(parts[index], preset)
