@@ -3174,6 +3174,63 @@ async def voiceclone_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def recapvoiceclone_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generate creator-owned VoxCPM narration and attach it to an active source-video render."""
+    if not update.message or not update.message.text:
+        return
+    first_line, separator, script = update.message.text.partition("\\n")
+    parts = first_line.split(maxsplit=1)
+    profile_name = parts[1].strip() if len(parts) > 1 else "ကိုယ်ပိုင်အသံ"
+    if not separator or not script.strip():
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /recapvoiceclone [profile_name] ပြီးနောက် မြန်မာ narration ကို စာကြောင်းအသစ်မှ ထည့်ပါ။\\n"
+            "အရင် /sourcevideo start ဖြင့် Video Render Session ဖွင့်ပြီး /myvoice setup ဖြင့် အသံသိမ်းထားပါ။"
+        )
+        return
+    session = context.user_data.get("video_render")
+    if not session or session.get("mode") != "source_video":
+        await update.message.reply_text(
+            "အရင် /sourcevideo start ပို့ပြီး Render Session ဖွင့်ပါ။ ထို့နောက် /recapvoiceclone ဖြင့် narration ဖန်တီးနိုင်ပါတယ်။"
+        )
+        return
+    try:
+        profiles = load_voice_profiles(update.effective_user.id)
+        profile = profiles.get(normalize_profile_name(profile_name))
+        if not profile:
+            await update.message.reply_text("သိမ်းထားသော Voice Profile မတွေ့ပါ။ /myvoice status သို့ /voiceprofile list ဖြင့် စစ်ပါ။")
+            return
+        await update.message.reply_text("ကိုယ်ပိုင် Reference အသံဖြင့် narration WAV ဖန်တီးနေပါတယ်။ Compatible GPU host လိုအပ်ပါတယ်...")
+        audio = await synthesize_cloned_burmese_voice(script.strip(), profile["filename"], profile["audio"])
+        from recap_voice_clone_pipeline import build_estimated_srt_for_audio
+        srt_text = build_estimated_srt_for_audio(script.strip(), audio)
+    except (OSError, ValueError, RuntimeError) as exc:
+        await update.message.reply_text(f"ကိုယ်ပိုင်အသံ Recap narration မဖန်တီးနိုင်ပါ: {exc}")
+        return
+    except Exception:
+        log.exception("/recapvoiceclone failed")
+        await update.message.reply_text("ကိုယ်ပိုင်အသံ Recap ဖန်တီးရာတွင် အမှားရှိပါတယ်။")
+        return
+
+    session["narration_audio"] = ("nexora_myvoice_narration.wav", audio)
+    session["subtitles"] = ("nexora_myvoice_estimated.srt", srt_text.encode("utf-8-sig"))
+    session["narration_voice"] = "ကိုယ်ပိုင်အသံ"
+    audio_file = BytesIO(audio)
+    audio_file.name = "nexora_myvoice_narration.wav"
+    await update.message.reply_document(
+        document=InputFile(audio_file, filename=audio_file.name),
+        caption="ကိုယ်ပိုင်အသံ Recap narration WAV။ ဒီဖိုင်ကို လက်ရှိ /sourcevideo Session ထဲသို့လည်း ချိတ်ထားပါပြီ။"
+    )
+    subtitle_file = BytesIO(srt_text.encode("utf-8-sig"))
+    subtitle_file.name = "nexora_myvoice_estimated.srt"
+    await update.message.reply_document(
+        document=InputFile(subtitle_file, filename=subtitle_file.name),
+        caption="အသံကြာချိန်နှင့် အဆုံးချိန်ညှိထားသော ခန့်မှန်း SRT ဖြစ်သည်။ Word-level alignment မဟုတ်ပါ။ ထုတ်ဝေမီ အသံနှင့်တိုက်စစ်ပြီး လိုအပ်လျှင် ပြင်ထားသော SRT ကို Upload လုပ်ပါ။"
+    )
+    await update.message.reply_text(
+        "ကိုယ်ပိုင်အသံ Narration + SRT ကို Render Session ထဲ ထည့်ပြီးပါပြီ။ မူရင်း Video/ခွင့်ပြုထားသော Footage ကို ပို့ပြီး /sourcevideo finish လုပ်ပါ။"
+    )
+
+
 async def ttslocal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Generate a WAV using the optional local MyanmarTTS model."""
     if not update.message or not update.message.text:
@@ -3843,6 +3900,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("voiceprofile", voiceprofile_cmd))
     telegram_app.add_handler(CommandHandler("myvoice", myvoice_cmd))
     telegram_app.add_handler(CommandHandler("voiceclone", voiceclone_cmd))
+    telegram_app.add_handler(CommandHandler("recapvoiceclone", recapvoiceclone_cmd))
     telegram_app.add_handler(CommandHandler("voices", voices_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
