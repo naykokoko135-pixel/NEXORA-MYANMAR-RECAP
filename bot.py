@@ -2297,8 +2297,16 @@ async def myvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     if action in {"delete", "remove"}:
-        context.args = ["delete", "ကိုယ်ပိုင်အသံ"]
-        await voiceprofile_cmd(update, context)
+        try:
+            profiles = load_voice_profiles(update.effective_user.id)
+            delete_voice_profile(profiles, "ကိုယ်ပိုင်အသံ")
+            save_voice_profiles(update.effective_user.id, profiles)
+        except (OSError, ValueError) as exc:
+            await update.message.reply_text(f"ကိုယ်ပိုင်အသံ ဖျက်မရပါ: {exc}")
+            return
+        context.user_data["custom_voice_profiles"] = profiles
+        await update.message.reply_text("Default ကိုယ်ပိုင်အသံ Profile ကို ဖျက်ပြီးပါပြီ။")
+        await send_voice_profile_backup(update, profiles, "ကိုယ်ပိုင်အသံဖျက်ပြီးနောက်")
         return
     await update.message.reply_text(
         "🎙️ NEXORA ကိုယ်ပိုင်အသံ Tool\n"
