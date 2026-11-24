@@ -159,6 +159,8 @@ def render_three_part_longform(
     burn_subtitles: bool = False,
     fade_seconds: float = 0.6,
     quality_preset: str = "720p",
+    music_volume: float = 0.18,
+    music_ducking: bool = True,
 ) -> list[Path]:
     """Render three sequential source ranges with distinct audio/SRT files."""
     import tempfile
@@ -198,6 +200,8 @@ def render_three_part_longform(
                     burn_subtitles=burn_subtitles,
                     fade_seconds=fade_seconds,
                     quality_preset=quality_preset,
+                    music_volume=music_volume,
+                    music_ducking=music_ducking,
                 )
                 outputs.append(output)
         except Exception:
