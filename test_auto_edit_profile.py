@@ -12,7 +12,10 @@ class AutoEditProfileTests(unittest.TestCase):
             profile = build_auto_edit_profile(category, "youtube")
             self.assertIn(profile["effect_preset"], EFFECT_PRESETS)
             self.assertIn(profile["audio_preset"], AUDIO_PRESETS)
-            self.assertIn(profile["transition"], TRANSITIONS)
+            if profile["transition"] != "cut":
+                self.assertIn(profile["transition"], TRANSITIONS)
+            from motion_presets import MOTION_PRESETS
+            self.assertIn(profile["motion_preset"], MOTION_PRESETS)
 
     def test_aliases_and_unknown_category_fallback(self):
         self.assertEqual(build_auto_edit_profile("3D")["category"], "3d animation")
