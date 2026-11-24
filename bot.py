@@ -144,6 +144,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/transition [preset] - Fade/Wipe/Slide/Circle/Dissolve အကူးအပြောင်း ရွေးရန်\n"
             "/motion [preset] - Camera Push-in/Pull-out/Pan/Drift Motion ရွေးရန်\n"
             "/bgm - Background Music ဖိုင်ထည့်ရန်; /bgm off - ဖယ်ရန်\n"
+            "/logo - Brand Logo တင်ရန်; /logo position top-left; /logo off\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - Video Footage + မြန်မာ Narration + SRT မှ MP4 ထုတ်ရန်\n"
@@ -2033,6 +2034,8 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     session.get("audio_preset", "voice"),
                     session.get("motion_preset", "none"),
                     context.user_data.get("background_music"),
+                    context.user_data.get("brand_logo"),
+                    context.user_data.get("logo_position", "bottom-right"),
                 )
             else:
                 single_output = output_dir / ("nexora_recap_" + secrets.token_hex(8) + ".mp4")
@@ -2047,6 +2050,8 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     audio_preset=session.get("audio_preset", "voice"),
                     motion_preset=session.get("motion_preset", "none"),
                     background_music=context.user_data.get("background_music"),
+                    brand_logo=context.user_data.get("brand_logo"),
+                    logo_position=context.user_data.get("logo_position", "bottom-right"),
                 )
                 output_paths = [single_output]
             now = time.time()
@@ -2271,6 +2276,32 @@ async def bgm_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def logo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Upload, position, or remove the creator's brand logo overlay."""
+    if not update.message:
+        return
+    from logo_overlay import LOGO_POSITIONS
+    action = context.args[0].strip().lower() if context.args else "upload"
+    if action in {"off", "clear", "remove"}:
+        context.user_data.pop("brand_logo", None)
+        context.user_data.pop("pending_logo_upload", None)
+        await update.message.reply_text("Brand Logo ဖယ်ရှားပြီးပါပြီ။")
+        return
+    if action == "position":
+        position = context.args[1].strip().lower() if len(context.args) > 1 else ""
+        if position not in LOGO_POSITIONS:
+            await update.message.reply_text("အသုံးပြုပုံ: /logo position top-left|top-right|bottom-left|bottom-right")
+            return
+        context.user_data["logo_position"] = position
+        await update.message.reply_text(f"Logo Position ပြောင်းပြီးပါပြီ: {position}")
+        return
+    context.user_data["pending_logo_upload"] = True
+    await update.message.reply_text(
+        "🪪 Brand Logo PNG/JPG/WEBP ဖိုင် (၅ MB အောက်) ပို့ပါ။ MP4 ပေါ်တွင် အလိုအလျောက် Overlay လုပ်ပေးပါမယ်။\n"
+        "နေရာပြောင်းရန် /logo position top-left စသဖြင့် သုံးပါ။ ဖယ်ရန် /logo off"
+    )
+
+
 async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
@@ -2327,6 +2358,27 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         context.user_data.pop("pending_voice_profile", None)
         await message.reply_text(f"{pending} အသံဖိုင် သိမ်းပြီးပါပြီ။ /voiceprofile list ဖြင့် ကြည့်နိုင်ပါတယ်။ ဒီဖိုင်သည် အသံသွင်းထားသော narration ကို တိုက်ရိုက်ပြန်သုံးရန်ဖြစ်ပြီး စာသားအသစ်ကို TTS ပြောင်းပေးခြင်း မဟုတ်ပါ။")
         await send_voice_profile_backup(update, profiles, "Profile အသစ်သိမ်းပြီးနောက်")
+        return
+    if context.user_data.get("pending_logo_upload"):
+        logo_media = message.photo[-1] if message.photo else None
+        logo_filename = "brand_logo.jpg" if logo_media else ""
+        if message.document:
+            candidate = message.document.file_name or ""
+            if Path(candidate).suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}:
+                logo_media = message.document
+                logo_filename = candidate
+        if logo_media is None:
+            await message.reply_text("PNG/JPG/WEBP Logo ဖိုင်ကို ပို့ပါ။")
+            return
+        media_file = await logo_media.get_file()
+        if (getattr(media_file, "file_size", 0) or 0) <= 0 or (getattr(media_file, "file_size", 0) or 0) > 5 * 1024 * 1024:
+            await message.reply_text("Brand Logo သည် ၅ MB အောက် ဖြစ်ရပါမယ်။")
+            return
+        buffer = BytesIO()
+        await media_file.download_to_memory(out=buffer)
+        context.user_data["brand_logo"] = (logo_filename, buffer.getvalue())
+        context.user_data.pop("pending_logo_upload", None)
+        await message.reply_text("🪪 Brand Logo လက်ခံပြီးပါပြီ။ နောက် MP4 Render မှာ အလိုအလျောက် Overlay လုပ်ပါမယ်။ /logo off ဖြင့် ဖယ်နိုင်ပါတယ်။")
         return
     if context.user_data.get("pending_bgm_upload"):
         music_media = message.audio or message.voice
@@ -3451,6 +3503,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("transition", transition_cmd))
     telegram_app.add_handler(CommandHandler("motion", motion_cmd))
     telegram_app.add_handler(CommandHandler("bgm", bgm_cmd))
+    telegram_app.add_handler(CommandHandler("logo", logo_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
