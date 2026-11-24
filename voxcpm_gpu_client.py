@@ -15,8 +15,8 @@ def gpu_worker_configured() -> bool:
 def _post(payload: dict) -> bytes:
     url = os.getenv("NEXORA_VOXCPM_GPU_URL", "").strip()
     token = os.getenv("NEXORA_VOXCPM_WORKER_TOKEN", "").strip()
-    if not url or not token:
-        raise RuntimeError("GPU Worker URL/Token မပြင်ဆင်ရသေးပါ။")
+    if not url.startswith("https://") or not token:
+        raise RuntimeError("GPU Worker HTTPS URL/Token မပြင်ဆင်ရသေးပါ။ Token လုံခြုံရေးအတွက် HTTPS သာ လက်ခံပါတယ်။")
     body = json.dumps({**payload, "token": token}).encode("utf-8")
     request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
     try:
