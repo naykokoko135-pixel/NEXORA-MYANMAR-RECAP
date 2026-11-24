@@ -1,32 +1,17 @@
+# FREE (default): Telegram control bot only. Heavy rendering runs on GitHub Actions.
 services:
   - type: web
     name: nexora-myanmar-recap-bot
     runtime: python
     plan: free
-    autoDeployTrigger: checksPass
-    healthCheckPath: /health
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn bot:web_app --host 0.0.0.0 --port $PORT
+    startCommand: python -m nexora.bot
+    healthCheckPath: /health
     envVars:
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: ERROR_REPORT_TOKEN
-        sync: false
-      - key: TELEGRAM_WEBHOOK_SECRET
-        generateValue: true
-      - key: CHATGPT_BRIDGE_API_KEY
-        sync: false
-      - key: NEXORA_CONSOLE_PASSWORD
-        sync: false
-      - key: CHATGPT_BRIDGE_CHAT_ID
-        sync: false
-      - key: TMDB_API_READ_ACCESS_TOKEN
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: GEMINI_RESEARCH_MODEL
-        value: gemini-3.8-flash
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: OPENAI_MODEL
-        value: gpt-4.1-mini
+      - { key: TELEGRAM_BOT_TOKEN, sync: false }
+      - { key: GH_TOKEN, sync: false }
+      - { key: GH_REPO, value: naykokoko135-pixel/NEXORA-MYANMAR-RECAP }
+      - { key: WEBHOOK_SECRET, generateValue: true }
+      - { key: GEMINI_API_KEY, sync: false }
+      - { key: TMDB_API_KEY, sync: false }
+      - { key: PYTHON_VERSION, value: "3.12.3" }
