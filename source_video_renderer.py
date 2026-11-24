@@ -11,7 +11,9 @@ class SourceVideoRenderError(ValueError):
     """Raised when an uploaded source video cannot be safely rendered."""
 
 
-MAX_SOURCE_VIDEO_BYTES = 20 * 1024 * 1024
+MAX_SOURCE_VIDEO_BYTES = 19 * 1024 * 1024
+MAX_SOURCE_VIDEO_CLIPS = 30
+MAX_SOURCE_VIDEO_TOTAL_BYTES = 180 * 1024 * 1024
 MAX_NARRATION_BYTES = 45 * 1024 * 1024
 MAX_SRT_BYTES = 1024 * 1024
 ALLOWED_VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".webm"}
@@ -134,8 +136,11 @@ def concatenate_source_video_clips(
     """Normalize and concatenate multiple uploaded real-video clips in order."""
     import imageio_ffmpeg
 
-    if not clips or len(clips) > 30:
-        raise SourceVideoRenderError("Video Clip ၁ ခုမှ ၃၀ ခုအထိ လိုအပ်ပါတယ်။")
+    if not clips or len(clips) > MAX_SOURCE_VIDEO_CLIPS:
+        raise SourceVideoRenderError(f"Video Clip ၁ ခုမှ {MAX_SOURCE_VIDEO_CLIPS} ခုအထိ လိုအပ်ပါတယ်။")
+    total_bytes = sum(len(data) for _, data in clips)
+    if total_bytes > MAX_SOURCE_VIDEO_TOTAL_BYTES:
+        raise SourceVideoRenderError("Video Clip စုစုပေါင်း ၁၈၀ MiB ကျော်နေပါတယ်။")
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
