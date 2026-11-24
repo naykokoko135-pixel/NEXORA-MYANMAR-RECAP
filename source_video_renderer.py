@@ -157,16 +157,17 @@ def concatenate_source_video_clips(
         normalized: list[Path] = []
         for index, (filename, data) in enumerate(clips, 1):
             suffix = Path(filename).suffix.lower()
-            if suffix not in ALLOWED_VIDEO_SUFFIXES or not data or len(data) > MAX_SOURCE_VIDEO_BYTES:
-                raise SourceVideoRenderError(f"Clip {index}: MP4/MOV/M4V/WEBM ၂၀ MB အောက် လိုအပ်ပါတယ်။")
+            if suffix not in ALLOWED_VIDEO_SUFFIXES:
+                raise SourceVideoRenderError(f"Clip {index}: MP4/MOV/M4V/WEBM ဖိုင်အမျိုးအစား လိုအပ်ပါတယ်။")
             if isinstance(data, (str, Path)):
                 raw = Path(data)
-                if not raw.is_file() or raw.stat().st_size > MAX_SOURCE_VIDEO_BYTES:
+                if not raw.is_file() or raw.stat().st_size <= 0 or raw.stat().st_size > MAX_SOURCE_VIDEO_BYTES:
                     raise SourceVideoRenderError(f"Clip {index}: ဖိုင်မရှိပါ သို့မဟုတ် ၁၉ MiB ကျော်နေပါတယ်။")
             else:
                 if not data or len(data) > MAX_SOURCE_VIDEO_BYTES:
                     raise SourceVideoRenderError(f"Clip {index}: MP4/MOV/M4V/WEBM ၁၉ MiB အောက် လိုအပ်ပါတယ်။")
                 raw = work / f"input_{index}{suffix}"
+                raw.write_bytes(data)
                 raw.write_bytes(data)
             cooked = work / f"clip_{index:02d}.mp4"
             probe = subprocess.run(
