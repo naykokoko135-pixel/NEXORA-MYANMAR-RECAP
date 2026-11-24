@@ -8,10 +8,10 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 MAX_SOURCE_BYTES = 1024 * 1024 * 1024
-MAX_PREVIEW_SOURCE_BYTES = 80 * 1024 * 1024
+MAX_PREVIEW_SOURCE_BYTES = 256 * 1024 * 1024
 MAX_PREVIEW_SECONDS = 45
 ALLOWED_HOST = "upload.wikimedia.org"
-ALLOWED_PREVIEW_HOSTS = {ALLOWED_HOST, "download.blender.org"}
+ALLOWED_PREVIEW_HOSTS = {ALLOWED_HOST, "download.blender.org", "storage.googleapis.com"}
 
 
 class LicensedClipError(ValueError):
