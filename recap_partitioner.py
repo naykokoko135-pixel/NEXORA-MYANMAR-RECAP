@@ -149,6 +149,7 @@ def render_three_part_longform(
     subtitles_srt: tuple[str, bytes],
     output_dir: str | Path,
     platform: str,
+    effect_preset: str = "cinematic",
 ) -> list[Path]:
     """Render three sequential source ranges with distinct audio/SRT files."""
     import tempfile
@@ -178,6 +179,7 @@ def render_three_part_longform(
                     source_start_seconds=part["start_seconds"],
                     require_source_coverage=True,
                     expected_duration_seconds=part["duration_seconds"],
+                    effect_preset=effect_preset,
                 )
                 outputs.append(output)
         except Exception:
