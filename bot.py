@@ -148,6 +148,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/substyle [preset] - Subtitle အရောင်/အရွယ်/Outline ရွေးရန်\n"
             "/subburn on|off - Subtitle ကို Video ထဲ Burn လုပ်/Soft Subtitle ပြန်ထားရန်\n"
             "/fade 0.6|off - Video/Audio အစနှင့်အဆုံး Fade ထည့်ရန်/ပိတ်ရန်\n"
+            "/editstatus - လက်ရှိ Auto Edit ဆက်တင်အားလုံးကြည့်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - Video Footage + မြန်မာ Narration + SRT မှ MP4 ထုတ်ရန်\n"
@@ -2277,6 +2278,30 @@ async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"{name} အတွက် ကိုယ်ပိုင်အသံ MP3/M4A/WAV/OGG ဖိုင် (၂၀ MB အောက်) ပို့ပါ။ မလုပ်တော့ပါက /cancel ပို့ပါ။")
 
 
+async def editstatus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show all automatic editor settings before the user renders a video."""
+    if not update.message:
+        return
+    defaults = context.user_data.get("video_edit_defaults") or {}
+    session = context.user_data.get("video_render") or {}
+    current = {**defaults, **session}
+    lines = [
+        "🧩 NEXORA EDIT SETTINGS",
+        f"Platform: {current.get('platform', context.user_data.get('platform', 'youtube'))}",
+        f"Effect: {current.get('effect_preset', 'cinematic')}",
+        f"Audio: {current.get('audio_preset', 'voice')}",
+        f"Transition: {current.get('transition', 'fade')}",
+        f"Camera Motion: {current.get('motion_preset', 'none')}",
+        f"Subtitle Style: {current.get('subtitle_style', 'classic')}",
+        f"Hard-burn subtitles: {'ON' if current.get('burn_subtitles', False) else 'OFF (soft subtitle)'}",
+        f"Opening/Closing Fade: {float(current.get('fade_seconds', 0.6)):.1f}s",
+        f"Background Music: {'READY' if context.user_data.get('background_music') else 'NOT SET'}",
+        f"Brand Logo: {'READY' if context.user_data.get('brand_logo') else 'NOT SET'}",
+        f"Logo Position: {context.user_data.get('logo_position', 'bottom-right')}",
+    ]
+    await update.message.reply_text("\\n".join(lines))
+
+
 async def fade_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set automatic opening/closing fade duration; zero disables fades."""
     if not update.message:
@@ -3599,6 +3624,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("substyle", substyle_cmd))
     telegram_app.add_handler(CommandHandler("subburn", subburn_cmd))
     telegram_app.add_handler(CommandHandler("fade", fade_cmd))
+    telegram_app.add_handler(CommandHandler("editstatus", editstatus_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
