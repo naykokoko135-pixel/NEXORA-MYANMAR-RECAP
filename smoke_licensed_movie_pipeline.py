@@ -29,7 +29,7 @@ NARRATION = (
 
 
 def subtitle_end_seconds(srt: str) -> float:
-    matches = re.findall(r"-->\\s*(\\d{2}):(\\d{2}):(\\d{2}),(\\d{3})", srt)
+    matches = re.findall(r"-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})", srt)
     if not matches:
         raise RuntimeError("TTS did not return a valid timed SRT")
     h, m, sec, ms = matches[-1]
