@@ -17,6 +17,7 @@ def test_telegram_help_documents_current_recap_voice_workflows():
     required = (
         "/recapvoice [preset]",
         "/recapvoice3 [preset]",
+        "/licensedownload <title>",
         "[PART 1]",
         "[PART 2]",
         "[PART 3]",
