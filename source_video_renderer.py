@@ -42,6 +42,7 @@ def render_user_source_video(
     source_start_seconds: float = 0.0,
     require_source_coverage: bool = True,
     expected_duration_seconds: float | None = None,
+    effect_preset: str = "cinematic",
 ) -> Path:
     """Use only the exact uploaded video; loop visuals if needed and replace source audio."""
     import imageio_ffmpeg
@@ -81,6 +82,13 @@ def render_user_source_video(
         raise SourceVideoRenderError("Platform သည် youtube/facebook/tiktok ဖြစ်ရပါမယ်။")
     width, height = PLATFORM_DIMENSIONS[platform]
 
+    from video_effects import build_effect_filter
+
+    try:
+        video_filter = build_effect_filter(effect_preset, width, height)
+    except ValueError as exc:
+        raise SourceVideoRenderError(str(exc)) from exc
+
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
@@ -113,8 +121,7 @@ def render_user_source_video(
             "-i", str(audio_path), "-i", str(srt_path),
             "-map", "0:v:0", "-map", "1:a:0", "-map", "2:s:0",
             "-vf",
-            f"scale={width}:{height}:force_original_aspect_ratio=increase,"
-            f"crop={width}:{height},setsar=1,format=yuv420p",
+            video_filter,
             "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
             "-c:a", "aac", "-b:a", "128k", "-c:s", "mov_text",
             "-metadata:s:s:0", "language=bur", "-t", f"{duration:.3f}",
