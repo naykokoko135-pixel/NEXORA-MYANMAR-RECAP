@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from auto_research import search_movie_sources
 from wikidata_metadata import (fetch_wikidata_metadata, format_wikidata_metadata,
                                format_wikidata_episode_guide)
+from pageview_trends import fetch_category_pageviews
 from script_writer import generate_episode_selection_guide
 from tvmaze_series import fetch_series_episode_guide, format_series_episode_guide
 from anilist_series import fetch_anilist_episode_guide, format_anilist_episode_guide
