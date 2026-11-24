@@ -676,29 +676,37 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Search and download a title-matching, explicitly reusable Commons video."""
+    """Search Commons, then Internet Archive, for an exact-title reusable source."""
     if not update.message:
         return
     query = " ".join(context.args).strip()
     if not query:
-        await update.message.reply_text("အသုံးပြုပုံ: /licensedownload <ခေါင်းစဉ်>\nခေါင်းစဉ်တိတိကျကျ ကိုက်ညီပြီး CC/Public Domain လိုင်စင်ရှိသော Commons Video ကိုသာ Download ဆွဲပေးပါမယ်။")
+        await update.message.reply_text(
+            "အသုံးပြုပုံ: /licensedownload <ခေါင်းစဉ်>\n"
+            "Wikimedia Commons မှ CC0/CC BY/CC BY-SA/Public Domain နှင့် "
+            "Internet Archive မှ CC0/Public Domain Mark ကိုသာ စစ်ပြီး Download လုပ်ပါမယ်။"
+        )
         return
-    await update.message.reply_text("Wikimedia Commons မှ CC/Public Domain Video ကို Server ပေါ်သို့ တိုက်ရိုက် Download လုပ်နေပါတယ်...")
+    await update.message.reply_text(
+        "Wikimedia Commons ကို ဦးစားပေးရှာပြီး မရပါက Internet Archive မှ "
+        "CC0/Public Domain Mark မူရင်း Video ကို စစ်ဆေး Download လုပ်နေပါတယ်..."
+    )
     try:
-        sources = await asyncio.to_thread(search_licensed_video, query, 8)
-        source = choose_matching_source(query, sources)
-        if not source:
-            await update.message.reply_text("ခေါင်းစဉ်နဲ့ ကိုက်ညီတဲ့ CC/Public Domain Video မတွေ့ပါ။ မဆိုင်တဲ့ Video ကို မဒေါင်းပါ။")
-            return
-        suffix = ".webm" if str(source.get("mime", "")).lower() == "video/webm" else ".mp4"
+        from licensed_source_router import (
+            LicensedSourceRouterError,
+            discover_and_download_licensed_source,
+        )
+
         work_root = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work"))
         work_root.mkdir(parents=True, exist_ok=True)
         chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
         safe_chat = re.sub(r"[^0-9-]", "", chat_id)
         session_dir = work_root / safe_chat
         session_dir.mkdir(parents=True, exist_ok=True)
-        output = session_dir / ("licensed_source" + suffix)
-        await asyncio.to_thread(download_licensed_source, source, output)
+
+        output, source, provider = await asyncio.to_thread(
+            discover_and_download_licensed_source, query, session_dir
+        )
         prior = context.user_data.get("video_render") or {}
         defaults = context.user_data.get("video_edit_defaults") or {}
         selected_effect = str(prior.get("effect_preset", defaults.get("effect_preset", "cinematic")))
@@ -709,6 +717,8 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
         selected_burn_subtitles = bool(prior.get("burn_subtitles", defaults.get("burn_subtitles", False)))
         selected_fade_seconds = float(prior.get("fade_seconds", defaults.get("fade_seconds", 0.6)))
         selected_quality = str(prior.get("quality_preset", defaults.get("quality_preset", "720p")))
+        artist = str(source.get("artist", "Unknown"))
+        attribution = str(source.get("attribution") or artist)
         context.user_data["video_render"] = {
             "mode": "source_video",
             "platform": context.user_data.get("platform", "youtube"),
@@ -724,23 +734,36 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
             "source_metadata": {
                 "title": str(source.get("title", "")),
                 "license": str(source.get("license", "")),
-                "artist": str(source.get("artist", "Unknown")),
-                "attribution": str(source.get("attribution", "")),
+                "license_uri": str(source.get("license_uri", "")),
+                "artist": artist,
+                "attribution": attribution,
                 "source_page": str(source.get("source_page", "")),
+                "provider": provider,
             },
             "narration_audio": None,
             "subtitles": None,
         }
-        await update.message.reply_text(
-            f"Server-side Download ပြီးပါပြီ။\nခေါင်းစဉ်: {source.get('title', '')}\n"
-            f"လိုင်စင်: {source.get('license', '')}\nဖန်တီးသူ: {str(source.get('artist', 'Unknown'))[:160]}\n"
-            f"Attribution: {str(source.get('attribution', ''))[:300]}\nSource: {source.get('source_page', '')}\n\n"
-            "ဒီဖိုင်ကို Telegram ကတစ်ဆင့် ပြန်ပို့စရာမလိုပါ။ အခု မြန်မာ Narration MP3 နဲ့ UTF-8 SRT ကို ပို့ပြီး /sourcevideo finish လုပ်ပါ။\n"
-            "မှတ်ချက်: Render Free ရဲ့ /tmp ဖိုင်တွေဟာ restart/deploy လုပ်ရင် ပျောက်နိုင်ပါတယ်။ Persistent Disk မချိတ်ရသေးပါ။"
+        archive_warning = (
+            "\n\nသတိပြုရန်: Internet Archive လိုင်စင်အချက်အလက်သည် uploader ထည့်ထားသော metadata ဖြစ်သည်။ "
+            "မထုတ်ဝေမီ မူရင်းအခွင့်အရေး/Attribution ကို ထပ်မံစစ်ဆေးပါ။"
+            if provider.startswith("Internet Archive") else ""
         )
-    except (ClipSourceError, LicensedClipError) as exc:
-        await update.message.reply_text(str(exc))
-    except Exception:
+        await update.message.reply_text(
+            f"Server-side Download အောင်မြင်ပါပြီ။\nProvider: {provider}\n"
+            f"ခေါင်းစဉ်: {source.get('title', '')}\n"
+            f"လိုင်စင်: {source.get('license', '')}\n"
+            f"ဖန်တီးသူ: {artist[:160]}\n"
+            f"Attribution: {attribution[:300]}\n"
+            f"Source: {source.get('source_page', '')}\n\n"
+            "ဒီဖိုင်ကို Telegram မှ ပြန်ပို့စရာမလိုပါ။ မြန်မာ Narration MP3 နှင့် UTF-8 SRT ကို ပို့ပြီး "
+            "/sourcevideo finish လုပ်ပါ။" + archive_warning +
+            "\n\nမှတ်ချက်: Render Free ရဲ့ /tmp ဖိုင်တွေဟာ restart/deploy လုပ်ရင် ပျောက်နိုင်ပါတယ်။ Persistent Disk မချိတ်ရသေးပါ။"
+        )
+    except Exception as exc:
+        from licensed_source_router import LicensedSourceRouterError
+        if isinstance(exc, LicensedSourceRouterError):
+            await update.message.reply_text(str(exc)[:3000])
+            return
         log.exception("Licensed source video download failed")
         await update.message.reply_text("ခွင့်ပြုထားသော Video ကို Download မလုပ်နိုင်ပါ။ နောက်မှ ထပ်စမ်းပါ။")
 
