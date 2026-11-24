@@ -17,7 +17,7 @@ from voxcpm_voice_clone import MAX_TEXT_CHARS, synthesize_cloned_burmese_voice
 
 MAX_RECAP_CHARS = 80_000
 MAX_OUTPUT_MP3_BYTES = 45 * 1024 * 1024
-DURATION_RE = re.compile(r"Duration:\\s*(\\d{2,}):(\\d{2}):(\\d{2}(?:\\.\\d+)?)")
+DURATION_RE = re.compile(r"Duration:\s*(\d{2,}):(\d{2}):(\d{2}(?:\.\d+)?)")
 
 
 def split_clone_text(text: str, max_chars: int = MAX_TEXT_CHARS) -> list[str]:
@@ -28,7 +28,7 @@ def split_clone_text(text: str, max_chars: int = MAX_TEXT_CHARS) -> list[str]:
         raise ValueError("Narration သည် စာလုံး ၈၀,၀၀၀ ထက် ကျော်နေပါတယ်။")
     if not 100 <= int(max_chars) <= MAX_TEXT_CHARS:
         raise ValueError("Voice Clone အပိုင်းအရွယ်အစား မမှန်ပါ။")
-    sentences = [s.strip() for s in re.split(r"(?<=[။!?])\\s*|\\n+", cleaned) if s.strip()]
+    sentences = [s.strip() for s in re.split(r"(?<=[။!?])\s*|\n+", cleaned) if s.strip()]
     chunks: list[str] = []
     current = ""
     for sentence in sentences:
@@ -64,7 +64,7 @@ def _stamp(seconds: float) -> str:
 
 def _caption_chunks(script: str, limit: int = 42) -> list[str]:
     result = []
-    for paragraph in re.split(r"\\n+", script):
+    for paragraph in re.split(r"\n+", script):
         remaining = paragraph.strip()
         while remaining:
             if len(remaining) <= limit:
@@ -94,8 +94,8 @@ def build_duration_scaled_srt(script: str, duration_seconds: float) -> str:
         start = cursor
         cursor = duration if index == len(captions) else cursor + duration * weight / total_weight
         end = max(start + 0.05, cursor)
-        blocks.append(f"{index}\\n{_stamp(start)} --> {_stamp(end)}\\n{caption}")
-    return "\\n\\n".join(blocks) + "\\n"
+        blocks.append(f"{index}\n{_stamp(start)} --> {_stamp(end)}\n{caption}")
+    return "\n\n".join(blocks) + "\n"
 
 
 def _ffmpeg_duration(stderr: str) -> float:
@@ -129,7 +129,7 @@ async def synthesize_recap_in_creator_voice(
             wav_paths.append(path)
         concat_list = work / "concat.txt"
         concat_list.write_text(
-            "".join("file '" + path.as_posix().replace("'", "'\\''") + "'\\n" for path in wav_paths),
+            "".join("file '" + path.as_posix().replace("'", "'\''") + "'\n" for path in wav_paths),
             encoding="utf-8",
         )
         output = work / "recap_voice.mp3"
