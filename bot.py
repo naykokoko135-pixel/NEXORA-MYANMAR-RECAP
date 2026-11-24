@@ -2268,6 +2268,7 @@ async def bgm_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if action not in {"upload", "on", "set"}:
         await update.message.reply_text("အသုံးပြုပုံ: /bgm (သီချင်းဖိုင်တင်ရန်) သို့မဟုတ် /bgm off (ဖယ်ရန်)")
         return
+    context.user_data.pop("pending_logo_upload", None)
     context.user_data["pending_bgm_upload"] = True
     await update.message.reply_text(
         "🎵 Background Music ဖိုင် MP3/M4A/WAV/OGG တစ်ခု ပို့ပါ (၂၀ MB အောက်)။\n"
@@ -2295,6 +2296,7 @@ async def logo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["logo_position"] = position
         await update.message.reply_text(f"Logo Position ပြောင်းပြီးပါပြီ: {position}")
         return
+    context.user_data.pop("pending_bgm_upload", None)
     context.user_data["pending_logo_upload"] = True
     await update.message.reply_text(
         "🪪 Brand Logo PNG/JPG/WEBP ဖိုင် (၅ MB အောက်) ပို့ပါ။ MP4 ပေါ်တွင် အလိုအလျောက် Overlay လုပ်ပေးပါမယ်။\n"
