@@ -125,3 +125,57 @@ def render_user_source_video(
         if result.returncode or not target.exists() or not target.stat().st_size:
             raise SourceVideoRenderError("မူရင်း Video မှ MP4 မထုတ်နိုင်ပါ။ Video codec/ဖိုင်ကို ပြန်စစ်ပါ။")
     return target
+
+
+def concatenate_source_video_clips(
+    clips: list[tuple[str, bytes]],
+    output_path: str | Path,
+) -> Path:
+    """Normalize and concatenate multiple uploaded real-video clips in order."""
+    import imageio_ffmpeg
+
+    if not clips or len(clips) > 30:
+        raise SourceVideoRenderError("Video Clip ၁ ခုမှ ၃၀ ခုအထိ လိုအပ်ပါတယ်။")
+    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="nexora_clip_join_") as temp:
+        work = Path(temp)
+        normalized: list[Path] = []
+        for index, (filename, data) in enumerate(clips, 1):
+            suffix = Path(filename).suffix.lower()
+            if suffix not in ALLOWED_VIDEO_SUFFIXES or not data or len(data) > MAX_SOURCE_VIDEO_BYTES:
+                raise SourceVideoRenderError(f"Clip {index}: MP4/MOV/M4V/WEBM ၂၀ MB အောက် လိုအပ်ပါတယ်။")
+            raw = work / f"input_{index}{suffix}"
+            cooked = work / f"clip_{index:02d}.mp4"
+            raw.write_bytes(data)
+            probe = subprocess.run(
+                [ffmpeg, "-hide_banner", "-i", str(raw)],
+                capture_output=True, text=True, timeout=30, check=False,
+            )
+            if "Video:" not in (probe.stderr or probe.stdout):
+                raise SourceVideoRenderError(f"Clip {index} တွင် ဖတ်ရှုနိုင်သော Video မတွေ့ပါ။")
+            command = [
+                ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
+                "-i", str(raw), "-map", "0:v:0", "-an",
+                "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=25,format=yuv420p",
+                "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
+                "-movflags", "+faststart", str(cooked),
+            ]
+            result = subprocess.run(command, capture_output=True, text=True, timeout=900, check=False)
+            if result.returncode or not cooked.is_file() or cooked.stat().st_size == 0:
+                raise SourceVideoRenderError(f"Clip {index} ကို Video အဖြစ် ပြင်ဆင်မရပါ။")
+            normalized.append(cooked)
+        concat_list = work / "concat.txt"
+        concat_list.write_text(
+            "".join("file '" + path.as_posix().replace("'", "'\\''") + "'\\n" for path in normalized),
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            [ffmpeg, "-y", "-hide_banner", "-loglevel", "error", "-f", "concat", "-safe", "0",
+             "-i", str(concat_list), "-c", "copy", "-movflags", "+faststart", str(target)],
+            capture_output=True, text=True, timeout=900, check=False,
+        )
+        if result.returncode or not target.is_file() or target.stat().st_size == 0:
+            raise SourceVideoRenderError("Video Clip များကို ပေါင်းစပ်၍ MP4 မထုတ်နိုင်ပါ။")
+    return target
