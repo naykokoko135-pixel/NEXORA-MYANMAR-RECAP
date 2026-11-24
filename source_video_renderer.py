@@ -168,7 +168,6 @@ def concatenate_source_video_clips(
                     raise SourceVideoRenderError(f"Clip {index}: MP4/MOV/M4V/WEBM ၁၉ MiB အောက် လိုအပ်ပါတယ်။")
                 raw = work / f"input_{index}{suffix}"
                 raw.write_bytes(data)
-                raw.write_bytes(data)
             cooked = work / f"clip_{index:02d}.mp4"
             probe = subprocess.run(
                 [ffmpeg, "-hide_banner", "-i", str(raw)],
