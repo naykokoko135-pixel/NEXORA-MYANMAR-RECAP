@@ -2292,6 +2292,27 @@ async def myvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "အတည်ပြုချက် လက်ခံပြီးပါပြီ။ ကိုယ့်အသံသာ ပါသော ၁၀–၃၀ စက္ကန့် MP3/M4A/WAV/OGG ဖိုင်ကို အခု ပို့ပါ (၂၀ MB အောက်)။"
         )
         return
+    if action == "test":
+        try:
+            profiles = load_voice_profiles(update.effective_user.id)
+            profile = profiles.get("ကိုယ်ပိုင်အသံ")
+            if not profile:
+                await update.message.reply_text("စမ်းသပ်ရန် ကိုယ်ပိုင်အသံမရှိသေးပါ။ /myvoice start → /myvoice confirm → အသံဖိုင်ပို့ပါ။")
+                return
+            await update.message.reply_text("ကိုယ်ပိုင်အသံ နမူနာ WAV ကို ဖန်တီးနေပါတယ်။ GPU host လိုအပ်ပါတယ်...")
+            sample_text = "မင်္ဂလာပါ။ ဒီအသံက ကျွန်တော့်ရဲ့ NEXORA ကိုယ်ပိုင်အသံ စမ်းသပ်နမူနာ ဖြစ်ပါတယ်။"
+            audio = await synthesize_cloned_burmese_voice(sample_text, profile["filename"], profile["audio"])
+            file_obj = BytesIO(audio)
+            file_obj.name = "nexora_myvoice_test.wav"
+            await update.message.reply_document(
+                document=InputFile(file_obj, filename=file_obj.name),
+                caption="ကိုယ်ပိုင်အသံ Clone စမ်းသပ် WAV။ အသံထွက်နှင့် သဘာဝကျမှုကို နားထောင်စစ်ဆေးပါ။",
+                read_timeout=120,
+                write_timeout=120,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            await update.message.reply_text(f"ကိုယ်ပိုင်အသံ စမ်းသပ်မရပါ: {exc}")
+        return
     if action in {"status", "list"}:
         try:
             profiles = load_voice_profiles(update.effective_user.id)
@@ -2306,7 +2327,7 @@ async def myvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Default ကိုယ်ပိုင်အသံ: {sample_state}\n"
             "Clone engine: VoxCPM2 (GPU host လိုအပ်)\n"
             "Persistent Disk + VOICE_PROFILE_DB_PATH မရှိလျှင် restart ပြီး အသံပျောက်နိုင်ပါတယ်။\n"
-            "အသံတင်ရန် /myvoice start | အတည်ပြုရန် /myvoice confirm | အသံထုတ်ရန် /voiceclone ကို သုံးပါ။"
+            "အသံတင်ရန် /myvoice start | အတည်ပြုရန် /myvoice confirm | စမ်းသပ်ရန် /myvoice test | အသံထုတ်ရန် /voiceclone ကို သုံးပါ။"
         )
         return
     if action in {"delete", "remove"}:
@@ -2326,6 +2347,7 @@ async def myvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/myvoice start — ကိုယ့်အသံနမူနာ Wizard စတင်မည်\n"
         "/myvoice confirm — ကိုယ့်အသံဖြစ်ကြောင်းနှင့် cloning ခွင့်ပြုချက် အတည်ပြုရန်\n"
         "/myvoice status — သိမ်းထားသော Profile ကြည့်ရန်\n"
+        "/myvoice test — ကိုယ်ပိုင်အသံ နမူနာ WAV ထုတ်စမ်းရန် (GPU host လိုအပ်)\n"
         "/myvoice delete — Default ကိုယ်ပိုင်အသံ ဖျက်ရန်\n"
         "/voiceclone ကိုယ်ပိုင်အသံ ပြီးနောက် စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
         "မှတ်ချက်: ကိုယ့်အသံ/ခွင့်ပြုချက်ရသော အသံသာ သုံးပါ။ AI Clone အတွက် GPU host လိုအပ်ပါတယ်။"
