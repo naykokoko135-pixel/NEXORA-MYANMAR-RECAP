@@ -42,15 +42,22 @@ class VoiceCloneTests(unittest.TestCase):
                     wav.setnchannels(1)
                     wav.setsampwidth(2)
                     wav.setframerate(sample_rate)
-                    wav.writeframes(b"\x00\x00" * len(audio))
+                    wav.writeframes(b"\\x00\\x00" * len(audio))
+        def fake_convert(args, **kwargs):
+            with open(args[-1], "wb") as wav:
+                wav.write(b"RIFF" + b"\\x00" * 64)
+            return types.SimpleNamespace(returncode=0, stderr="")
         fake_vox = types.SimpleNamespace(VoxCPM=types.SimpleNamespace(from_pretrained=lambda *a, **k: FakeModel()))
         fake_torch = types.SimpleNamespace(cuda=types.SimpleNamespace(is_available=lambda: True))
+        fake_ffmpeg = types.SimpleNamespace(get_ffmpeg_exe=lambda: "ffmpeg")
         with patch.dict(os.environ, {"NEXORA_VOXCPM_ENABLED": "1"}):
-            with patch.dict(sys.modules, {"voxcpm": fake_vox, "torch": fake_torch, "soundfile": FakeSoundFile}):
-                import voxcpm_voice_design
-                with patch.object(voxcpm_voice_design, "_model", None):
-                    result = asyncio.run(synthesize_cloned_burmese_voice("မင်္ဂလာပါ", "ref.wav", b"reference"))
+            with patch.dict(sys.modules, {"voxcpm": fake_vox, "torch": fake_torch, "soundfile": FakeSoundFile, "imageio_ffmpeg": fake_ffmpeg}):
+                with patch("voxcpm_voice_clone.subprocess.run", side_effect=fake_convert):
+                    import voxcpm_voice_design
+                    with patch.object(voxcpm_voice_design, "_model", None):
+                        result = asyncio.run(synthesize_cloned_burmese_voice("မင်္ဂလာပါ", "ref.mp3", b"reference"))
         self.assertIn("reference_wav_path", captured)
+        self.assertTrue(captured["reference_wav_path"].endswith(".wav"))
         self.assertTrue(result.startswith(b"RIFF"))
         self.assertFalse(os.path.exists(captured["reference_wav_path"]))
 
