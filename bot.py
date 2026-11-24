@@ -145,6 +145,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/transition [preset] - Fade/Wipe/Slide/Circle/Dissolve အကူးအပြောင်း ရွေးရန်\n"
             "/motion [preset] - Camera Push-in/Pull-out/Pan/Drift Motion ရွေးရန်\n"
             "/bgm - Background Music ဖိုင်ထည့်ရန်; /bgm off - ဖယ်ရန်\n"
+            "/bgmvolume 0.18 - Background Music အသံအတိုးအကျယ် ၀ မှ ၁ အထိ သတ်မှတ်ရန်\n"
+            "/bgmduck on|off - Narration ပြောနေချိန် Music ကို အလိုအလျောက်လျှော့/မလျှော့ ရွေးရန်\n"
             "/logo - Brand Logo တင်ရန်; /logo position top-left; /logo off\n"
             "/substyle [preset] - Subtitle အရောင်/အရွယ်/Outline ရွေးရန်\n"
             "/subburn on|off - Subtitle ကို Video ထဲ Burn လုပ်/Soft Subtitle ပြန်ထားရန်\n"
@@ -2078,6 +2080,8 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     session.get("burn_subtitles", False),
                     session.get("fade_seconds", 0.6),
                     session.get("quality_preset", "720p"),
+                    music_volume=session.get("music_volume", 0.18),
+                    music_ducking=session.get("music_ducking", True),
                 )
             else:
                 single_output = output_dir / ("nexora_recap_" + secrets.token_hex(8) + ".mp4")
@@ -2098,6 +2102,8 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     burn_subtitles=session.get("burn_subtitles", False),
                     fade_seconds=session.get("fade_seconds", 0.6),
                     quality_preset=session.get("quality_preset", "720p"),
+                    music_volume=session.get("music_volume", 0.18),
+                    music_ducking=session.get("music_ducking", True),
                 )
                 output_paths = [single_output]
             now = time.time()
@@ -2345,6 +2351,8 @@ async def editstatus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Hard-burn subtitles: {'ON' if current.get('burn_subtitles', False) else 'OFF (soft subtitle)'}",
         f"Opening/Closing Fade: {float(current.get('fade_seconds', 0.6)):.1f}s",
         f"Background Music: {'READY' if context.user_data.get('background_music') else 'NOT SET'}",
+        f"Background Music Volume: {float(current.get('music_volume', 0.18)):.2f}",
+        f"Music Ducking: {'ON' if current.get('music_ducking', True) else 'OFF'}",
         f"Brand Logo: {'READY' if context.user_data.get('brand_logo') else 'NOT SET'}",
         f"Logo Position: {context.user_data.get('logo_position', 'bottom-right')}",
     ]
@@ -2440,6 +2448,47 @@ async def bgm_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "ဖယ်ရှားရန် /bgm off"
     )
 
+
+async def bgmvolume_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Set background music loudness from muted (0) to full volume (1)."""
+    if not update.message:
+        return
+    raw = context.args[0].strip() if context.args else "0.18"
+    try:
+        volume = float(raw)
+    except ValueError:
+        await update.message.reply_text("အသုံးပြုပုံ: /bgmvolume 0.18 (၀ မှ ၁ အတွင်း)")
+        return
+    if not 0.0 <= volume <= 1.0:
+        await update.message.reply_text("Music Volume သည် ၀ မှ ၁ အတွင်း ဖြစ်ရပါမယ်။ ဥပမာ /bgmvolume 0.18")
+        return
+    defaults = context.user_data.setdefault("video_edit_defaults", {})
+    defaults["music_volume"] = volume
+    session = context.user_data.get("video_render")
+    if session is not None:
+        session["music_volume"] = volume
+    await update.message.reply_text(f"Background Music Volume ကို {volume:.2f} သတ်မှတ်ပြီးပါပြီ။")
+
+
+async def bgmduck_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Toggle automatic background-music ducking while narration is speaking."""
+    if not update.message:
+        return
+    selected = context.args[0].strip().lower() if context.args else "on"
+    if selected not in {"on", "off", "true", "false", "1", "0"}:
+        await update.message.reply_text("အသုံးပြုပုံ: /bgmduck on သို့မဟုတ် /bgmduck off")
+        return
+    enabled = selected in {"on", "true", "1"}
+    defaults = context.user_data.setdefault("video_edit_defaults", {})
+    defaults["music_ducking"] = enabled
+    session = context.user_data.get("video_render")
+    if session is not None:
+        session["music_ducking"] = enabled
+    await update.message.reply_text(
+        "Narration ပြောနေချိန် Background Music ကို အလိုအလျောက်လျှော့ပါမယ်။"
+        if enabled else
+        "Background Music Ducking ပိတ်ထားပါပြီ။ Music အသံကို မလျှော့တော့ပါ။"
+    )
 
 async def logo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Upload, position, or remove the creator's brand logo overlay."""
@@ -3669,6 +3718,8 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("transition", transition_cmd))
     telegram_app.add_handler(CommandHandler("motion", motion_cmd))
     telegram_app.add_handler(CommandHandler("bgm", bgm_cmd))
+    telegram_app.add_handler(CommandHandler("bgmvolume", bgmvolume_cmd))
+    telegram_app.add_handler(CommandHandler("bgmduck", bgmduck_cmd))
     telegram_app.add_handler(CommandHandler("logo", logo_cmd))
     telegram_app.add_handler(CommandHandler("substyle", substyle_cmd))
     telegram_app.add_handler(CommandHandler("subburn", subburn_cmd))
