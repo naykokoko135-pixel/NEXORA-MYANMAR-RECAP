@@ -2299,7 +2299,7 @@ async def editstatus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Brand Logo: {'READY' if context.user_data.get('brand_logo') else 'NOT SET'}",
         f"Logo Position: {context.user_data.get('logo_position', 'bottom-right')}",
     ]
-    await update.message.reply_text("\\n".join(lines))
+    await update.message.reply_text("\n".join(lines))
 
 
 async def fade_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
