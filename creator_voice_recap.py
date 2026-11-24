@@ -114,7 +114,7 @@ def combine_estimated_srt_parts(parts: list[tuple[str, float]]) -> str:
     blocks = []
     offset = 0.0
     cue_number = 1
-    timestamp_line = re.compile(r"^(\\d{2}:\\d{2}:\\d{2},\\d{3})\\s*-->\\s*(\\d{2}:\\d{2}:\\d{2},\\d{3})$")
+    timestamp_line = re.compile(r"^(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})$")
     def seconds(stamp: str) -> float:
         hours, minutes, remainder = stamp.split(":")
         whole, millis = remainder.split(",")
@@ -123,7 +123,7 @@ def combine_estimated_srt_parts(parts: list[tuple[str, float]]) -> str:
         duration = float(part_duration)
         if duration <= 0:
             raise ValueError("SRT အပိုင်းကြာချိန် မမှန်ပါ။")
-        for block in re.split(r"\\r?\\n\\s*\\r?\\n", str(srt_text).strip()):
+        for block in re.split(r"\r?\n\s*\r?\n", str(srt_text).strip()):
             lines = block.splitlines()
             if len(lines) < 3:
                 continue
@@ -136,12 +136,12 @@ def combine_estimated_srt_parts(parts: list[tuple[str, float]]) -> str:
                 raise ValueError("SRT cue သည် သက်ဆိုင်ရာ Audio အပိုင်းကြာချိန်ကို ကျော်နေပါတယ်။")
             lines[0] = str(cue_number)
             lines[1] = f"{_stamp(start)} --> {_stamp(end)}"
-            blocks.append("\\n".join(lines))
+            blocks.append("\n".join(lines))
             cue_number += 1
         offset += duration
     if not blocks:
         raise ValueError("ပေါင်းစပ်ရန် SRT cue မတွေ့ပါ။")
-    return "\\n\\n".join(blocks) + "\\n"
+    return "\n\n".join(blocks) + "\n"
 
 
 async def combine_creator_voice_parts(
@@ -166,7 +166,7 @@ async def combine_creator_voice_parts(
             path.write_bytes(audio)
             paths.append(path)
         concat_list = work / "concat.txt"
-        concat_list.write_text("".join(f"file '{path.as_posix()}'\\n" for path in paths), encoding="utf-8")
+        concat_list.write_text("".join(f"file '{path.as_posix()}'\n" for path in paths), encoding="utf-8")
         output = work / "combined.mp3"
         try:
             result = await asyncio.to_thread(
