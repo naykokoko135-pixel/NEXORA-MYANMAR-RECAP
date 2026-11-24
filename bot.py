@@ -140,6 +140,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/sourcevideo - ကိုယ်ပိုင်/ခွင့်ပြုထားသော Video + မြန်မာအသံ + SRT မှ MP4 ထုတ်ရန်\n"
             "/effect [preset] - Visual Look ၂၀ မျိုး ရွေးရန်\n"
             "/audiofx [preset] - Voice/Cinematic/Podcast/Soft Audio Mastering ရွေးရန်\n"
+            "/transition [preset] - Fade/Wipe/Slide/Circle/Dissolve အကူးအပြောင်း ရွေးရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - Video Footage + မြန်မာ Narration + SRT မှ MP4 ထုတ်ရန်\n"
