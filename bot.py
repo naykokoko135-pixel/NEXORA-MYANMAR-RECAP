@@ -1929,9 +1929,9 @@ async def motion_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     selected = context.args[0].strip().lower() if context.args else ""
     if not selected or selected == "list":
         await update.message.reply_text(
-            "🎥 NEXORA Camera Motion\\nအသုံးပြုပုံ: /motion <preset>\\n"
+            "🎥 NEXORA Camera Motion\nအသုံးပြုပုံ: /motion <preset>\\n"
             + "\\n".join("• " + name for name in sorted(MOTION_PRESETS))
-            + "\\nDefault: none"
+            + "\nDefault: none"
         )
         return
     if selected not in MOTION_PRESETS:
@@ -3399,7 +3399,6 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("effect", effect_cmd))
     telegram_app.add_handler(CommandHandler("audiofx", audiofx_cmd))
     telegram_app.add_handler(CommandHandler("transition", transition_cmd))
-    telegram_app.add_handler(CommandHandler("motion", motion_cmd))
     telegram_app.add_handler(CommandHandler("motion", motion_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
