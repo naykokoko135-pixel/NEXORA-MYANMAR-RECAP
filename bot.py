@@ -1056,7 +1056,6 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"Title: {metadata.get('title', query)}\\nSource: {archive_source.get('source_page', '')}\\n"
                         f"License: {archive_source.get('license', '')} ({archive_source.get('license_uri', '')})\\n"
                         f"Uploader/Creator: {archive_source.get('artist', 'Unknown')}\\n"
-                        "
                     )
                 )
                 credit_file = BytesIO(attribution.encode("utf-8-sig"))
