@@ -22,7 +22,7 @@ ALIASES = {
     "news": "documentary", "nonfiction": "documentary",
 }
 
-def build_auto_edit_profile(category: str = "default", platform: str = "youtube") -> dict[str, str]:
+def build_auto_edit_profile(category: str = "default", platform: str = "youtube") -> dict[str, str | float]:
     """Return a validated style bundle; platform is validated to prevent bad output presets."""
     key = str(category or "default").strip().casefold()
     key = ALIASES.get(key, key)
