@@ -168,7 +168,7 @@ def concatenate_source_video_clips(
             normalized.append(cooked)
         concat_list = work / "concat.txt"
         concat_list.write_text(
-            "".join("file '" + path.as_posix().replace("'", "'\\''") + "'\\n" for path in normalized),
+            "".join(f"file '{path.as_posix()}'\n" for path in normalized),
             encoding="utf-8",
         )
         result = subprocess.run(
