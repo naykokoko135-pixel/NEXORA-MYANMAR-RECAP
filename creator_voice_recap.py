@@ -172,7 +172,7 @@ async def combine_creator_voice_parts(
             result = await asyncio.to_thread(
                 subprocess.run,
                 [ffmpeg, "-hide_banner", "-y", "-f", "concat", "-safe", "0",
-                 "-i", str(concat_list), "-vn", "-c:a", "libmp3lame", "-q:a", "3", str(output)],
+                 "-i", str(concat_list), "-vn", "-ac", "1", "-ar", "24000", "-c:a", "libmp3lame", "-b:a", "96k", str(output)],
                 capture_output=True, text=True, timeout=900, check=False,
             )
         except subprocess.TimeoutExpired as exc:
