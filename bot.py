@@ -149,6 +149,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/subburn on|off - Subtitle ကို Video ထဲ Burn လုပ်/Soft Subtitle ပြန်ထားရန်\n"
             "/fade 0.6|off - Video/Audio အစနှင့်အဆုံး Fade ထည့်ရန်/ပိတ်ရန်\n"
             "/editstatus - လက်ရှိ Auto Edit ဆက်တင်အားလုံးကြည့်ရန်\n"
+            "/quality 720p|1080p - MP4 Output Resolution ရွေးရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - Video Footage + မြန်မာ Narration + SRT မှ MP4 ထုတ်ရန်\n"
@@ -707,6 +708,7 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
         selected_subtitle_style = str(prior.get("subtitle_style", defaults.get("subtitle_style", "classic")))
         selected_burn_subtitles = bool(prior.get("burn_subtitles", defaults.get("burn_subtitles", False)))
         selected_fade_seconds = float(prior.get("fade_seconds", defaults.get("fade_seconds", 0.6)))
+        selected_quality = str(prior.get("quality_preset", defaults.get("quality_preset", "720p")))
         context.user_data["video_render"] = {
             "mode": "source_video",
             "platform": context.user_data.get("platform", "youtube"),
@@ -717,6 +719,7 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
             "subtitle_style": selected_subtitle_style,
             "burn_subtitles": selected_burn_subtitles,
             "fade_seconds": selected_fade_seconds,
+            "quality_preset": selected_quality,
             "source_video_path": str(output),
             "source_metadata": {
                 "title": str(source.get("title", "")),
@@ -1877,7 +1880,7 @@ async def autoedit_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     defaults.update(profile)
     session = context.user_data.get("video_render")
     if session is not None:
-        session.update({k: profile[k] for k in ("effect_preset", "audio_preset", "transition", "motion_preset", "subtitle_style", "fade_seconds")})
+        session.update({k: profile[k] for k in ("effect_preset", "audio_preset", "transition", "motion_preset", "subtitle_style", "fade_seconds", "quality_preset")})
     await update.message.reply_text(
         "✨ Auto Edit Profile ရွေးပြီးပါပြီ\n"
         f"Category: {profile['category']}\n"
@@ -2050,6 +2053,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     session.get("subtitle_style", "classic"),
                     session.get("burn_subtitles", False),
                     session.get("fade_seconds", 0.6),
+                    session.get("quality_preset", "720p"),
                 )
             else:
                 single_output = output_dir / ("nexora_recap_" + secrets.token_hex(8) + ".mp4")
@@ -2069,6 +2073,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     subtitle_style=session.get("subtitle_style", "classic"),
                     burn_subtitles=session.get("burn_subtitles", False),
                     fade_seconds=session.get("fade_seconds", 0.6),
+                    quality_preset=session.get("quality_preset", "720p"),
                 )
                 output_paths = [single_output]
             now = time.time()
@@ -2164,6 +2169,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     selected_subtitle_style = str(previous.get("subtitle_style", defaults.get("subtitle_style", "classic")))
     selected_burn_subtitles = bool(previous.get("burn_subtitles", defaults.get("burn_subtitles", False)))
     selected_fade_seconds = float(previous.get("fade_seconds", defaults.get("fade_seconds", 0.6)))
+    selected_quality = str(previous.get("quality_preset", defaults.get("quality_preset", "720p")))
     selected_effect = str(previous.get("effect_preset", defaults.get("effect_preset", "cinematic")))
     selected_audio = str(previous.get("audio_preset", defaults.get("audio_preset", "voice")))
     chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
@@ -2179,6 +2185,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "subtitle_style": selected_subtitle_style,
         "burn_subtitles": selected_burn_subtitles,
         "fade_seconds": selected_fade_seconds,
+        "quality_preset": selected_quality,
         "source_video": None,
         "source_videos": [],
         "source_video_path": None,
@@ -2278,6 +2285,23 @@ async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"{name} အတွက် ကိုယ်ပိုင်အသံ MP3/M4A/WAV/OGG ဖိုင် (၂၀ MB အောက်) ပို့ပါ။ မလုပ်တော့ပါက /cancel ပို့ပါ။")
 
 
+async def quality_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Choose standard 720p or HD 1080p output dimensions."""
+    if not update.message:
+        return
+    selected = context.args[0].strip().lower() if context.args else "720p"
+    if selected not in {"720p", "1080p"}:
+        await update.message.reply_text("အသုံးပြုပုံ: /quality 720p သို့မဟုတ် /quality 1080p")
+        return
+    defaults = context.user_data.setdefault("video_edit_defaults", {})
+    defaults["quality_preset"] = selected
+    session = context.user_data.get("video_render")
+    if session is not None:
+        session["quality_preset"] = selected
+    note = "Render ပိုမြန်စေရန် 720p ကို Default ထားပါတယ်။" if selected == "720p" else "1080p သည် ပိုကြည်လင်သော်လည်း Render အချိန်/Memory ပိုလိုအပ်ပါတယ်။"
+    await update.message.reply_text(f"Output Quality: {selected}\n{note}")
+
+
 async def editstatus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show all automatic editor settings before the user renders a video."""
     if not update.message:
@@ -2288,6 +2312,7 @@ async def editstatus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines = [
         "🧩 NEXORA EDIT SETTINGS",
         f"Platform: {current.get('platform', context.user_data.get('platform', 'youtube'))}",
+        f"Output Quality: {current.get('quality_preset', '720p')}",
         f"Effect: {current.get('effect_preset', 'cinematic')}",
         f"Audio: {current.get('audio_preset', 'voice')}",
         f"Transition: {current.get('transition', 'fade')}",
@@ -3625,6 +3650,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("subburn", subburn_cmd))
     telegram_app.add_handler(CommandHandler("fade", fade_cmd))
     telegram_app.add_handler(CommandHandler("editstatus", editstatus_cmd))
+    telegram_app.add_handler(CommandHandler("quality", quality_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
