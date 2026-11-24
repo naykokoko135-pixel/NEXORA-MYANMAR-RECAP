@@ -1839,6 +1839,35 @@ async def topratedepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TYP
     await update.message.reply_text("\n".join(lines), disable_web_page_preview=True)
 
 
+async def autoedit_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Choose a genre-aware automatic edit profile before starting a render."""
+    if not update.message:
+        return
+    from auto_edit_profile import build_auto_edit_profile, list_auto_edit_categories
+    category = context.args[0].strip().lower() if context.args else "default"
+    if category in {"list", "help"}:
+        await update.message.reply_text(
+            "🤖 NEXORA Auto Edit\nအသုံးပြုပုံ: /autoedit <category>\n"
+            + "\n".join("• " + name for name in list_auto_edit_categories())
+            + "\nDefault: cinematic movie profile\n"
+            "ရွေးထားသော Profile ကို နောက် /sourcevideo workflow တွင် အလိုအလျောက်သုံးပါမယ်။"
+        )
+        return
+    platform = context.user_data.get("platform", "youtube")
+    profile = build_auto_edit_profile(category, platform)
+    defaults = context.user_data.setdefault("video_edit_defaults", {})
+    defaults.update(profile)
+    session = context.user_data.get("video_render")
+    if session is not None:
+        session.update({k: profile[k] for k in ("effect_preset", "audio_preset", "transition")})
+    await update.message.reply_text(
+        "✨ Auto Edit Profile ရွေးပြီးပါပြီ\n"
+        f"Category: {profile['category']}\n"
+        f"Visual: {profile['effect_preset']} | Audio: {profile['audio_preset']} | Transition: {profile['transition']}\n"
+        "ဒီရွေးချယ်မှုတွေကို MP4 Render မှာ အလိုအလျောက်ထည့်ပါမယ်။"
+    )
+
+
 async def effect_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """List or select an automatic visual-effect preset for the active recap session."""
     if not update.message:
@@ -3333,7 +3362,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("dailyrecap", dailyrecap_cmd))
     telegram_app.add_handler(CommandHandler("recapvideo", recapvideo_cmd))
     telegram_app.add_handler(CommandHandler("sourcevideo", sourcevideo_cmd))
-    telegram_app.add_handler(CommandHandler("effect", effect_cmd))
+    telegram_app.add_handler(CommandHandler("autoedit", autoedit_cmd))\n    telegram_app.add_handler(CommandHandler("effect", effect_cmd))
     telegram_app.add_handler(CommandHandler("audiofx", audiofx_cmd))
     telegram_app.add_handler(CommandHandler("transition", transition_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
