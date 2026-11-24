@@ -34,7 +34,7 @@ def build_estimated_srt_for_audio(script: str, wav_bytes: bytes) -> str:
     if duration_ms < 1000 or duration_ms > 60 * 60 * 1000:
         raise ValueError("Voice Clone WAV ကြာချိန်သည် ၁ စက္ကန့်မှ ၆၀ မိနစ်အတွင်း ဖြစ်ရပါမယ်။")
     estimated = build_burmese_srt(script)
-    pattern = re.compile(r"(\\d{2}):(\\d{2}):(\\d{2}),(\\d{3})")
+    pattern = re.compile(r"(\d{2}):(\d{2}):(\d{2}),(\d{3})")
     matches = list(pattern.finditer(estimated))
     if not matches:
         raise ValueError("SRT timestamp မထုတ်နိုင်ပါ။")
