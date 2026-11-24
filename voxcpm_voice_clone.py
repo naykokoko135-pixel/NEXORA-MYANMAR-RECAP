@@ -92,9 +92,22 @@ def _synthesize_sync(text: str, filename: str, reference_audio: bytes) -> bytes:
 async def synthesize_cloned_burmese_voice(text: str, filename: str, reference_audio: bytes) -> bytes:
     """Generate Burmese speech in the creator's saved reference voice."""
     cleaned = validate_voice_clone_request(text, filename, reference_audio)
-    from voxcpm_voice_design import voice_design_host_unavailable_reason
+    from voxcpm_voice_design import voice_design_host_unavailable_reason, _validate_wav_bytes
+    from voxcpm_gpu_client import gpu_worker_configured, synthesize_on_gpu
 
+    if gpu_worker_configured():
+        import base64
+        result = await synthesize_on_gpu({
+            "mode": "clone",
+            "text": cleaned,
+            "filename": filename,
+            "reference_audio": base64.b64encode(reference_audio).decode("ascii"),
+        })
+        _validate_wav_bytes(result)
+        return result
     unavailable = voice_design_host_unavailable_reason()
     if unavailable:
-        raise RuntimeError(unavailable)
+        raise RuntimeError(
+            unavailable + " Remote GPU Worker မချိတ်ရသေးပါ။ NEXORA_VOXCPM_GPU_URL နှင့် NEXORA_VOXCPM_WORKER_TOKEN ကို သတ်မှတ်ပါ။"
+        )
     return await asyncio.to_thread(_synthesize_sync, cleaned, filename, reference_audio)
