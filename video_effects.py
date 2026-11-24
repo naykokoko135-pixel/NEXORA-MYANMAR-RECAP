@@ -43,7 +43,9 @@ def build_effect_filter(preset: str, width: int, height: int) -> str:
             "Effect preset မသိပါ။ ရနိုင်သော preset များ: "
             + ", ".join(sorted(EFFECT_PRESETS))
         )
-    if (width, height) not in set(PLATFORM_DIMENSIONS.values()):
+    from render_quality import QUALITY_DIMENSIONS
+    supported_dimensions = {dimension for profile in QUALITY_DIMENSIONS.values() for dimension in profile.values()}
+    if (width, height) not in supported_dimensions:
         raise ValueError("Platform video dimensions မမှန်ပါ။")
     crop = (
         f"scale={width}:{height}:force_original_aspect_ratio=increase,"
