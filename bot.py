@@ -169,6 +169,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/voiceprofile <name> - ကိုယ်ပိုင်အသံဖိုင် သိမ်းရန်\n"
             "/myvoice start|confirm|status|delete - ကိုယ်ပိုင်အသံ Setup Tool\n"
             "/voiceclone <name> - သိမ်းထားသော ကိုယ်ပိုင်အသံဖြင့် မြန်မာစာ TTS ထုတ်ရန် (GPU host လိုအပ်)\n"
+            "/recapvoiceclone [profile] - ကိုယ်ပိုင်အသံ Narration WAV + ခန့်မှန်း SRT ကို Source Video Render ထဲချိတ်ရန်\n"
             "/voiceprofile export|import - အသံ Profile Backup ထုတ်/ပြန်သွင်းရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
             "/duration <ကြာချိန်> - Platform အလိုက် ကြာချိန်ရွေးရန်\n"
@@ -3178,12 +3179,12 @@ async def recapvoiceclone_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Generate creator-owned VoxCPM narration and attach it to an active source-video render."""
     if not update.message or not update.message.text:
         return
-    first_line, separator, script = update.message.text.partition("\\n")
+    first_line, separator, script = update.message.text.partition("\n")
     parts = first_line.split(maxsplit=1)
     profile_name = parts[1].strip() if len(parts) > 1 else "ကိုယ်ပိုင်အသံ"
     if not separator or not script.strip():
         await update.message.reply_text(
-            "အသုံးပြုပုံ: /recapvoiceclone [profile_name] ပြီးနောက် မြန်မာ narration ကို စာကြောင်းအသစ်မှ ထည့်ပါ။\\n"
+            "အသုံးပြုပုံ: /recapvoiceclone [profile_name] ပြီးနောက် မြန်မာ narration ကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
             "အရင် /sourcevideo start ဖြင့် Video Render Session ဖွင့်ပြီး /myvoice setup ဖြင့် အသံသိမ်းထားပါ။"
         )
         return
