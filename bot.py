@@ -1860,7 +1860,7 @@ async def autoedit_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     defaults.update(profile)
     session = context.user_data.get("video_render")
     if session is not None:
-        session.update({k: profile[k] for k in ("effect_preset", "audio_preset", "transition")})
+        session.update({k: profile[k] for k in ("effect_preset", "audio_preset", "transition", "motion_preset")})
     await update.message.reply_text(
         "✨ Auto Edit Profile ရွေးပြီးပါပြီ\n"
         f"Category: {profile['category']}\n"
@@ -1918,6 +1918,30 @@ async def audiofx_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"Audio preset ရွေးပြီးပါပြီ: {selected}\nMP4 Render တွင် Narration အသံကို အလိုအလျောက်ညှိပါမယ်။"
     )
+
+
+async def motion_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Choose a subtle camera-motion preset for the next MP4 render."""
+    if not update.message:
+        return
+    from motion_presets import MOTION_PRESETS
+    selected = context.args[0].strip().lower() if context.args else ""
+    if not selected or selected == "list":
+        await update.message.reply_text(
+            "🎥 NEXORA Camera Motion\\nအသုံးပြုပုံ: /motion <preset>\\n"
+            + "\\n".join("• " + name for name in sorted(MOTION_PRESETS))
+            + "\\nDefault: none"
+        )
+        return
+    if selected not in MOTION_PRESETS:
+        await update.message.reply_text("Motion preset မသိပါ။ /motion list ဖြင့် ကြည့်ပါ။")
+        return
+    defaults = context.user_data.setdefault("video_edit_defaults", {})
+    defaults["motion_preset"] = selected
+    session = context.user_data.get("video_render")
+    if session is not None:
+        session["motion_preset"] = selected
+    await update.message.reply_text(f"Camera Motion ရွေးပြီးပါပြီ: {selected}")
 
 
 async def transition_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2001,6 +2025,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     platform,
                     session.get("effect_preset", "cinematic"),
                     session.get("audio_preset", "voice"),
+                    session.get("motion_preset", "none"),
                 )
             else:
                 single_output = output_dir / ("nexora_recap_" + secrets.token_hex(8) + ".mp4")
@@ -2013,6 +2038,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     platform,
                     effect_preset=session.get("effect_preset", "cinematic"),
                     audio_preset=session.get("audio_preset", "voice"),
+                    motion_preset=session.get("motion_preset", "none"),
                 )
                 output_paths = [single_output]
             now = time.time()
@@ -2102,7 +2128,11 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     platform = context.user_data.get("platform", "youtube")
     selected_effect = str(previous.get("effect_preset", "cinematic"))
     selected_audio = str(previous.get("audio_preset", "voice"))
-    selected_transition = str(previous.get("transition", "fade"))
+    defaults = context.user_data.get("video_edit_defaults") or {}
+    selected_transition = str(previous.get("transition", defaults.get("transition", "fade")))
+    selected_motion = str(previous.get("motion_preset", defaults.get("motion_preset", "none")))
+    selected_effect = str(previous.get("effect_preset", defaults.get("effect_preset", "cinematic")))
+    selected_audio = str(previous.get("audio_preset", defaults.get("audio_preset", "voice")))
     chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
     safe_chat = re.sub(r"[^0-9-]", "", chat_id) or "unknown"
     clip_dir = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work")) / safe_chat / "source_clips" / secrets.token_hex(8)
@@ -2112,6 +2142,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "effect_preset": selected_effect,
         "audio_preset": selected_audio,
         "transition": selected_transition,
+        "motion_preset": selected_motion,
         "source_video": None,
         "source_videos": [],
         "source_video_path": None,
@@ -3367,6 +3398,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("effect", effect_cmd))
     telegram_app.add_handler(CommandHandler("audiofx", audiofx_cmd))
     telegram_app.add_handler(CommandHandler("transition", transition_cmd))
+    telegram_app.add_handler(CommandHandler("motion", motion_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
