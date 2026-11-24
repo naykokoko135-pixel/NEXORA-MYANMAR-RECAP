@@ -18,6 +18,8 @@ class AutoEditProfileTests(unittest.TestCase):
             self.assertIn(profile["motion_preset"], MOTION_PRESETS)
             from subtitle_styles import SUBTITLE_STYLES
             self.assertIn(profile["subtitle_style"], SUBTITLE_STYLES)
+            self.assertGreaterEqual(profile["fade_seconds"], 0)
+            self.assertLessEqual(profile["fade_seconds"], 5)
 
     def test_aliases_and_unknown_category_fallback(self):
         self.assertEqual(build_auto_edit_profile("3D")["category"], "3d animation")
