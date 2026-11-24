@@ -167,7 +167,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/tts_local - Local MyanmarTTS WAV ထုတ်ရန် (စမ်းသပ်ဆဲ၊ host enable လိုအပ်)\n"
             "/voices - အသံပုံစံအားလုံးကြည့်ရန်\n"
             "/voiceprofile <name> - ကိုယ်ပိုင်အသံဖိုင် သိမ်းရန်\n"
-            "/myvoice start|status|delete - ကိုယ်ပိုင်အသံ Setup Tool\n"
+            "/myvoice start|confirm|status|delete - ကိုယ်ပိုင်အသံ Setup Tool\n"
             "/voiceclone <name> - သိမ်းထားသော ကိုယ်ပိုင်အသံဖြင့် မြန်မာစာ TTS ထုတ်ရန် (GPU host လိုအပ်)\n"
             "/voiceprofile export|import - အသံ Profile Backup ထုတ်/ပြန်သွင်းရန်\n"
             "/platform youtube|tiktok|facebook - Platform ရွေးရန်\n"
@@ -468,8 +468,9 @@ async def cancel_voiceover_cmd(update: Update, context: ContextTypes.DEFAULT_TYP
         return
     pending = context.user_data.pop("pending_voiceover", None)
     pending_profile = context.user_data.pop("pending_voice_profile", None)
+    pending_consent = context.user_data.pop("pending_voice_profile_consent", None)
     pending_backup = context.user_data.pop("pending_voice_profile_import", None)
-    if pending or pending_profile or pending_backup:
+    if pending or pending_profile or pending_consent or pending_backup:
         await update.message.reply_text("စောင့်ဆိုင်းနေသော Voice-over/အသံဖိုင်တင်ခြင်းကို ပယ်ဖျက်ပြီးပါပြီ။")
     else:
         await update.message.reply_text("ပယ်ဖျက်ရန် စောင့်နေသော အလုပ်မရှိပါ။")
