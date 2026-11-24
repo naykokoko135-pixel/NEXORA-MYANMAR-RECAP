@@ -2268,16 +2268,25 @@ async def myvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     action = context.args[0].strip().lower() if context.args else "help"
     if action in {"start", "setup", "add"}:
-        context.user_data["pending_voice_profile"] = "ကိုယ်ပိုင်အသံ"
+        context.user_data["pending_voice_profile_consent"] = "ကိုယ်ပိုင်အသံ"
+        context.user_data.pop("pending_voice_profile", None)
         await update.message.reply_text(
-            "🎙️ ကိုယ်ပိုင်အသံ Setup စတင်ပါပြီ။\n\n"
+            "🎙️ ကိုယ်ပိုင်အသံ Setup\n\n"
             "၁။ ကိုယ့်အသံသာ ပါတဲ့ ၁၀–၃၀ စက္ကန့် အသံနမူနာကို တိတ်ဆိတ်တဲ့နေရာမှာ သဘာဝအတိုင်း ဖတ်ပြီး Record လုပ်ပါ။\n"
-            "၂။ MP3/M4A/WAV/OGG ဖိုင်အဖြစ် ဒီ Chat ထဲ ပို့ပါ (၂၀ MB အောက်)။\n"
-            "၃။ သိမ်းပြီးရင် /myvoice status နဲ့ စစ်ပါ။\n"
-            "၄။ AI ကို ကိုယ့်အသံနဲ့ စာသားဖတ်ခိုင်းရန် /voiceclone ကို သုံးပါ။\n\n"
-            "အခြားသူ၏အသံကို ခွင့်ပြုချက်မရှိဘဲ မတင်ပါနှင့်။ "
-            "အသံနမူနာသိမ်းခြင်းသာဖြစ်ပြီး Render Free မှာ AI voice cloning မလုပ်နိုင်ပါ။ "
-            "Clone ထုတ်ရန် compatible GPU host လိုအပ်ပါတယ်။"
+            "၂။ MP3/M4A/WAV/OGG ဖိုင် (၂၀ MB အောက်) အဖြစ် ဒီ Chat ထဲ ပို့နိုင်ပါတယ်။\n"
+            "၃။ ကိုယ့်အသံဖြစ်ကြောင်းနှင့် AI voice cloning အတွက် အသုံးပြုခွင့်ပေးကြောင်း အတည်ပြုရန် /myvoice confirm ပို့ပါ။\n\n"
+            "အခြားသူ၏အသံကို ခွင့်ပြုချက်မရှိဘဲ မတင်ပါနှင့်။ အတည်ပြုပြီးမှသာ အသံဖိုင်ကို လက်ခံသိမ်းဆည်းပါမယ်။ "
+            "Render Free မှာ clone မထုတ်နိုင်သေးဘဲ compatible GPU host လိုအပ်ပါတယ်။"
+        )
+        return
+    if action == "confirm":
+        pending_consent = context.user_data.pop("pending_voice_profile_consent", None)
+        if not pending_consent:
+            await update.message.reply_text("အရင် /myvoice start ပို့ပြီး အသံပိုင်ဆိုင်မှု/ခွင့်ပြုချက်ကို အတည်ပြုပါ။")
+            return
+        context.user_data["pending_voice_profile"] = pending_consent
+        await update.message.reply_text(
+            "အတည်ပြုချက် လက်ခံပြီးပါပြီ။ ကိုယ့်အသံသာ ပါသော ၁၀–၃၀ စက္ကန့် MP3/M4A/WAV/OGG ဖိုင်ကို အခု ပို့ပါ (၂၀ MB အောက်)။"
         )
         return
     if action in {"status", "list"}:
@@ -2294,7 +2303,7 @@ async def myvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Default ကိုယ်ပိုင်အသံ: {sample_state}\n"
             "Clone engine: VoxCPM2 (GPU host လိုအပ်)\n"
             "Persistent Disk + VOICE_PROFILE_DB_PATH မရှိလျှင် restart ပြီး အသံပျောက်နိုင်ပါတယ်။\n"
-            "အသံတင်ရန် /myvoice start | အသံထုတ်ရန် /voiceclone ကို သုံးပါ။"
+            "အသံတင်ရန် /myvoice start | အတည်ပြုရန် /myvoice confirm | အသံထုတ်ရန် /voiceclone ကို သုံးပါ။"
         )
         return
     if action in {"delete", "remove"}:
@@ -2311,7 +2320,8 @@ async def myvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await update.message.reply_text(
         "🎙️ NEXORA ကိုယ်ပိုင်အသံ Tool\n"
-        "/myvoice start — ကိုယ့်အသံနမူနာ တင်ရန် Wizard စတင်မည်\n"
+        "/myvoice start — ကိုယ့်အသံနမူနာ Wizard စတင်မည်\n"
+        "/myvoice confirm — ကိုယ့်အသံဖြစ်ကြောင်းနှင့် cloning ခွင့်ပြုချက် အတည်ပြုရန်\n"
         "/myvoice status — သိမ်းထားသော Profile ကြည့်ရန်\n"
         "/myvoice delete — Default ကိုယ်ပိုင်အသံ ဖျက်ရန်\n"
         "/voiceclone ကိုယ်ပိုင်အသံ ပြီးနောက် စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
@@ -2606,6 +2616,7 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             return
         context.user_data["custom_voice_profiles"] = restored
         context.user_data.pop("pending_voice_profile_import", None)
+        context.user_data.pop("pending_voice_profile_consent", None)
         await message.reply_text(f"Voice Profile Backup ပြန်သွင်းပြီးပါပြီ။ လက်ရှိ Profile {len(restored)} ခု ရှိပါတယ်။")
         await send_voice_profile_backup(update, restored, "ပြန်သွင်းပြီးနောက်")
         return
@@ -2629,7 +2640,7 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             await message.reply_text(str(exc))
             return
         context.user_data.pop("pending_voice_profile", None)
-        await message.reply_text(f"{pending} အသံဖိုင် သိမ်းပြီးပါပြီ။ /voiceprofile list ဖြင့် ကြည့်နိုင်ပါတယ်။ ဒီဖိုင်သည် အသံသွင်းထားသော narration ကို တိုက်ရိုက်ပြန်သုံးရန်ဖြစ်ပြီး စာသားအသစ်ကို TTS ပြောင်းပေးခြင်း မဟုတ်ပါ။")
+        await message.reply_text(f"{pending} အသံနမူနာကို သိမ်းပြီးပါပြီ။ /myvoice status ဖြင့် စစ်ပါ။ AI ကို ကိုယ့်အသံနဲ့ စာသားဖတ်ခိုင်းရန် /voiceclone ကိုသုံးပါ။ ဒီလုပ်ဆောင်မှုသည် GPU host လိုအပ်ပြီး Render Free တွင် မရနိုင်သေးပါ။")
         await send_voice_profile_backup(update, profiles, "Profile အသစ်သိမ်းပြီးနောက်")
         return
     if context.user_data.get("pending_logo_upload"):
