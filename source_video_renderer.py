@@ -50,6 +50,8 @@ def render_user_source_video(
     music_ducking: bool = True,
     brand_logo: tuple[str, bytes] | None = None,
     logo_position: str = "bottom-right",
+    subtitle_style: str = "classic",
+    burn_subtitles: bool = False,
 ) -> Path:
     """Use only the exact uploaded video; loop visuals if needed and replace source audio."""
     import imageio_ffmpeg
@@ -141,6 +143,12 @@ def render_user_source_video(
             render_video_path.write_bytes(video_data)
         audio_path.write_bytes(audio_data)
         srt_path.write_bytes(srt_data)
+        if burn_subtitles:
+            from subtitle_styles import build_subtitle_filter
+            try:
+                video_filter = video_filter + "," + build_subtitle_filter(str(srt_path), subtitle_style)
+            except ValueError as exc:
+                raise SourceVideoRenderError(str(exc)) from exc
         # Use only genuine source-video frames; never loop or freeze a short clip to fill narration.
         probe = subprocess.run(
             [ffmpeg, "-hide_banner", "-i", str(render_video_path)],
@@ -189,14 +197,18 @@ def render_user_source_video(
             command.extend(["-map", audio_label])
         else:
             command.extend(["-map", "1:a:0"])
-        command.extend(["-map", "2:s:0"])
+        if not burn_subtitles:
+            command.extend(["-map", "2:s:0"])
         if not logo_graph:
             command.extend(["-vf", video_filter])
         command.extend([
             "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
             "-af", audio_filter,
-            "-c:a", "aac", "-b:a", "160k", "-c:s", "mov_text",
-            "-metadata:s:s:0", "language=bur", "-t", f"{duration:.3f}",
+            "-c:a", "aac", "-b:a", "160k",
+        ])
+        if not burn_subtitles:
+            command.extend(["-c:s", "mov_text", "-metadata:s:s:0", "language=bur"])
+        command.extend(["-t", f"{duration:.3f}",
             "-shortest", "-movflags", "+faststart", str(target),
         ])
         try:
