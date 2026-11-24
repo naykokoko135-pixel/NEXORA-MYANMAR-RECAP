@@ -44,6 +44,7 @@ def render_user_source_video(
     expected_duration_seconds: float | None = None,
     effect_preset: str = "cinematic",
     audio_preset: str = "voice",
+    motion_preset: str = "none",
 ) -> Path:
     """Use only the exact uploaded video; loop visuals if needed and replace source audio."""
     import imageio_ffmpeg
@@ -89,6 +90,14 @@ def render_user_source_video(
         video_filter = build_effect_filter(effect_preset, width, height)
     except ValueError as exc:
         raise SourceVideoRenderError(str(exc)) from exc
+
+    from motion_presets import build_motion_filter
+    try:
+        motion_filter = build_motion_filter(motion_preset, width, height)
+    except ValueError as exc:
+        raise SourceVideoRenderError(str(exc)) from exc
+    if motion_filter:
+        video_filter = video_filter + "," + motion_filter
 
     from audio_mastering import build_audio_filter
 
