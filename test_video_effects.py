@@ -5,6 +5,7 @@ from video_effects import EFFECT_PRESETS, build_effect_filter
 
 class VideoEffectPresetTests(unittest.TestCase):
     def test_all_presets_build_platform_specific_filters(self):
+        self.assertGreaterEqual(len(EFFECT_PRESETS), 20)
         for preset in EFFECT_PRESETS:
             for dimensions in ((1280, 720), (864, 1080), (720, 1280)):
                 result = build_effect_filter(preset, *dimensions)
