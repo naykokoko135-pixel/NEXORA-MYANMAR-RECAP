@@ -2177,6 +2177,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except OSError:
                     log.warning("Could not remove temporary concatenated source video")
             context.user_data.pop("video_render", None)
+            context.user_data.pop("creator_voice_assets", None)
         metadata = session.get("source_metadata") or {}
         if metadata:
             attribution_lines = [
