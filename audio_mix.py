@@ -12,8 +12,9 @@ def build_background_music_graph(volume: float = 0.18, ducking: bool = True,
     music = f"[{music_input_index}:a]volume={level:.3f}[bgm]"
     if ducking:
         graph = (music + ";"
-                 + f"[bgm][{narration_input_index}:a]sidechaincompress=threshold=0.025:ratio=8:attack=20:release=450[ducked];"
-                 + f"[{narration_input_index}:a][ducked]amix=inputs=2:duration=first:dropout_transition=2[aout]")
+                 + f"[{narration_input_index}:a]asplit=2[narration_sc][narration_mix];"
+                 + "[bgm][narration_sc]sidechaincompress=threshold=0.025:ratio=8:attack=20:release=450[ducked];"
+                 + "[narration_mix][ducked]amix=inputs=2:duration=first:dropout_transition=2[aout]")
     else:
         graph = music + ";" + f"[{narration_input_index}:a][bgm]amix=inputs=2:duration=first:dropout_transition=2[aout]"
     return graph, "[aout]"
