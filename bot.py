@@ -691,11 +691,13 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
         await asyncio.to_thread(download_licensed_source, source, output)
         selected_effect = str((context.user_data.get("video_render") or {}).get("effect_preset", "cinematic"))
         selected_audio = str((context.user_data.get("video_render") or {}).get("audio_preset", "voice"))
+        selected_transition = str((context.user_data.get("video_render") or {}).get("transition", "fade"))
         context.user_data["video_render"] = {
             "mode": "source_video",
             "platform": context.user_data.get("platform", "youtube"),
             "effect_preset": selected_effect,
             "audio_preset": selected_audio,
+            "transition": selected_transition,
             "source_video_path": str(output),
             "source_metadata": {
                 "title": str(source.get("title", "")),
