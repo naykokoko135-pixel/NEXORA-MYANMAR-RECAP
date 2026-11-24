@@ -70,3 +70,26 @@ def test_filters_non_public_video():
                side_effect=[_response(search), _response(details)]):
         result = search_youtube_cc_videos("test", api_key="test-key")
     assert result == []
+
+
+def test_official_trailer_references_are_watch_links_only():
+    search_trailer = {"items": [{
+        "id": {"videoId": "trailer123"},
+        "snippet": {"title": "Example Official Trailer", "channelTitle": "Studio Channel"}
+    }]}
+    details_trailer = {"items": [{
+        "id": "trailer123",
+        "snippet": {"title": "Example Official Trailer", "channelTitle": "Studio Channel"},
+        "status": {"privacyStatus": "public", "uploadStatus": "processed", "embeddable": True}
+    }]}
+    search_clip = {"items": []}
+    with patch("youtube_cc_finder.urllib.request.urlopen",
+               side_effect=[_response(search_trailer), _response(details_trailer), _response(search_clip)]):
+        from youtube_cc_finder import search_official_trailer_references
+        result = search_official_trailer_references("Example Movie", api_key="test-key")
+    assert len(result) == 1
+    assert result[0]["source"] == "YouTube Trailer Reference"
+    assert result[0]["url"] == "https://www.youtube.com/watch?v=trailer123"
+    assert result[0]["download_enabled"] is False
+    assert result[0]["reuse_ready"] is False
+    assert "official" in result[0]["title"].lower()
