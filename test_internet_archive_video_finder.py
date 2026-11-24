@@ -35,7 +35,7 @@ class InternetArchiveVideoFinderTests(unittest.TestCase):
             ],
         }
         with patch("internet_archive_video_finder.urllib.request.urlopen",
-                   side_effect=[_response(search), _response(metadata)]):
+                   side_effect=[_response(search), _response(search), _response(metadata)]):
             result = search_internet_archive_licensed_video("Open Film")
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["license"], "CC BY 4.0")
@@ -61,7 +61,7 @@ class InternetArchiveVideoFinderTests(unittest.TestCase):
                 ],
             }
             with patch("internet_archive_video_finder.urllib.request.urlopen",
-                       side_effect=[_response(search), _response(metadata)]):
+                       side_effect=[_response(search), _response(search), _response(metadata)]):
                 result = search_internet_archive_licensed_video("Public Film")
             self.assertEqual(len(result), 1)
             self.assertTrue(result[0]["download_enabled"])
@@ -76,7 +76,7 @@ class InternetArchiveVideoFinderTests(unittest.TestCase):
             "files": [{"name": "film.mp4", "source": "original", "size": "100"}],
         }
         with patch("internet_archive_video_finder.urllib.request.urlopen",
-                   side_effect=[_response(search), _response(metadata)]):
+                   side_effect=[_response(search), _response(search), _response(metadata)]):
             self.assertEqual(search_internet_archive_licensed_video("Restricted Film"), [])
 
     def test_requires_exact_title_match(self):
@@ -89,7 +89,7 @@ class InternetArchiveVideoFinderTests(unittest.TestCase):
             "files": [{"name": "film.mp4", "source": "original", "size": "100"}],
         }
         with patch("internet_archive_video_finder.urllib.request.urlopen",
-                   side_effect=[_response(search), _response(metadata)]):
+                   side_effect=[_response(search), _response(search), _response(metadata)]):
             self.assertEqual(search_internet_archive_licensed_video("Open Film"), [])
 
     def test_explicit_year_must_match_archive_record(self):
@@ -103,7 +103,7 @@ class InternetArchiveVideoFinderTests(unittest.TestCase):
             "files": [{"name": "film.mp4", "source": "original", "size": "100"}],
         }
         with patch("internet_archive_video_finder.urllib.request.urlopen",
-                   side_effect=[_response(search), _response(metadata)]):
+                   side_effect=[_response(search), _response(search), _response(metadata)]):
             self.assertEqual(search_internet_archive_licensed_video("Open Film (2021)"), [])
 
     def test_skips_items_without_original_video_file_or_with_oversize_file(self):
@@ -119,7 +119,7 @@ class InternetArchiveVideoFinderTests(unittest.TestCase):
             ],
         }
         with patch("internet_archive_video_finder.urllib.request.urlopen",
-                   side_effect=[_response(search), _response(metadata)]):
+                   side_effect=[_response(search), _response(search), _response(metadata)]):
             self.assertEqual(search_internet_archive_licensed_video("Open Film"), [])
 
     def test_license_allowlist_excludes_nc_nd(self):
