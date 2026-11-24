@@ -194,7 +194,7 @@ def concatenate_source_video_clips(
             probe_text = probe.stderr or probe.stdout
             if "Video:" not in probe_text:
                 raise SourceVideoRenderError(f"Clip {index} တွင် ဖတ်ရှုနိုင်သော Video မတွေ့ပါ။")
-            duration_match = re.search(r"Duration: (\\d+):(\\d+):(\\d+(?:\\.\\d+)?)", probe_text)
+            duration_match = re.search(r"Duration: (\d+):(\d+):(\d+(?:\.\d+)?)", probe_text)
             if not duration_match:
                 raise SourceVideoRenderError(f"Clip {index} ကြာချိန်ကို မဖတ်နိုင်ပါ။")
             durations.append(int(duration_match.group(1))*3600 + int(duration_match.group(2))*60 + float(duration_match.group(3)))
@@ -211,7 +211,7 @@ def concatenate_source_video_clips(
             normalized.append(cooked)
         if len(normalized) == 1 or transition == "cut":
             concat_list = work / "concat.txt"
-            concat_list.write_text("".join(f"file '{path.as_posix()}'\\n" for path in normalized), encoding="utf-8")
+            concat_list.write_text("".join(f"file '{path.as_posix()}'\n" for path in normalized), encoding="utf-8")
             command = [ffmpeg, "-y", "-hide_banner", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy", "-movflags", "+faststart", str(target)]
         else:
             from video_transitions import build_transition_graph
