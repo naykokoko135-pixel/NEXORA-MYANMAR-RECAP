@@ -184,7 +184,7 @@ def render_user_source_video(
             command.extend(["-stream_loop", "-1", "-i", str(music_path)])
             from audio_mix import build_background_music_graph
             try:
-                audio_graph, audio_label = build_background_music_graph(music_volume, music_ducking)
+                audio_graph, audio_label = build_background_music_graph(music_volume, music_ducking, post_filter=audio_filter)
             except ValueError as exc:
                 raise SourceVideoRenderError(str(exc)) from exc
         logo_graph = None
@@ -213,9 +213,10 @@ def render_user_source_video(
             command.extend(["-vf", video_filter])
         command.extend([
             "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
-            "-af", audio_filter,
-            "-c:a", "aac", "-b:a", "160k",
         ])
+        if not audio_graph:
+            command.extend(["-af", audio_filter])
+        command.extend(["-c:a", "aac", "-b:a", "160k"])
         if not burn_subtitles:
             command.extend(["-c:s", "mov_text", "-metadata:s:s:0", "language=bur"])
         command.extend(["-t", f"{duration:.3f}",
