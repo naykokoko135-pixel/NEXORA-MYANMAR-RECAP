@@ -123,7 +123,7 @@ def combine_estimated_srt_parts(parts: list[tuple[str, float]]) -> str:
         duration = float(part_duration)
         if duration <= 0:
             raise ValueError("SRT အပိုင်းကြာချိန် မမှန်ပါ။")
-        for block in re.split(r"\r?\n\s*\r?\n", str(srt_text).strip()):
+        for block in re.split(r"\r?\n[ \t]*\r?\n", str(srt_text).strip()):
             lines = block.splitlines()
             if len(lines) < 3:
                 continue
