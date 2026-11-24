@@ -11,7 +11,7 @@ def make_wav(seconds=5, sample_rate=8000):
         wav.setnchannels(1)
         wav.setsampwidth(2)
         wav.setframerate(sample_rate)
-        wav.writeframes(b"\\x00\\x00" * seconds * sample_rate)
+        wav.writeframes(b"\x00\x00" * seconds * sample_rate)
     return buffer.getvalue()
 
 
