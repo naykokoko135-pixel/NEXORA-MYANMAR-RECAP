@@ -941,7 +941,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             actual = round(duration_seconds / 60, 1)
             await update.message.reply_text(
                 f"{platform.upper()} အတွက် Movie MP4 မထုတ်နိုင်သေးပါ။ Narration ကြာချိန် {actual} မိနစ်သာ ရှိပါတယ်။ "
-                f"လိုအပ်ချက်မှာ {minimum}–{maximum} မိနစ် ဖြစ်ပါတယ်။\\n"
+                f"လိုအပ်ချက်မှာ {minimum}–{maximum} မိနစ် ဖြစ်ပါတယ်။\n"
                 "မပြည့်မီသေးသော Narration ကို အတင်းဖြည့်ခြင်း၊ ဇာတ်ကွက်ဖန်တီးဖြည့်ခြင်း မလုပ်ထားပါ။ "
                 "Verified Plot Notes ပိုမိုရရှိမှသာ Long-form ကို ဆက်ထုတ်ပါမယ်။"
             )
@@ -1010,17 +1010,17 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Do not send audio-only deliverables when the requested movie footage is unavailable.
             await update.message.reply_text(
                 f"{metadata.get('title', query)} အတွက် ခေါင်းစဉ်နှင့် ကိုက်ညီပြီး "
-                "ပြန်လည်အသုံးပြုခွင့်ကို အတည်ပြုနိုင်သော မူရင်းဗီဒီယို မရရှိပါ။\\n"
-                "မသက်ဆိုင်သော footage ဖြင့် MP4 မထုတ်ထားပါ။ MP3/SRT ကို ပို့ပေးထားပါတယ်။\\n\\n"
+                "ပြန်လည်အသုံးပြုခွင့်ကို အတည်ပြုနိုင်သော မူရင်းဗီဒီယို မရရှိပါ။\n"
+                "မသက်ဆိုင်သော footage ဖြင့် MP4 မထုတ်ထားပါ။ MP3/SRT ကို ပို့ပေးထားပါတယ်။\n\n"
                 "ကိုယ်ပိုင် သို့မဟုတ် လိုင်စင်ရ Video ရှိပါက /sourcevideo workflow မှာ အသုံးပြုနိုင်ပါတယ်။"
                 + (
-                    "\\n\\n🔎 အခြားရင်းမြစ်များမှ တွေ့ရှိသော ခွင့်ပြုချက်စစ်ဆေးရန် Leads:\\n"
-                    + "\\n".join(fallback_source_notes[:5])
+                    "\n\n🔎 အခြားရင်းမြစ်များမှ တွေ့ရှိသော ခွင့်ပြုချက်စစ်ဆေးရန် Leads:\n"
+                    + "\n".join(fallback_source_notes[:5])
                     if fallback_source_notes else
-                    "\\n\\nအခြားရင်းမြစ်များတွင်လည်း အသုံးပြုခွင့်ရှိသော အလိုအလျောက် Download လုပ်နိုင်သည့် မူရင်းဖိုင် မတွေ့ပါ။"
+                    "\n\nအခြားရင်းမြစ်များတွင်လည်း အသုံးပြုခွင့်ရှိသော အလိုအလျောက် Download လုပ်နိုင်သည့် မူရင်းဖိုင် မတွေ့ပါ။"
                 )
                 + (
-                    "\\n\\nProvider စစ်ဆေးမှုမှတ်ချက်: " + " | ".join(fallback_source_errors)
+                    "\n\nProvider စစ်ဆေးမှုမှတ်ချက်: " + " | ".join(fallback_source_errors)
                     if fallback_source_errors else ""
                 )
             )
@@ -1079,9 +1079,9 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 attribution = (
                     build_licensed_attribution_note(source, metadata.get("title", query), metadata.get("source", ""))
                     if source else (
-                        f"Title: {metadata.get('title', query)}\\nSource: {archive_source.get('source_page', '')}\\n"
-                        f"License: {archive_source.get('license', '')} ({archive_source.get('license_uri', '')})\\n"
-                        f"Uploader/Creator: {archive_source.get('artist', 'Unknown')}\\n"
+                        f"Title: {metadata.get('title', query)}\nSource: {archive_source.get('source_page', '')}\n"
+                        f"License: {archive_source.get('license', '')} ({archive_source.get('license_uri', '')})\n"
+                        f"Uploader/Creator: {archive_source.get('artist', 'Unknown')}\n"
                     )
                 )
                 credit_file = BytesIO(attribution.encode("utf-8-sig"))
@@ -1933,8 +1933,8 @@ async def motion_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     selected = context.args[0].strip().lower() if context.args else ""
     if not selected or selected == "list":
         await update.message.reply_text(
-            "🎥 NEXORA Camera Motion\nအသုံးပြုပုံ: /motion <preset>\\n"
-            + "\\n".join("• " + name for name in sorted(MOTION_PRESETS))
+            "🎥 NEXORA Camera Motion\nအသုံးပြုပုံ: /motion <preset>\n"
+            + "\n".join("• " + name for name in sorted(MOTION_PRESETS))
             + "\nDefault: none"
         )
         return
