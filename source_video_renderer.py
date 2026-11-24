@@ -148,8 +148,9 @@ def render_user_source_video(
 def concatenate_source_video_clips(
     clips: list[tuple[str, bytes | str | Path]],
     output_path: str | Path,
+    transition: str = "fade",
 ) -> Path:
-    """Normalize and concatenate disk-backed or in-memory real-video clips in order."""
+    """Normalize and join real-video clips with a selectable transition."""
     import imageio_ffmpeg
 
     if not clips or len(clips) > MAX_SOURCE_VIDEO_CLIPS:
@@ -171,6 +172,7 @@ def concatenate_source_video_clips(
     with tempfile.TemporaryDirectory(prefix="nexora_clip_join_") as temp:
         work = Path(temp)
         normalized: list[Path] = []
+        durations: list[float] = []
         for index, (filename, data) in enumerate(clips, 1):
             suffix = Path(filename).suffix.lower()
             if suffix not in ALLOWED_VIDEO_SUFFIXES:
@@ -189,8 +191,13 @@ def concatenate_source_video_clips(
                 [ffmpeg, "-hide_banner", "-i", str(raw)],
                 capture_output=True, text=True, timeout=30, check=False,
             )
-            if "Video:" not in (probe.stderr or probe.stdout):
+            probe_text = probe.stderr or probe.stdout
+            if "Video:" not in probe_text:
                 raise SourceVideoRenderError(f"Clip {index} တွင် ဖတ်ရှုနိုင်သော Video မတွေ့ပါ။")
+            duration_match = re.search(r"Duration: (\\d+):(\\d+):(\\d+(?:\\.\\d+)?)", probe_text)
+            if not duration_match:
+                raise SourceVideoRenderError(f"Clip {index} ကြာချိန်ကို မဖတ်နိုင်ပါ။")
+            durations.append(int(duration_match.group(1))*3600 + int(duration_match.group(2))*60 + float(duration_match.group(3)))
             command = [
                 ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
                 "-i", str(raw), "-map", "0:v:0", "-an",
@@ -202,16 +209,20 @@ def concatenate_source_video_clips(
             if result.returncode or not cooked.is_file() or cooked.stat().st_size == 0:
                 raise SourceVideoRenderError(f"Clip {index} ကို Video အဖြစ် ပြင်ဆင်မရပါ။")
             normalized.append(cooked)
-        concat_list = work / "concat.txt"
-        concat_list.write_text(
-            "".join(f"file '{path.as_posix()}'\n" for path in normalized),
-            encoding="utf-8",
-        )
-        result = subprocess.run(
-            [ffmpeg, "-y", "-hide_banner", "-loglevel", "error", "-f", "concat", "-safe", "0",
-             "-i", str(concat_list), "-c", "copy", "-movflags", "+faststart", str(target)],
-            capture_output=True, text=True, timeout=900, check=False,
-        )
+        if len(normalized) == 1 or transition == "cut":
+            concat_list = work / "concat.txt"
+            concat_list.write_text("".join(f"file '{path.as_posix()}'\\n" for path in normalized), encoding="utf-8")
+            command = [ffmpeg, "-y", "-hide_banner", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy", "-movflags", "+faststart", str(target)]
+        else:
+            from video_transitions import build_transition_graph
+            try:
+                graph, output_label = build_transition_graph(durations, transition, 0.6)
+            except ValueError as exc:
+                raise SourceVideoRenderError(str(exc)) from exc
+            command = [ffmpeg, "-y", "-hide_banner", "-loglevel", "error"]
+            for path in normalized: command.extend(["-i", str(path)])
+            command.extend(["-filter_complex", graph, "-map", output_label, "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "25", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(target)])
+        result = subprocess.run(command, capture_output=True, text=True, timeout=900, check=False)
         if result.returncode or not target.is_file() or target.stat().st_size == 0:
             raise SourceVideoRenderError("Video Clip များကို ပေါင်းစပ်၍ MP4 မထုတ်နိုင်ပါ။")
     return target
