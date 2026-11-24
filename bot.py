@@ -9,6 +9,7 @@ import os
 import re
 import tempfile
 import secrets
+from types import SimpleNamespace
 from pathlib import Path
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
@@ -472,7 +473,8 @@ async def cancel_voiceover_cmd(update: Update, context: ContextTypes.DEFAULT_TYP
     pending_profile = context.user_data.pop("pending_voice_profile", None)
     pending_consent = context.user_data.pop("pending_voice_profile_consent", None)
     pending_backup = context.user_data.pop("pending_voice_profile_import", None)
-    if pending or pending_profile or pending_consent or pending_backup:
+    pending_recap = context.user_data.pop("pending_recap_voice_parts_upload", None)
+    if pending or pending_profile or pending_consent or pending_backup or pending_recap:
         await update.message.reply_text("စောင့်ဆိုင်းနေသော Voice-over/အသံဖိုင်တင်ခြင်းကို ပယ်ဖျက်ပြီးပါပြီ။")
     else:
         await update.message.reply_text("ပယ်ဖျက်ရန် စောင့်နေသော အလုပ်မရှိပါ။")
@@ -2653,6 +2655,34 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         await message.reply_text(f"Voice Profile Backup ပြန်သွင်းပြီးပါပြီ။ လက်ရှိ Profile {len(restored)} ခု ရှိပါတယ်။")
         await send_voice_profile_backup(update, restored, "ပြန်သွင်းပြီးနောက်")
         return
+    if context.user_data.get("pending_recap_voice_parts_upload") and message.document:
+        filename = message.document.file_name or ""
+        if Path(filename).suffix.lower() != ".txt":
+            await message.reply_text("YouTube/Facebook Script အတွက် .txt ဖိုင်သာ ပို့ပါ။")
+            return
+        if (message.document.file_size or 0) <= 0 or (message.document.file_size or 0) > 1024 * 1024:
+            await message.reply_text("Script TXT သည် ၁ MB အောက် ဖြစ်ရပါမယ်။")
+            return
+        media_file = await message.document.get_file()
+        buffer = BytesIO()
+        await media_file.download_to_memory(out=buffer)
+        try:
+            script_text = buffer.getvalue().decode("utf-8-sig")
+        except UnicodeDecodeError:
+            await message.reply_text("TXT ဖိုင်ကို UTF-8 encoding ဖြင့် သိမ်းပြီး ပြန်ပို့ပါ။")
+            return
+        if len(script_text) > 80_000:
+            await message.reply_text("Script စာသားသည် စာလုံး ၈၀,၀၀၀ ထက် ကျော်နေပါတယ်။")
+            return
+        context.user_data.pop("pending_recap_voice_parts_upload", None)
+        synthetic_message = SimpleNamespace(
+            text="/recapvoice3 myvoice\\n" + script_text,
+            reply_text=message.reply_text,
+            reply_document=message.reply_document,
+        )
+        synthetic_update = SimpleNamespace(message=synthetic_message, effective_user=update.effective_user)
+        await recapvoice3_cmd(synthetic_update, context)
+        return
     pending = context.user_data.get("pending_voice_profile")
     if pending and (message.audio or message.voice or message.document):
         media = message.audio or message.voice or message.document
@@ -3423,6 +3453,18 @@ async def recapvoice3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "/recapvoice3 သည် YouTube/Facebook အတွက်သာ ဖြစ်သည်။ "
             "TikTok အတွက် /recapvoice ကိုသုံးပြီး တစ်ဖိုင်တည်း ၄–၇ မိနစ် ထုတ်ပါ။"
+        )
+        return
+    first_line, separator, _ = update.message.text.partition("\\n")
+    first_parts = first_line.strip().split(maxsplit=1)
+    requested_voice = first_parts[1].strip().lower() if len(first_parts) > 1 else "narrator"
+    if requested_voice == "myvoice" and not separator:
+        context.user_data["pending_recap_voice_parts_upload"] = True
+        await update.message.reply_text(
+            "YouTube/Facebook ကိုယ်ပိုင်အသံ Recap အတွက် UTF-8 .txt ဖိုင်တစ်ခု ပို့ပါ။\\n"
+            "ဖိုင်ထဲတွင် [PART 1], [PART 2], [PART 3] ခေါင်းစဉ်များနှင့် Script အပြည့်အစုံ ပါရပါမည်။\\n"
+            "Telegram စာတိုအရှည်ကန့်သတ်ချက်ကို ရှောင်ရန် TXT ဖိုင်ဖြင့် ပို့နိုင်ပါတယ်။ ဖိုင် ၁ MB အောက် ဖြစ်ရပါမယ်။\\n"
+            "မလုပ်တော့ပါက /cancel ပို့ပါ။"
         )
         return
     try:
