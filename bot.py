@@ -1878,7 +1878,7 @@ async def autoedit_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✨ Auto Edit Profile ရွေးပြီးပါပြီ\n"
         f"Category: {profile['category']}\n"
         f"Visual: {profile['effect_preset']} | Audio: {profile['audio_preset']} | Transition: {profile['transition']} | Motion: {profile['motion_preset']}\n"
-        f"Subtitle Style: {profile['subtitle_style']}\\n"
+        f"Subtitle Style: {profile['subtitle_style']}\n"
         "ဒီရွေးချယ်မှုတွေကို MP4 Render မှာ အလိုအလျောက်ထည့်ပါမယ်။"
     )
 
