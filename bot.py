@@ -1837,8 +1837,8 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ("subtitles", "SRT"),
             ) if not session.get(key)
         ]
-        if not (session.get("source_video") or session.get("source_video_path")):
-            missing.insert(0, "မူရင်း Video")
+        if not (session.get("source_video") or session.get("source_video_path") or session.get("source_videos")):
+            missing.insert(0, "မူရင်း Video Clip")
         if missing:
             await update.message.reply_text("မရသေးသောဖိုင်: " + "၊ ".join(missing))
             return
@@ -1852,8 +1852,15 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             output_dir.mkdir(parents=True, exist_ok=True)
             platform = session.get("platform", "youtube")
             source_video = session.get("source_video") or session.get("source_video_path")
+            batch_dir = output_dir / ("nexora_recap_" + secrets.token_hex(8))
+            source_clips = session.get("source_videos") or []
+            if not source_video and source_clips:
+                from source_video_renderer import concatenate_source_video_clips
+                combined_source = batch_dir / "combined_source.mp4" if platform in {"youtube", "facebook"} else output_dir / ("nexora_source_" + secrets.token_hex(8) + ".mp4")
+                combined_source.parent.mkdir(parents=True, exist_ok=True)
+                await asyncio.to_thread(concatenate_source_video_clips, source_clips, combined_source)
+                source_video = combined_source
             if platform in {"youtube", "facebook"}:
-                batch_dir = output_dir / ("nexora_recap_" + secrets.token_hex(8))
                 output_paths = await asyncio.to_thread(
                     render_three_part_longform,
                     source_video,
@@ -1947,13 +1954,14 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "mode": "source_video",
         "platform": platform,
         "source_video": None,
+        "source_videos": [],
         "source_video_path": None,
         "narration_audio": None,
         "subtitles": None,
     }
     await update.message.reply_text(
         "Source Video Recap စတင်ပါပြီ။ သင်ပိုင်ဆိုင်သော သို့မဟုတ် အသုံးပြုခွင့်ရထားသော Video ကိုသာ ပို့ပါ။\n"
-        "၁) MP4/MOV/M4V/WEBM Video (၂၀ MB အောက်) သို့မဟုတ် /licensedownload ဖြင့် Commons မှ Server-side Download\n"
+        "၁) MP4/MOV/M4V/WEBM Video Clip တစ်ခုလျှင် ၂၀ MB အောက်၊ စုစုပေါင်း Clip ၃၀ ခုအထိ ပို့နိုင်သည်။\n"
         "၂) မြန်မာ Narration MP3/M4A/WAV/OGG (၂၀ MB အောက်)\n"
         "၃) UTF-8 .SRT စာတန်းထိုး (၁ MB အောက်)\n"
         "ဖိုင် ၃ မျိုးလုံးပို့ပြီး /sourcevideo finish ပို့ပါ။ /sourcevideo cancel ဖြင့် ရပ်နိုင်ပါတယ်။"
@@ -2133,13 +2141,22 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         buffer = BytesIO()
         await media_file.download_to_memory(out=buffer)
         payload = (filename, buffer.getvalue())
-        key = {"video": "source_video", "audio": "narration_audio", "subtitle": "subtitles"}[kind]
-        session[key] = payload
-        await message.reply_text({
-            "video": "မူရင်း Video လက်ခံပြီးပါပြီ။",
-            "audio": "မြန်မာ Narration အသံ လက်ခံပြီးပါပြီ။",
-            "subtitle": "SRT စာတန်းထိုး လက်ခံပြီးပါပြီ။",
-        }[kind] + " လိုအပ်သည့်ဖိုင်အားလုံးပြီးလျှင် /sourcevideo finish ပို့ပါ။")
+        if kind == "video":
+            clips = session.setdefault("source_videos", [])
+            if len(clips) >= 30:
+                await message.reply_text("Video Clip ၃၀ ခု ပြည့်ပါပြီ။ /sourcevideo finish ပို့ပါ။")
+                return
+            clips.append(payload)
+            session["source_video"] = None
+            received = f"Video Clip {len(clips)}/30 လက်ခံပြီးပါပြီ။"
+        else:
+            key = {"audio": "narration_audio", "subtitle": "subtitles"}[kind]
+            session[key] = payload
+            received = {
+                "audio": "မြန်မာ Narration အသံ လက်ခံပြီးပါပြီ။",
+                "subtitle": "SRT စာတန်းထိုး လက်ခံပြီးပါပြီ။",
+            }[kind]
+        await message.reply_text(received + " လိုအပ်သည့်ဖိုင်အားလုံးပြီးလျှင် /sourcevideo finish ပို့ပါ။")
         return
     media_file = None
     filename = ""
