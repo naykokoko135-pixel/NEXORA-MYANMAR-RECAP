@@ -53,6 +53,7 @@ def render_user_source_video(
     subtitle_style: str = "classic",
     burn_subtitles: bool = False,
     fade_seconds: float = 0.6,
+    quality_preset: str = "720p",
 ) -> Path:
     """Use only the exact uploaded video; loop visuals if needed and replace source audio."""
     import imageio_ffmpeg
@@ -102,7 +103,11 @@ def render_user_source_video(
         raise SourceVideoRenderError("Narration/SRT ကြာချိန်သည် သတ်မှတ်ထားသော အပိုင်းကြာချိန်နှင့် မကိုက်ညီပါ။")
     if platform not in PLATFORM_DIMENSIONS:
         raise SourceVideoRenderError("Platform သည် youtube/facebook/tiktok ဖြစ်ရပါမယ်။")
-    width, height = PLATFORM_DIMENSIONS[platform]
+    from render_quality import resolve_output_dimensions
+    try:
+        width, height = resolve_output_dimensions(platform, quality_preset)
+    except ValueError as exc:
+        raise SourceVideoRenderError(str(exc)) from exc
 
     from video_effects import build_effect_filter
 
