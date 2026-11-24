@@ -3804,6 +3804,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("ttssrt", ttssrt_cmd))
     telegram_app.add_handler(CommandHandler("scenetts", scenetts_cmd))
     telegram_app.add_handler(CommandHandler("voiceprofile", voiceprofile_cmd))
+    telegram_app.add_handler(CommandHandler("myvoice", myvoice_cmd))
     telegram_app.add_handler(CommandHandler("voiceclone", voiceclone_cmd))
     telegram_app.add_handler(CommandHandler("voices", voices_cmd))
     telegram_app.add_handler(CommandHandler("platform", platform_cmd))
