@@ -3,16 +3,16 @@ from __future__ import annotations
 
 # These profiles select deterministic FFmpeg looks only; they never invent footage.
 CATEGORY_PROFILES = {
-    "anime": {"effect_preset": "anime", "audio_preset": "cinematic", "transition": "dissolve"},
-    "donghua": {"effect_preset": "anime", "audio_preset": "cinematic", "transition": "smoothleft"},
-    "3d animation": {"effect_preset": "vivid", "audio_preset": "cinematic", "transition": "fade"},
-    "cartoon": {"effect_preset": "vivid", "audio_preset": "voice", "transition": "wipeleft"},
-    "action": {"effect_preset": "action", "audio_preset": "cinematic", "transition": "wipeleft"},
-    "horror": {"effect_preset": "horror", "audio_preset": "cinematic", "transition": "fade"},
-    "romance": {"effect_preset": "romance", "audio_preset": "soft", "transition": "dissolve"},
-    "documentary": {"effect_preset": "documentary", "audio_preset": "podcast", "transition": "cut"},
-    "movie": {"effect_preset": "cinematic", "audio_preset": "voice", "transition": "fade"},
-    "default": {"effect_preset": "cinematic", "audio_preset": "voice", "transition": "fade"},
+    "anime": {"effect_preset": "anime", "audio_preset": "cinematic", "transition": "dissolve", "motion_preset": "pushin"},
+    "donghua": {"effect_preset": "anime", "audio_preset": "cinematic", "transition": "smoothleft", "motion_preset": "drift"},
+    "3d animation": {"effect_preset": "vivid", "audio_preset": "cinematic", "transition": "fade", "motion_preset": "pushin"},
+    "cartoon": {"effect_preset": "vivid", "audio_preset": "voice", "transition": "wipeleft", "motion_preset": "panright"},
+    "action": {"effect_preset": "action", "audio_preset": "cinematic", "transition": "wipeleft", "motion_preset": "pushin"},
+    "horror": {"effect_preset": "horror", "audio_preset": "cinematic", "transition": "fade", "motion_preset": "pushin"},
+    "romance": {"effect_preset": "romance", "audio_preset": "soft", "transition": "dissolve", "motion_preset": "drift"},
+    "documentary": {"effect_preset": "documentary", "audio_preset": "podcast", "transition": "cut", "motion_preset": "none"},
+    "movie": {"effect_preset": "cinematic", "audio_preset": "voice", "transition": "fade", "motion_preset": "pushin"},
+    "default": {"effect_preset": "cinematic", "audio_preset": "voice", "transition": "fade", "motion_preset": "none"},
 }
 
 ALIASES = {
