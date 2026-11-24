@@ -2401,8 +2401,8 @@ async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         storage_note = "Persistent storage path သတ်မှတ်ထားသည်" if durable else "သတိ: လက်ရှိ DB path သည် persistent disk ဖြစ်ကြောင်း မအတည်ပြုနိုင်ပါ။ Restart/Deploy မတိုင်မီ /voiceprofile export လုပ်ထားပါ။"
         await update.message.reply_text(
             "သိမ်းထားသောအသံများ: " + (", ".join(names) if names else "မရှိသေးပါ") +
-            f"\\nStorage: {storage_note}\\nDB path: {db_path}" +
-            "\\nမှတ်ချက်: Profile သိမ်းခြင်းသည် Voice Cloning မဟုတ်ပါ။ ကိုယ်ပိုင်အသံဖြင့် TTS ထုတ်ရန် GPU ပါသော VoxCPM2 host လိုအပ်သည်။"
+            f"\nStorage: {storage_note}\nDB path: {db_path}" +
+            "\nမှတ်ချက်: Profile သိမ်းခြင်းသည် Voice Cloning မဟုတ်ပါ။ ကိုယ်ပိုင်အသံဖြင့် TTS ထုတ်ရန် GPU ပါသော VoxCPM2 host လိုအပ်သည်။"
         )
         return
     if args[0].lower() == "delete":
