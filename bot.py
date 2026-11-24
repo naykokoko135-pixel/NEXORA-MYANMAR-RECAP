@@ -2261,6 +2261,55 @@ async def send_voice_profile_backup(update: Update, profiles: dict, reason: str)
         )
 
 
+async def myvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Friendly personal-voice setup and status tool."""
+    if not update.message:
+        return
+    action = context.args[0].strip().lower() if context.args else "help"
+    if action in {"start", "setup", "add"}:
+        context.user_data["pending_voice_profile"] = "ကိုယ်ပိုင်အသံ"
+        await update.message.reply_text(
+            "🎙️ ကိုယ်ပိုင်အသံ Setup စတင်ပါပြီ။\n\n"
+            "၁။ ကိုယ့်အသံသာ ပါတဲ့ ၁၀–၃၀ စက္ကန့် အသံနမူနာကို တိတ်ဆိတ်တဲ့နေရာမှာ သဘာဝအတိုင်း ဖတ်ပြီး Record လုပ်ပါ။\n"
+            "၂။ MP3/M4A/WAV/OGG ဖိုင်အဖြစ် ဒီ Chat ထဲ ပို့ပါ (၂၀ MB အောက်)။\n"
+            "၃။ သိမ်းပြီးရင် /myvoice status နဲ့ စစ်ပါ။\n"
+            "၄။ AI ကို ကိုယ့်အသံနဲ့ စာသားဖတ်ခိုင်းရန် /voiceclone ကို သုံးပါ။\n\n"
+            "အခြားသူ၏အသံကို ခွင့်ပြုချက်မရှိဘဲ မတင်ပါနှင့်။ "
+            "အသံနမူနာသိမ်းခြင်းသာဖြစ်ပြီး Render Free မှာ AI voice cloning မလုပ်နိုင်ပါ။ "
+            "Clone ထုတ်ရန် compatible GPU host လိုအပ်ပါတယ်။"
+        )
+        return
+    if action in {"status", "list"}:
+        try:
+            profiles = load_voice_profiles(update.effective_user.id)
+        except (OSError, ValueError) as exc:
+            await update.message.reply_text(f"Voice Storage ကို ဖတ်မရပါ: {exc}")
+            return
+        names = ", ".join(profiles) if profiles else "မသိမ်းရသေးပါ"
+        default = profiles.get("ကိုယ်ပိုင်အသံ")
+        sample_state = "ရှိပြီး" if default else "မရှိသေးပါ"
+        await update.message.reply_text(
+            f"🎙️ ကိုယ်ပိုင်အသံ အခြေအနေ\nProfile: {names}\n"
+            f"Default ကိုယ်ပိုင်အသံ: {sample_state}\n"
+            "Clone engine: VoxCPM2 (GPU host လိုအပ်)\n"
+            "Persistent Disk + VOICE_PROFILE_DB_PATH မရှိလျှင် restart ပြီး အသံပျောက်နိုင်ပါတယ်။\n"
+            "အသံတင်ရန် /myvoice start | အသံထုတ်ရန် /voiceclone ကို သုံးပါ။"
+        )
+        return
+    if action in {"delete", "remove"}:
+        context.args = ["delete", "ကိုယ်ပိုင်အသံ"]
+        await voiceprofile_cmd(update, context)
+        return
+    await update.message.reply_text(
+        "🎙️ NEXORA ကိုယ်ပိုင်အသံ Tool\n"
+        "/myvoice start — ကိုယ့်အသံနမူနာ တင်ရန် Wizard စတင်မည်\n"
+        "/myvoice status — သိမ်းထားသော Profile ကြည့်ရန်\n"
+        "/myvoice delete — Default ကိုယ်ပိုင်အသံ ဖျက်ရန်\n"
+        "/voiceclone ကိုယ်ပိုင်အသံ ပြီးနောက် စာသားကို စာကြောင်းအသစ်မှ ထည့်ပါ။\n"
+        "မှတ်ချက်: ကိုယ့်အသံ/ခွင့်ပြုချက်ရသော အသံသာ သုံးပါ။ AI Clone အတွက် GPU host လိုအပ်ပါတယ်။"
+    )
+
+
 async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
