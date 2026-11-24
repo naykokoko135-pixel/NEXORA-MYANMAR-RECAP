@@ -3383,6 +3383,12 @@ async def recapvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     subtitle_file = BytesIO(srt_text.encode("utf-8-sig"))
     subtitle_file.name = "nexora_recap_subtitles_aligned.srt"
+    if preset == "myvoice":
+        render_session = context.user_data.get("video_render")
+        if render_session and render_session.get("mode") == "source_video":
+            render_session["narration_audio"] = ("nexora_recap_voiceover.mp3", audio)
+            render_session["subtitles"] = ("nexora_recap_subtitles_aligned.srt", srt_text.encode("utf-8-sig"))
+            render_session["narration_voice"] = "ကိုယ်ပိုင်အသံ"
     await update.message.reply_document(
         document=InputFile(subtitle_file, filename=subtitle_file.name),
         caption=(
