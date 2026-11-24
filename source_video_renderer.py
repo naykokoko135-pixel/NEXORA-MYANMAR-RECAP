@@ -130,15 +130,23 @@ def render_user_source_video(
 
 
 def concatenate_source_video_clips(
-    clips: list[tuple[str, bytes]],
+    clips: list[tuple[str, bytes | str | Path]],
     output_path: str | Path,
 ) -> Path:
-    """Normalize and concatenate multiple uploaded real-video clips in order."""
+    """Normalize and concatenate disk-backed or in-memory real-video clips in order."""
     import imageio_ffmpeg
 
     if not clips or len(clips) > MAX_SOURCE_VIDEO_CLIPS:
         raise SourceVideoRenderError(f"Video Clip ၁ ခုမှ {MAX_SOURCE_VIDEO_CLIPS} ခုအထိ လိုအပ်ပါတယ်။")
-    total_bytes = sum(len(data) for _, data in clips)
+    total_bytes = 0
+    for index, (_, payload) in enumerate(clips, 1):
+        if isinstance(payload, (str, Path)):
+            clip_path = Path(payload)
+            if not clip_path.is_file():
+                raise SourceVideoRenderError(f"Clip {index} ဖိုင် မတွေ့ပါ။")
+            total_bytes += clip_path.stat().st_size
+        else:
+            total_bytes += len(payload)
     if total_bytes > MAX_SOURCE_VIDEO_TOTAL_BYTES:
         raise SourceVideoRenderError("Video Clip စုစုပေါင်း ၁၈၀ MiB ကျော်နေပါတယ်။")
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
@@ -151,9 +159,16 @@ def concatenate_source_video_clips(
             suffix = Path(filename).suffix.lower()
             if suffix not in ALLOWED_VIDEO_SUFFIXES or not data or len(data) > MAX_SOURCE_VIDEO_BYTES:
                 raise SourceVideoRenderError(f"Clip {index}: MP4/MOV/M4V/WEBM ၂၀ MB အောက် လိုအပ်ပါတယ်။")
-            raw = work / f"input_{index}{suffix}"
+            if isinstance(data, (str, Path)):
+                raw = Path(data)
+                if not raw.is_file() or raw.stat().st_size > MAX_SOURCE_VIDEO_BYTES:
+                    raise SourceVideoRenderError(f"Clip {index}: ဖိုင်မရှိပါ သို့မဟုတ် ၁၉ MiB ကျော်နေပါတယ်။")
+            else:
+                if not data or len(data) > MAX_SOURCE_VIDEO_BYTES:
+                    raise SourceVideoRenderError(f"Clip {index}: MP4/MOV/M4V/WEBM ၁၉ MiB အောက် လိုအပ်ပါတယ်။")
+                raw = work / f"input_{index}{suffix}"
+                raw.write_bytes(data)
             cooked = work / f"clip_{index:02d}.mp4"
-            raw.write_bytes(data)
             probe = subprocess.run(
                 [ffmpeg, "-hide_banner", "-i", str(raw)],
                 capture_output=True, text=True, timeout=30, check=False,
