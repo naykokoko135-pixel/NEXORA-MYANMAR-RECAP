@@ -106,6 +106,85 @@ def _ffmpeg_duration(stderr: str) -> float:
     return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
 
+
+def combine_estimated_srt_parts(parts: list[tuple[str, float]]) -> str:
+    """Join independently timed SRT parts into one continuous subtitle timeline."""
+    if not parts:
+        raise ValueError("ပေါင်းစပ်ရန် SRT အပိုင်း မရှိပါ။")
+    blocks = []
+    offset = 0.0
+    cue_number = 1
+    timestamp_line = re.compile(r"^(\\d{2}:\\d{2}:\\d{2},\\d{3})\\s*-->\\s*(\\d{2}:\\d{2}:\\d{2},\\d{3})$")
+    def seconds(stamp: str) -> float:
+        hours, minutes, remainder = stamp.split(":")
+        whole, millis = remainder.split(",")
+        return int(hours) * 3600 + int(minutes) * 60 + int(whole) + int(millis) / 1000
+    for srt_text, part_duration in parts:
+        duration = float(part_duration)
+        if duration <= 0:
+            raise ValueError("SRT အပိုင်းကြာချိန် မမှန်ပါ။")
+        for block in re.split(r"\\r?\\n\\s*\\r?\\n", str(srt_text).strip()):
+            lines = block.splitlines()
+            if len(lines) < 3:
+                continue
+            match = timestamp_line.match(lines[1].strip())
+            if not match:
+                raise ValueError("SRT timestamp မမှန်ပါ။")
+            start = seconds(match.group(1)) + offset
+            end = seconds(match.group(2)) + offset
+            if end <= start or end > offset + duration + 1.0:
+                raise ValueError("SRT cue သည် သက်ဆိုင်ရာ Audio အပိုင်းကြာချိန်ကို ကျော်နေပါတယ်။")
+            lines[0] = str(cue_number)
+            lines[1] = f"{_stamp(start)} --> {_stamp(end)}"
+            blocks.append("\\n".join(lines))
+            cue_number += 1
+        offset += duration
+    if not blocks:
+        raise ValueError("ပေါင်းစပ်ရန် SRT cue မတွေ့ပါ။")
+    return "\\n\\n".join(blocks) + "\\n"
+
+
+async def combine_creator_voice_parts(
+    parts: list[tuple[bytes, str, float]]
+) -> tuple[bytes, str, float]:
+    """Combine separately cloned part MP3/SRT files for the source-video renderer."""
+    if len(parts) != 3:
+        raise ValueError("YouTube/Facebook ကိုယ်ပိုင်အသံအတွက် Part ၃ ပိုင်း လိုအပ်ပါတယ်။")
+    try:
+        import imageio_ffmpeg
+        ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception as exc:
+        raise RuntimeError("FFmpeg မရရှိပါ။") from exc
+    combined_srt = combine_estimated_srt_parts([(srt, duration) for _, srt, duration in parts])
+    with tempfile.TemporaryDirectory(prefix="nexora-myvoice-parts-") as directory:
+        work = Path(directory)
+        paths = []
+        for index, (audio, _, _) in enumerate(parts, start=1):
+            if not audio:
+                raise ValueError(f"Part {index} MP3 ဗလာဖြစ်နေပါတယ်။")
+            path = work / f"part_{index:02d}.mp3"
+            path.write_bytes(audio)
+            paths.append(path)
+        concat_list = work / "concat.txt"
+        concat_list.write_text("".join(f"file '{path.as_posix()}'\\n" for path in paths), encoding="utf-8")
+        output = work / "combined.mp3"
+        try:
+            result = await asyncio.to_thread(
+                subprocess.run,
+                [ffmpeg, "-hide_banner", "-y", "-f", "concat", "-safe", "0",
+                 "-i", str(concat_list), "-vn", "-c:a", "libmp3lame", "-q:a", "3", str(output)],
+                capture_output=True, text=True, timeout=900, check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("သုံးပိုင်း Narration ပေါင်းစပ်မှု အချိန်ကျော်သွားပါတယ်။") from exc
+        if result.returncode != 0 or not output.is_file() or output.stat().st_size <= 0:
+            raise RuntimeError("သုံးပိုင်း MP3 များကို ပေါင်းစပ်မရပါ။")
+        audio = output.read_bytes()
+        if len(audio) > MAX_OUTPUT_MP3_BYTES:
+            raise RuntimeError("ပေါင်းစပ်ထားသော MP3 သည် ၄၅ MB ထက် ကျော်နေပါတယ်။")
+        duration = _ffmpeg_duration(result.stderr)
+        return audio, combined_srt, duration
+
 async def synthesize_recap_in_creator_voice(
     text: str, filename: str, reference_audio: bytes
 ) -> tuple[bytes, str, float]:
