@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 
 from clip_source_finder import search_licensed_video
-from licensed_video_pipeline import choose_matching_source, render_licensed_preview
+from licensed_video_pipeline import LicensedClipError, choose_matching_source, render_licensed_preview
 from source_video_renderer import render_user_source_video
 from tts_builder import synthesize_burmese_speech_with_srt
 
@@ -46,6 +46,26 @@ async def main() -> None:
             "metadata was found; refusing unrelated footage."
         )
 
+    preview = OUTPUT / "licensed-source-preview.mp4"
+    try:
+        await asyncio.to_thread(render_licensed_preview, source, preview, "youtube")
+    except LicensedClipError as exc:
+        # Wikimedia may rate-limit CI runners. Fall back only to Blender's
+        # official Big Buck Bunny download, whose CC BY 3.0 terms are declared
+        # by the film publisher. Never fall back to unrelated stock footage.
+        print(f"Commons preview unavailable ({exc}); trying official Blender source.")
+        source = {
+            "title": "Big Buck Bunny 320x180 (official Blender Foundation file)",
+            "url": "https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4",
+            "source_page": "https://peach.blender.org/about/",
+            "license": "CC BY 3.0",
+            "artist": "Blender Foundation",
+            "attribution": "(c) copyright 2008, Blender Foundation / www.bigbuckbunny.org",
+            "mime": "video/mp4",
+            "size": 0,
+        }
+        await asyncio.to_thread(render_licensed_preview, source, preview, "youtube")
+
     # Keep an auditable rights/source record with the test artifacts.
     (OUTPUT / "source-attribution.json").write_text(
         json.dumps(
@@ -54,8 +74,10 @@ async def main() -> None:
                 "matched_file": source.get("title"),
                 "source_page": source.get("source_page"),
                 "license": source.get("license"),
+                "license_url": "https://creativecommons.org/licenses/by/3.0/",
                 "artist": source.get("artist"),
                 "attribution": source.get("attribution"),
+                "changes": "Shortened to a preview, resized/re-encoded to 720p, with original Burmese narration and timed subtitles added.",
                 "notice": "Verify the uploader's rights and comply with the exact license before publication.",
             },
             ensure_ascii=False,
@@ -63,9 +85,6 @@ async def main() -> None:
         ),
         encoding="utf-8",
     )
-
-    preview = OUTPUT / "licensed-source-preview.mp4"
-    await asyncio.to_thread(render_licensed_preview, source, preview, "youtube")
 
     audio, srt = await synthesize_burmese_speech_with_srt(NARRATION, "narrator")
     duration = subtitle_end_seconds(srt)
