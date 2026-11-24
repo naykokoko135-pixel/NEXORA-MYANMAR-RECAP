@@ -138,7 +138,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/recapvideo <title> - အလိုအလျောက် narration + ခွင့်ပြုထားသော Footage မရှိပါက ရပ်မည်; သင့် Video ကို /sourcevideo ဖြင့် MP4 ထုတ်ရန်\n"
             "/dailyrecap [youtube|facebook|tiktok|all] - ယနေ့ Daily Report ရွေးထားသော ခေါင်းစဉ်များကို Licensed Recap pipeline ဖြင့် စတင်ရန် (default all)\n"
             "/sourcevideo - ကိုယ်ပိုင်/ခွင့်ပြုထားသော Video + မြန်မာအသံ + SRT မှ MP4 ထုတ်ရန်\n"
-            "/effect [preset] - Visual Look ၂၀ မျိုး (Film/Warm/Cool/Horror/Romance အပါအဝင်) ရွေးရန်\n"
+            "/effect [preset] - Visual Look ၂၀ မျိုး ရွေးရန်\n"
+            "/audiofx [preset] - Voice/Cinematic/Podcast/Soft Audio Mastering ရွေးရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - Video Footage + မြန်မာ Narration + SRT မှ MP4 ထုတ်ရန်\n"
@@ -689,10 +690,12 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
         output = session_dir / ("licensed_source" + suffix)
         await asyncio.to_thread(download_licensed_source, source, output)
         selected_effect = str((context.user_data.get("video_render") or {}).get("effect_preset", "cinematic"))
+        selected_audio = str((context.user_data.get("video_render") or {}).get("audio_preset", "voice"))
         context.user_data["video_render"] = {
             "mode": "source_video",
             "platform": context.user_data.get("platform", "youtube"),
             "effect_preset": selected_effect,
+            "audio_preset": selected_audio,
             "source_video_path": str(output),
             "source_metadata": {
                 "title": str(source.get("title", "")),
@@ -1858,6 +1861,32 @@ async def effect_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def audiofx_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Select a narration audio-mastering preset for the active source-video edit."""
+    if not update.message:
+        return
+    from audio_mastering import AUDIO_PRESETS
+    selected = context.args[0].strip().lower() if context.args else ""
+    if not selected or selected == "list":
+        await update.message.reply_text(
+            "🎧 NEXORA Audio Mastering\nအသုံးပြုပုံ: /audiofx <preset>\n"
+            + "\n".join("• " + name for name in sorted(AUDIO_PRESETS))
+            + "\nDefault: voice"
+        )
+        return
+    if selected not in AUDIO_PRESETS:
+        await update.message.reply_text("မသိသော Audio preset ဖြစ်ပါတယ်။ /audiofx list ဖြင့် ကြည့်ပါ။")
+        return
+    session = context.user_data.get("video_render")
+    if session is None:
+        context.user_data["video_render"] = {"audio_preset": selected}
+    else:
+        session["audio_preset"] = selected
+    await update.message.reply_text(
+        f"Audio preset ရွေးပြီးပါပြီ: {selected}\nMP4 Render တွင် Narration အသံကို အလိုအလျောက်ညှိပါမယ်။"
+    )
+
+
 async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Accept a creator-owned/licensed source video, narration, and SRT for MP4 rendering."""
     if not update.message:
@@ -1932,6 +1961,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     single_output,
                     platform,
                     effect_preset=session.get("effect_preset", "cinematic"),
+                    audio_preset=session.get("audio_preset", "voice"),
                 )
                 output_paths = [single_output]
             now = time.time()
@@ -2020,6 +2050,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         shutil.rmtree(previous["source_video_clip_dir"], ignore_errors=True)
     platform = context.user_data.get("platform", "youtube")
     selected_effect = str(previous.get("effect_preset", "cinematic"))
+    selected_audio = str(previous.get("audio_preset", "voice"))
     chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
     safe_chat = re.sub(r"[^0-9-]", "", chat_id) or "unknown"
     clip_dir = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work")) / safe_chat / "source_clips" / secrets.token_hex(8)
@@ -2027,6 +2058,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "mode": "source_video",
         "platform": platform,
         "effect_preset": selected_effect,
+        "audio_preset": selected_audio,
         "source_video": None,
         "source_videos": [],
         "source_video_path": None,
@@ -3279,6 +3311,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("recapvideo", recapvideo_cmd))
     telegram_app.add_handler(CommandHandler("sourcevideo", sourcevideo_cmd))
     telegram_app.add_handler(CommandHandler("effect", effect_cmd))
+    telegram_app.add_handler(CommandHandler("audiofx", audiofx_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
