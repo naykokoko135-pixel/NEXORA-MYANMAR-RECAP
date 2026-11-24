@@ -2236,7 +2236,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Source Video Recap စတင်ပါပြီ။ သင်ပိုင်ဆိုင်သော သို့မဟုတ် အသုံးပြုခွင့်ရထားသော Video ကိုသာ ပို့ပါ။\n"
         "၁) MP4/MOV/M4V/WEBM Video Clip တစ်ခုလျှင် ၁၉ MiB အောက်၊ စုစုပေါင်း ၃၀ ခု/၁၈၀ MiB အထိ ပို့နိုင်သည်။\n"
-        "၂) မြန်မာ Narration MP3/M4A/WAV/OGG (၂၀ MB အောက်)\n"
+        "၂) မြန်မာ Narration MP3/M4A/WAV/OGG (၂၀ MB အောက်) — ကိုယ်ပိုင်အသံ Command သုံးထားလျှင် auto-attach လုပ်ထားသည်။\n"
         "၃) UTF-8 .SRT စာတန်းထိုး (၁ MB အောက်)\n"
         "ဖိုင် ၃ မျိုးလုံးပို့ပြီး /sourcevideo finish ပို့ပါ။ /recapvoice myvoice သို့မဟုတ် /recapvoice3 myvoice ကို သုံးထားပါက Narration/SRT ကို အလိုအလျောက် ချိတ်ပေးထားနိုင်သည်။ /sourcevideo cancel ဖြင့် ရပ်နိုင်ပါတယ်။"
     )
@@ -3828,7 +3828,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/mode free|ai — Mode ရွေးရန် (Paid API ကို အလိုအလျောက် မခေါ်ပါ)\n\n"
         "【Recap အသံထုတ်လုပ်မှု】\n"
         "/recapvoice [preset|myvoice] — MP3 တစ်ဖိုင် + SRT တစ်ဖိုင်\n"
-        "/recapvoice myvoice — သိမ်းထားသော ကိုယ်ပိုင်အသံကို သုံးရန် (GPU host လိုအပ်၊ SRT သည် ကြာချိန်အပေါ် ခန့်မှန်းထားခြင်း)\n"
+        "/recapvoice myvoice — TikTok/တစ်ဖိုင် Recap အတွက် ကိုယ်ပိုင်အသံ MP3/SRT ထုတ်ရန် (GPU host လိုအပ်)\n"\n        "/recapvoice3 myvoice — YouTube/Facebook အတွက် ၁၅–၂၀ မိနစ်စီ ၃ ပိုင်းထုတ်ပြီး MP4 ပေါင်းစပ်ဖိုင် auto-attach လုပ်ရန်\n"\n        "ကိုယ်ပိုင်အသံ SRT သည် ကြာချိန်အပေါ် ခန့်မှန်းထားခြင်းဖြစ်၍ ထုတ်ဝေမီ ပြန်ညှိပါ။\n"
         "TikTok အတွက် /platform tiktok ကို အရင်ရွေးပါ။ တစ်ဖိုင်တည်း ၄–၇ မိနစ် ဖြစ်ရမည်။ FFmpeg ဖြင့် တကယ့်အသံကြာချိန်ကို စစ်ပြီး QA မအောင်မြင်လျှင် MP3 မထုတ်ပေးပါ။\n"
         "/recapvoice3 [preset|myvoice] — YouTube/Facebook အတွက် MP3 သုံးဖိုင် + SRT သုံးဖိုင်\n"
         "Script ကို Command နဲ့ message တစ်စောင်တည်းတွင် အောက်ပါပုံစံအတိုင်း ထည့်ပါ။\n"
