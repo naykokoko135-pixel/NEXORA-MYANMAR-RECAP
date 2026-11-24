@@ -43,6 +43,7 @@ def render_user_source_video(
     require_source_coverage: bool = True,
     expected_duration_seconds: float | None = None,
     effect_preset: str = "cinematic",
+    audio_preset: str = "voice",
 ) -> Path:
     """Use only the exact uploaded video; loop visuals if needed and replace source audio."""
     import imageio_ffmpeg
@@ -89,6 +90,13 @@ def render_user_source_video(
     except ValueError as exc:
         raise SourceVideoRenderError(str(exc)) from exc
 
+    from audio_mastering import build_audio_filter
+
+    try:
+        audio_filter = build_audio_filter(audio_preset)
+    except ValueError as exc:
+        raise SourceVideoRenderError(str(exc)) from exc
+
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
@@ -123,7 +131,8 @@ def render_user_source_video(
             "-vf",
             video_filter,
             "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
-            "-c:a", "aac", "-b:a", "128k", "-c:s", "mov_text",
+            "-af", audio_filter,
+            "-c:a", "aac", "-b:a", "160k", "-c:s", "mov_text",
             "-metadata:s:s:0", "language=bur", "-t", f"{duration:.3f}",
             "-shortest", "-movflags", "+faststart", str(target),
         ]
