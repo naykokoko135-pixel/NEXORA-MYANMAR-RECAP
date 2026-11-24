@@ -2017,12 +2017,14 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         import shutil
         shutil.rmtree(previous["source_video_clip_dir"], ignore_errors=True)
     platform = context.user_data.get("platform", "youtube")
+    selected_effect = str(previous.get("effect_preset", "cinematic"))
     chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
     safe_chat = re.sub(r"[^0-9-]", "", chat_id) or "unknown"
     clip_dir = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work")) / safe_chat / "source_clips" / secrets.token_hex(8)
     context.user_data["video_render"] = {
         "mode": "source_video",
         "platform": platform,
+        "effect_preset": selected_effect,
         "source_video": None,
         "source_videos": [],
         "source_video_path": None,
