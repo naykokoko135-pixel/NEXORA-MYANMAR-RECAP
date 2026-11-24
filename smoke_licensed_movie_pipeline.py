@@ -53,10 +53,10 @@ async def main() -> None:
         # Wikimedia may rate-limit CI runners. Fall back only to Blender's
         # official Big Buck Bunny download, whose CC BY 3.0 terms are declared
         # by the film publisher. Never fall back to unrelated stock footage.
-        print(f"Commons preview unavailable ({exc}); trying official Blender source.")
+        print(f"Commons/Blender source unavailable ({exc}); trying the hosted Blender open-movie mirror.")
         source = {
-            "title": "Big Buck Bunny 320x180 (official Blender Foundation file)",
-            "url": "https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4",
+            "title": "Big Buck Bunny (Blender Foundation CC BY 3.0 sample mirror)",
+            "url": "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
             "source_page": "https://peach.blender.org/about/",
             "license": "CC BY 3.0",
             "artist": "Blender Foundation",
