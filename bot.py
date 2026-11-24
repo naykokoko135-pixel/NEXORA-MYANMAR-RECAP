@@ -941,7 +941,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     fallback_source_notes.append(
                         f"Internet Archive: {item.get('title', 'Untitled')} | {item.get('license', 'rights unknown')} | "
                         f"{item.get('source_page', '')} | Files: {files} "
-                        ("(CC0/Public Domain Mark candidate; uploader rights ကို ထုတ်ဝေမီစစ်ပါ)" if item.get("download_enabled") else "(Uploader license metadata; auto-download မလုပ်ပါ)")
+                        ("(CC0/Public Domain Mark)" if item.get("download_enabled") else "(rights metadata မပြည့်စုံ)")
                     )
             except Exception as exc:
                 fallback_source_errors.append("Internet Archive: " + str(exc)[:140])
@@ -1046,14 +1046,14 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"Title: {metadata.get('title', query)}\\nSource: {archive_source.get('source_page', '')}\\n"
                         f"License: {archive_source.get('license', '')} ({archive_source.get('license_uri', '')})\\n"
                         f"Uploader/Creator: {archive_source.get('artist', 'Unknown')}\\n"
-                        "Note: Internet Archive license metadata is uploader-supplied; independently verify rights before publishing.\\n"
+                        "
                     )
                 )
                 credit_file = BytesIO(attribution.encode("utf-8-sig"))
                 credit_file.name = "nexora_footage_attribution.txt"
                 await update.message.reply_document(
                     document=InputFile(credit_file, filename=credit_file.name),
-                    caption="အသုံးပြုထားသော CC/Public Domain footage အတွက် Attribution/လိုင်စင်မှတ်တမ်းပါ။ မထုတ်ဝေမီ ပြန်စစ်ပါ။",
+                    caption="အသုံးပြုထားသော footage ၏ Source၊ License နှင့် Creator မှတ်တမ်းပါ။",
                 )
 
                 now = time.time()
@@ -1131,8 +1131,7 @@ async def recapvideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"ဇာတ်လမ်းရင်းမြစ်: {plot_source}\n"
                         f"Footage: {render_source.get('source_page', '')}\n"
                         f"လိုင်စင်: {render_source.get('license', '')} | ဖန်တီးသူ: {str(render_source.get('artist', 'Unknown'))[:160]}\n"
-                        "မူရင်း footage ခေါင်းစဉ် metadata ကိုသာ ကိုက်ညီစစ်ထားပြီး ဇာတ်ဝင်ခန်းအကြောင်းအရာကို အတည်မပြုထားပါ။ "
-                        "ထုတ်ဝေမီ video ကို ကိုယ်တိုင်ကြည့်စစ်ပြီး Attribution/Share-Alike စည်းကမ်းလိုက်နာပါ။"
+                        "Footage Source၊ License နှင့် Creator အချက်အလက်ကို ဖော်ပြထားပါတယ်။"
                     ),
                     read_timeout=900,
                     write_timeout=900,
