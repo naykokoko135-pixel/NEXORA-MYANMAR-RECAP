@@ -5,8 +5,12 @@ def parse_recap_voice_request(message_text: str, available_presets) -> tuple[str
     if not isinstance(message_text, str):
         raise ValueError("Command စာသားကို မဖတ်နိုင်ပါ။")
     first_line, separator, script = message_text.partition("\n")
-    parts = first_line.strip().split(maxsplit=1)
+    parts = first_line.strip().split(maxsplit=2)
     preset = parts[1].strip().lower() if len(parts) > 1 else "narrator"
+    # "myvoice" may be followed by a saved profile name; the profile is
+    # resolved by the Telegram handler, while this parser validates the mode.
+    if preset.startswith("myvoice "):
+        preset = "myvoice"
     narration = script.strip() if separator else ""
     if not narration:
         raise ValueError(

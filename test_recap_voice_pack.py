@@ -12,6 +12,13 @@ class RecapVoicePackTests(unittest.TestCase):
         self.assertEqual(parse_recap_voice_request("/recapvoice hero\nဇာတ်လမ်းစာသား", PRESETS),
                          ("hero", "ဇာတ်လမ်းစာသား"))
 
+    def test_myvoice_accepts_optional_profile_name(self):
+        request = "/recapvoice myvoice ကိုယ်ပိုင်အသံ\nမင်္ဂလာပါ။ ဒီနေ့ ဇာတ်လမ်းတစ်ပုဒ်ကို တင်ဆက်ပေးပါမယ်။"
+        self.assertEqual(
+            parse_recap_voice_request(request, PRESETS),
+            ("myvoice", "မင်္ဂလာပါ။ ဒီနေ့ ဇာတ်လမ်းတစ်ပုဒ်ကို တင်ဆက်ပေးပါမယ်။"),
+        )
+
     def test_missing_script_rejected(self):
         with self.assertRaises(ValueError):
             parse_recap_voice_request("/recapvoice narrator", PRESETS)
