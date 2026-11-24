@@ -2238,7 +2238,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "၁) MP4/MOV/M4V/WEBM Video Clip တစ်ခုလျှင် ၁၉ MiB အောက်၊ စုစုပေါင်း ၃၀ ခု/၁၈၀ MiB အထိ ပို့နိုင်သည်။\n"
         "၂) မြန်မာ Narration MP3/M4A/WAV/OGG (၂၀ MB အောက်)\n"
         "၃) UTF-8 .SRT စာတန်းထိုး (၁ MB အောက်)\n"
-        "ဖိုင် ၃ မျိုးလုံးပို့ပြီး /sourcevideo finish ပို့ပါ။ /sourcevideo cancel ဖြင့် ရပ်နိုင်ပါတယ်။"
+        "ဖိုင် ၃ မျိုးလုံးပို့ပြီး /sourcevideo finish ပို့ပါ။ /recapvoice myvoice သို့မဟုတ် /recapvoice3 myvoice ကို သုံးထားပါက Narration/SRT ကို အလိုအလျောက် ချိတ်ပေးထားနိုင်သည်။ /sourcevideo cancel ဖြင့် ရပ်နိုင်ပါတယ်။"
     )
 
 
