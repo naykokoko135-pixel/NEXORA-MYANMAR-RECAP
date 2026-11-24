@@ -138,6 +138,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/recapvideo <title> - အလိုအလျောက် narration + ခွင့်ပြုထားသော Footage မရှိပါက ရပ်မည်; သင့် Video ကို /sourcevideo ဖြင့် MP4 ထုတ်ရန်\n"
             "/dailyrecap [youtube|facebook|tiktok|all] - ယနေ့ Daily Report ရွေးထားသော ခေါင်းစဉ်များကို Licensed Recap pipeline ဖြင့် စတင်ရန် (default all)\n"
             "/sourcevideo - ကိုယ်ပိုင်/ခွင့်ပြုထားသော Video + မြန်မာအသံ + SRT မှ MP4 ထုတ်ရန်\n"
+            "/effect [preset] - Cinematic/Action/Anime/Vintage/Noir စသည့် Auto Effect ရွေးရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - Video Footage + မြန်မာ Narration + SRT မှ MP4 ထုတ်ရန်\n"
@@ -1830,6 +1831,31 @@ async def topratedepisodes_cmd(update: Update, context: ContextTypes.DEFAULT_TYP
     await update.message.reply_text("\n".join(lines), disable_web_page_preview=True)
 
 
+async def effect_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """List or select an automatic visual-effect preset for the active recap session."""
+    if not update.message:
+        return
+    from video_effects import EFFECT_PRESETS
+    selected = context.args[0].strip().lower() if context.args else ""
+    if not selected or selected == "list":
+        lines = ["🎬 NEXORA Auto Effects", "အသုံးပြုပုံ: /effect <preset>", ""]
+        lines.extend(f"• {name}" for name in sorted(EFFECT_PRESETS))
+        lines.append("Default: cinematic")
+        await update.message.reply_text("\n".join(lines))
+        return
+    if selected not in EFFECT_PRESETS:
+        await update.message.reply_text("မသိသော Effect ဖြစ်ပါတယ်။ /effect list ဖြင့် ရနိုင်တာတွေကြည့်ပါ။")
+        return
+    session = context.user_data.get("video_render")
+    if session is None:
+        context.user_data["video_render"] = {"effect_preset": selected}
+    else:
+        session["effect_preset"] = selected
+    await update.message.reply_text(
+        f"Effect ရွေးပြီးပါပြီ: {selected}\n/sourcevideo finish လုပ်တဲ့အခါ MP4 မှာ အလိုအလျောက်ထည့်ပါမယ်။"
+    )
+
+
 async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Accept a creator-owned/licensed source video, narration, and SRT for MP4 rendering."""
     if not update.message:
@@ -1892,6 +1918,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     session["subtitles"],
                     batch_dir,
                     platform,
+                    session.get("effect_preset", "cinematic"),
                 )
             else:
                 single_output = output_dir / ("nexora_recap_" + secrets.token_hex(8) + ".mp4")
@@ -1902,6 +1929,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     session["subtitles"],
                     single_output,
                     platform,
+                    effect_preset=session.get("effect_preset", "cinematic"),
                 )
                 output_paths = [single_output]
             now = time.time()
@@ -3246,6 +3274,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("dailyrecap", dailyrecap_cmd))
     telegram_app.add_handler(CommandHandler("recapvideo", recapvideo_cmd))
     telegram_app.add_handler(CommandHandler("sourcevideo", sourcevideo_cmd))
+    telegram_app.add_handler(CommandHandler("effect", effect_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
