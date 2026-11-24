@@ -1961,7 +1961,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     await update.message.reply_text(
         "Source Video Recap စတင်ပါပြီ။ သင်ပိုင်ဆိုင်သော သို့မဟုတ် အသုံးပြုခွင့်ရထားသော Video ကိုသာ ပို့ပါ။\n"
-        "၁) MP4/MOV/M4V/WEBM Video Clip တစ်ခုလျှင် ၂၀ MB အောက်၊ စုစုပေါင်း Clip ၃၀ ခုအထိ ပို့နိုင်သည်။\n"
+        "၁) MP4/MOV/M4V/WEBM Video Clip တစ်ခုလျှင် ၁၉ MiB အောက်၊ စုစုပေါင်း ၃၀ ခု/၁၈၀ MiB အထိ ပို့နိုင်သည်။\n"
         "၂) မြန်မာ Narration MP3/M4A/WAV/OGG (၂၀ MB အောက်)\n"
         "၃) UTF-8 .SRT စာတန်းထိုး (၁ MB အောက်)\n"
         "ဖိုင် ၃ မျိုးလုံးပို့ပြီး /sourcevideo finish ပို့ပါ။ /sourcevideo cancel ဖြင့် ရပ်နိုင်ပါတယ်။"
@@ -2134,9 +2134,9 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             return
         media_file = await media.get_file()
         size = getattr(media_file, "file_size", 0) or 0
-        limit = 20 * 1024 * 1024 if kind in {"video", "audio"} else 1024 * 1024
+        limit = (19 * 1024 * 1024 if kind == "video" else 20 * 1024 * 1024) if kind in {"video", "audio"} else 1024 * 1024
         if size <= 0 or size > limit:
-            await message.reply_text("Video/အသံသည် ၂၀ MB အောက်၊ SRT သည် ၁ MB အောက် ဖြစ်ရပါမယ်။")
+            await message.reply_text("Video Clip သည် ၁၉ MiB အောက်၊ အသံသည် ၂၀ MB အောက်၊ SRT သည် ၁ MB အောက် ဖြစ်ရပါမယ်။")
             return
         buffer = BytesIO()
         await media_file.download_to_memory(out=buffer)
@@ -2145,6 +2145,10 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             clips = session.setdefault("source_videos", [])
             if len(clips) >= 30:
                 await message.reply_text("Video Clip ၃၀ ခု ပြည့်ပါပြီ။ /sourcevideo finish ပို့ပါ။")
+                return
+            total_bytes = sum(len(item[1]) for item in clips) + len(payload[1])
+            if total_bytes > 180 * 1024 * 1024:
+                await message.reply_text("Video Clip စုစုပေါင်း ၁၈၀ MiB ကျော်နေပါတယ်။ ပိုသေးသော Clip များသုံးပါ။")
                 return
             clips.append(payload)
             session["source_video"] = None
