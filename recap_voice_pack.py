@@ -15,7 +15,7 @@ def parse_recap_voice_request(message_text: str, available_presets) -> tuple[str
         )
     if len(narration) > MAX_RECAP_SCRIPT_CHARS:
         raise ValueError("Narration စာသားသည် စာလုံး ၈၀,၀၀၀ ထက် မကျော်ရပါ။ အပိုင်းခွဲပြီး ထုတ်ပါ။")
-    if preset not in available_presets:
+    if preset != "myvoice" and preset not in available_presets:
         raise ValueError("Voice preset မမှန်ပါ။ /voices ဖြင့် ရရှိနိုင်သော preset များကို ကြည့်ပါ။")
     return preset, narration
 
@@ -29,7 +29,7 @@ def parse_recap_voice_parts_request(message_text: str, available_presets):
     first_line, separator, package = message_text.partition("\n")
     command = first_line.strip().split(maxsplit=1)
     preset = command[1].strip().lower() if len(command) > 1 else "narrator"
-    if preset not in available_presets:
+    if preset != "myvoice" and preset not in available_presets:
         raise ValueError("Voice preset မမှန်ပါ။ /voices ဖြင့် ရရှိနိုင်သော preset များကို ကြည့်ပါ။")
     if not separator or not package.strip():
         raise ValueError(
