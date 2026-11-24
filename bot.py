@@ -142,6 +142,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/effect [preset] - Visual Look ၂၀ မျိုး ရွေးရန်\n"
             "/audiofx [preset] - Voice/Cinematic/Podcast/Soft Audio Mastering ရွေးရန်\n"
             "/transition [preset] - Fade/Wipe/Slide/Circle/Dissolve အကူးအပြောင်း ရွေးရန်\n"
+            "/motion [preset] - Camera Push-in/Pull-out/Pan/Drift Motion ရွေးရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - Video Footage + မြန်မာ Narration + SRT မှ MP4 ထုတ်ရန်\n"
@@ -1864,7 +1865,7 @@ async def autoedit_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "✨ Auto Edit Profile ရွေးပြီးပါပြီ\n"
         f"Category: {profile['category']}\n"
-        f"Visual: {profile['effect_preset']} | Audio: {profile['audio_preset']} | Transition: {profile['transition']}\n"
+        f"Visual: {profile['effect_preset']} | Audio: {profile['audio_preset']} | Transition: {profile['transition']} | Motion: {profile['motion_preset']}\n"
         "ဒီရွေးချယ်မှုတွေကို MP4 Render မှာ အလိုအလျောက်ထည့်ပါမယ်။"
     )
 
@@ -3398,6 +3399,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("effect", effect_cmd))
     telegram_app.add_handler(CommandHandler("audiofx", audiofx_cmd))
     telegram_app.add_handler(CommandHandler("transition", transition_cmd))
+    telegram_app.add_handler(CommandHandler("motion", motion_cmd))
     telegram_app.add_handler(CommandHandler("motion", motion_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
