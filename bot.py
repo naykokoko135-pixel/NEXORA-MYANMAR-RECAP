@@ -143,6 +143,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/audiofx [preset] - Voice/Cinematic/Podcast/Soft Audio Mastering ရွေးရန်\n"
             "/transition [preset] - Fade/Wipe/Slide/Circle/Dissolve အကူးအပြောင်း ရွေးရန်\n"
             "/motion [preset] - Camera Push-in/Pull-out/Pan/Drift Motion ရွေးရန်\n"
+            "/bgm - Background Music ဖိုင်ထည့်ရန်; /bgm off - ဖယ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - Video Footage + မြန်မာ Narration + SRT မှ MP4 ထုတ်ရန်\n"
@@ -2031,6 +2032,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     session.get("effect_preset", "cinematic"),
                     session.get("audio_preset", "voice"),
                     session.get("motion_preset", "none"),
+                    context.user_data.get("background_music"),
                 )
             else:
                 single_output = output_dir / ("nexora_recap_" + secrets.token_hex(8) + ".mp4")
@@ -2044,6 +2046,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     effect_preset=session.get("effect_preset", "cinematic"),
                     audio_preset=session.get("audio_preset", "voice"),
                     motion_preset=session.get("motion_preset", "none"),
+                    background_music=context.user_data.get("background_music"),
                 )
                 output_paths = [single_output]
             now = time.time()
@@ -2247,6 +2250,27 @@ async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"{name} အတွက် ကိုယ်ပိုင်အသံ MP3/M4A/WAV/OGG ဖိုင် (၂၀ MB အောက်) ပို့ပါ။ မလုပ်တော့ပါက /cancel ပို့ပါ။")
 
 
+async def bgm_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Request optional background music upload or clear the stored track."""
+    if not update.message:
+        return
+    action = context.args[0].strip().lower() if context.args else "upload"
+    if action in {"off", "clear", "remove"}:
+        context.user_data.pop("background_music", None)
+        context.user_data.pop("pending_bgm_upload", None)
+        await update.message.reply_text("Background Music ဖယ်ရှားပြီးပါပြီ။")
+        return
+    if action not in {"upload", "on", "set"}:
+        await update.message.reply_text("အသုံးပြုပုံ: /bgm (သီချင်းဖိုင်တင်ရန်) သို့မဟုတ် /bgm off (ဖယ်ရန်)")
+        return
+    context.user_data["pending_bgm_upload"] = True
+    await update.message.reply_text(
+        "🎵 Background Music ဖိုင် MP3/M4A/WAV/OGG တစ်ခု ပို့ပါ (၂၀ MB အောက်)။\n"
+        "Narration ပြောနေချိန်တွင် Music ကို အလိုအလျောက်လျှော့ပေးပါမယ်။\n"
+        "ဖယ်ရှားရန် /bgm off"
+    )
+
+
 async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
@@ -2303,6 +2327,28 @@ async def video_media_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         context.user_data.pop("pending_voice_profile", None)
         await message.reply_text(f"{pending} အသံဖိုင် သိမ်းပြီးပါပြီ။ /voiceprofile list ဖြင့် ကြည့်နိုင်ပါတယ်။ ဒီဖိုင်သည် အသံသွင်းထားသော narration ကို တိုက်ရိုက်ပြန်သုံးရန်ဖြစ်ပြီး စာသားအသစ်ကို TTS ပြောင်းပေးခြင်း မဟုတ်ပါ။")
         await send_voice_profile_backup(update, profiles, "Profile အသစ်သိမ်းပြီးနောက်")
+        return
+    if context.user_data.get("pending_bgm_upload"):
+        music_media = message.audio or message.voice
+        music_filename = getattr(music_media, "file_name", None) if music_media else None
+        if message.document:
+            candidate = message.document.file_name or ""
+            if Path(candidate).suffix.lower() in {".mp3", ".m4a", ".wav", ".ogg"}:
+                music_media = message.document
+                music_filename = candidate
+        if music_media is None:
+            await message.reply_text("MP3/M4A/WAV/OGG Music ဖိုင်ကို ပို့ပါ။")
+            return
+        media_file = await music_media.get_file()
+        if (getattr(media_file, "file_size", 0) or 0) <= 0 or (getattr(media_file, "file_size", 0) or 0) > 20 * 1024 * 1024:
+            await message.reply_text("Background Music သည် ၂၀ MB အောက် ဖြစ်ရပါမယ်။")
+            return
+        buffer = BytesIO()
+        await media_file.download_to_memory(out=buffer)
+        filename = music_filename or ("background.ogg" if message.voice else "background.mp3")
+        context.user_data["background_music"] = (filename, buffer.getvalue())
+        context.user_data.pop("pending_bgm_upload", None)
+        await message.reply_text("🎵 Background Music လက်ခံပြီးပါပြီ။ Narration အသံပြောချိန်တွင် Music ကို အလိုအလျောက်လျှော့ပြီး MP4 ထဲထည့်ပါမယ်။ /bgm off ဖြင့် ဖယ်နိုင်ပါတယ်။")
         return
     session = context.user_data.get("video_render")
     if session is None:
@@ -3404,6 +3450,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("audiofx", audiofx_cmd))
     telegram_app.add_handler(CommandHandler("transition", transition_cmd))
     telegram_app.add_handler(CommandHandler("motion", motion_cmd))
+    telegram_app.add_handler(CommandHandler("bgm", bgm_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
