@@ -11,6 +11,7 @@ MAX_SOURCE_BYTES = 1024 * 1024 * 1024
 MAX_PREVIEW_SOURCE_BYTES = 80 * 1024 * 1024
 MAX_PREVIEW_SECONDS = 45
 ALLOWED_HOST = "upload.wikimedia.org"
+ALLOWED_PREVIEW_HOSTS = {ALLOWED_HOST, "download.blender.org"}
 
 
 class LicensedClipError(ValueError):
@@ -48,12 +49,12 @@ def render_licensed_preview(source: dict, output_path: str | Path, platform: str
         raise LicensedClipError("လိုင်စင်အမျိုးအစားကို အတည်မပြုနိုင်ပါ။")
     url = str(source.get("url", ""))
     parsed = urlparse(url)
-    if parsed.scheme != "https" or parsed.hostname != ALLOWED_HOST or parsed.username or parsed.password:
+    if parsed.scheme != "https" or parsed.hostname not in ALLOWED_PREVIEW_HOSTS or parsed.username or parsed.password:
         raise LicensedClipError("ခွင့်ပြုထားသော Wikimedia upload ရင်းမြစ်မဟုတ်ပါ။")
     class CommonsRedirectHandler(HTTPRedirectHandler):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
             redirected = urlparse(newurl)
-            if redirected.scheme != "https" or redirected.hostname != ALLOWED_HOST:
+            if redirected.scheme != "https" or redirected.hostname not in ALLOWED_PREVIEW_HOSTS:
                 raise LicensedClipError("ခွင့်မပြုထားသော Redirect ကို ပိတ်လိုက်ပါတယ်။")
             return super().redirect_request(req, fp, code, msg, headers, newurl)
 
