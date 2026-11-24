@@ -55,14 +55,14 @@ async def main() -> None:
         # by the film publisher. Never fall back to unrelated stock footage.
         print(f"Commons/Blender source unavailable ({exc}); trying the hosted Blender open-movie mirror.")
         source = {
-            "title": "Big Buck Bunny (Blender Foundation CC BY 3.0 sample mirror)",
-            "url": "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+            "title": "Big Buck Bunny 1080p 30s (Blender Foundation CC BY 3.0 mirror)",
+            "url": "https://raw.githubusercontent.com/renesas-rz/media/main/Big_Buck_Bunny/big_buck_bunny_1080p_30fps_30s.mp4",
             "source_page": "https://peach.blender.org/about/",
             "license": "CC BY 3.0",
             "artist": "Blender Foundation",
             "attribution": "(c) copyright 2008, Blender Foundation / www.bigbuckbunny.org",
             "mime": "video/mp4",
-            "size": 0,
+            "size": 19068285,
         }
         await asyncio.to_thread(render_licensed_preview, source, preview, "youtube")
 
