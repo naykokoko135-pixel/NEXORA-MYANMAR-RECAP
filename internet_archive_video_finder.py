@@ -90,20 +90,36 @@ def search_internet_archive_licensed_video(query: str, limit: int = 6) -> list[d
         raise InternetArchiveSearchError("Internet Archive ရှာဖွေရန် ခေါင်းစဉ် မမှန်ပါ။")
     limit = max(1, min(int(limit), 10))
     escaped = clean.replace("\\", "\\\\").replace('"', '\\"')
-    params = urllib.parse.urlencode([
-        ("q", f'title:"{escaped}" AND mediatype:movies'),
-        ("fl[]", "identifier"),
-        ("fl[]", "title"),
-        ("rows", str(limit)),
-        ("page", "1"),
-        ("output", "json"),
-    ])
-    try:
-        search = _request_json(SEARCH_URL + "?" + params)
-    except Exception as exc:
-        raise InternetArchiveSearchError("Internet Archive search ယခုချိန်တွင် မရရှိပါ။") from exc
+    # Search the general Moving Image Archive and Prelinger collection
+    # separately. Prelinger contains downloadable archival films, but each
+    # item's own rights record still controls whether NEXORA may reuse it.
+    queries = [
+        f'title:"{escaped}" AND mediatype:movies',
+        f'title:"{escaped}" AND mediatype:movies AND collection:prelinger',
+    ]
+    docs_by_id = {}
+    failures = 0
+    for search_query in queries:
+        params = urllib.parse.urlencode([
+            ("q", search_query),
+            ("fl[]", "identifier"),
+            ("fl[]", "title"),
+            ("rows", str(limit)),
+            ("page", "1"),
+            ("output", "json"),
+        ])
+        try:
+            search = _request_json(SEARCH_URL + "?" + params)
+            for doc in search.get("response", {}).get("docs", []):
+                identifier = str(doc.get("identifier") or "").strip()
+                if identifier:
+                    docs_by_id[identifier] = doc
+        except Exception:
+            failures += 1
+    if not docs_by_id and failures == len(queries):
+        raise InternetArchiveSearchError("Internet Archive / Prelinger ရှာဖွေမှု ယခုချိန်တွင် မရရှိပါ။")
 
-    docs = search.get("response", {}).get("docs", [])
+    docs = list(docs_by_id.values())
     results = []
     seen = set()
     for doc in docs[:limit]:
@@ -164,7 +180,7 @@ def search_internet_archive_licensed_video(query: str, limit: int = 6) -> list[d
         results.append({
             "title": title,
             "identifier": identifier,
-            "source": "Internet Archive",
+            "source": "Prelinger Archives / Internet Archive" if "prelinger" in str(metadata.get("collection", "")).casefold() else "Internet Archive",
             "source_page": f"https://archive.org/details/{identifier}",
             "license": _license_label(license_uri),
             "license_uri": license_uri,
