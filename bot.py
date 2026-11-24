@@ -3878,6 +3878,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "[PART 1]\nအပိုင်း ၁ Script စာသား...\n"
         "[PART 2]\nအပိုင်း ၂ Script စာသား...\n"
         "[PART 3]\nအပိုင်း ၃ Script စာသား...\n"
+        "စာသားရှည်လျှင် /recapvoice3 myvoice ကို အရင်ပို့ပြီး [PART 1]–[PART 3] ပါသော UTF-8 .txt ဖိုင် (၁ MB အောက်) ကို တင်ပါ။\n"
         "YouTube/Facebook စည်းမျဉ်း: အပိုင်း ၃ ပိုင်းတိတိ၊ တစ်ပိုင်းလျှင် ၁၅–၂၀ မိနစ်၊ စုစုပေါင်း ၄၆–၆၀ မိနစ်။ FFmpeg တိုင်းတာချက်ဖြင့် QA ပြုလုပ်သည်။\n"
         "/audioqa youtube|facebook|tiktok — Audio ဖိုင်ကို reply လုပ်ပြီး တကယ့်ကြာချိန် စစ်ရန်\n"
         "/productionqa <Category>|<Title>|<Platform> — Script/ခန့်မှန်းကြာချိန်/SRT စစ်ရန်\n"
