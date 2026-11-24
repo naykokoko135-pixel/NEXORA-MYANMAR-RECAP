@@ -102,3 +102,74 @@ def search_youtube_cc_videos(query: str, limit: int = 5, api_key: str | None = N
             "media_access": "YouTube watch/embed only; no automatic download or stream extraction.",
         })
     return results
+
+
+def search_official_trailer_references(query: str, limit: int = 4, api_key: str | None = None) -> list[dict]:
+    """Find public trailer/clip reference links; never download or claim reuse rights.
+
+    Search results are deliberately labelled candidates because channel identity
+    and the uploader's authority to license the footage are not established by
+    YouTube search metadata.
+    """
+    clean = " ".join(str(query or "").split())
+    if not clean or len(clean) > 180:
+        raise YouTubeCCSearchError("YouTube trailer ရှာဖွေရန် ခေါင်းစဉ်ကို မှန်ကန်စွာ ထည့်ပါ။")
+    key = str(api_key or os.getenv("YOUTUBE_DATA_API_KEY", "")).strip()
+    if not key:
+        raise YouTubeCCSearchError("YOUTUBE_DATA_API_KEY မသတ်မှတ်ရသေးပါ။ Trailer ရှာဖွေမှုကို ကျော်ထားပါသည်။")
+    limit = max(1, min(int(limit), 8))
+    candidates = []
+    seen = set()
+    for suffix in ("official trailer", "official clip"):
+        search = _get_json("search", {
+            "part": "snippet",
+            "q": f"{clean} {suffix}",
+            "type": "video",
+            "maxResults": limit,
+            "safeSearch": "strict",
+            "key": key,
+        })
+        ids = []
+        snippets = {}
+        for item in search.get("items", []):
+            video_id = str(item.get("id", {}).get("videoId", "")).strip()
+            if video_id and video_id not in seen:
+                seen.add(video_id)
+                ids.append(video_id)
+                snippets[video_id] = item.get("snippet", {})
+        if not ids:
+            continue
+        details = _get_json("videos", {
+            "part": "snippet,status",
+            "id": ",".join(ids),
+            "key": key,
+        })
+        for item in details.get("items", []):
+            video_id = str(item.get("id", "")).strip()
+            status = item.get("status") or {}
+            snippet = item.get("snippet") or snippets.get(video_id, {})
+            if (
+                not video_id
+                or status.get("privacyStatus") != "public"
+                or status.get("uploadStatus") not in (None, "processed")
+                or status.get("embeddable") is False
+            ):
+                continue
+            title = str(snippet.get("title", "Untitled")).strip()
+            candidates.append({
+                "title": title,
+                "url": "https://www.youtube.com/watch?v=" + video_id,
+                "source_page": "https://www.youtube.com/watch?v=" + video_id,
+                "license": "YouTube Standard License / license status not reusable by default",
+                "license_uri": "https://support.google.com/youtube/answer/2797468",
+                "artist": str(snippet.get("channelTitle", "Unknown")).strip(),
+                "published_at": str(snippet.get("publishedAt", "")),
+                "usage_terms": "Reference only. Channel identity and reuse permission are unverified.",
+                "source": "YouTube Trailer Reference",
+                "download_enabled": False,
+                "reuse_ready": False,
+                "media_access": "Official trailer/clip candidate watch or embed link only; no download or stream extraction.",
+            })
+            if len(candidates) >= limit:
+                return candidates
+    return candidates
