@@ -147,6 +147,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/logo - Brand Logo တင်ရန်; /logo position top-left; /logo off\n"
             "/substyle [preset] - Subtitle အရောင်/အရွယ်/Outline ရွေးရန်\n"
             "/subburn on|off - Subtitle ကို Video ထဲ Burn လုပ်/Soft Subtitle ပြန်ထားရန်\n"
+            "/fade 0.6|off - Video/Audio အစနှင့်အဆုံး Fade ထည့်ရန်/ပိတ်ရန်\n"
             "/moviemultisourceresearch <ရုပ်ရှင်အမည်> - TMDB + Wikidata metadata စစ်ရန်\n"
             "/multisourceresearch <Anime/Cartoon/Donghua/Movie/TV Series အမည်> - အမျိုးအစားအားလုံးကို သီးခြားစစ်ရန်\n"
             "/render - Video Footage + မြန်မာ Narration + SRT မှ MP4 ထုတ်ရန်\n"
@@ -704,6 +705,7 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
         selected_motion = str(prior.get("motion_preset", defaults.get("motion_preset", "none")))
         selected_subtitle_style = str(prior.get("subtitle_style", defaults.get("subtitle_style", "classic")))
         selected_burn_subtitles = bool(prior.get("burn_subtitles", defaults.get("burn_subtitles", False)))
+        selected_fade_seconds = float(prior.get("fade_seconds", defaults.get("fade_seconds", 0.6)))
         context.user_data["video_render"] = {
             "mode": "source_video",
             "platform": context.user_data.get("platform", "youtube"),
@@ -713,6 +715,7 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
             "motion_preset": selected_motion,
             "subtitle_style": selected_subtitle_style,
             "burn_subtitles": selected_burn_subtitles,
+            "fade_seconds": selected_fade_seconds,
             "source_video_path": str(output),
             "source_metadata": {
                 "title": str(source.get("title", "")),
@@ -1873,7 +1876,7 @@ async def autoedit_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     defaults.update(profile)
     session = context.user_data.get("video_render")
     if session is not None:
-        session.update({k: profile[k] for k in ("effect_preset", "audio_preset", "transition", "motion_preset", "subtitle_style")})
+        session.update({k: profile[k] for k in ("effect_preset", "audio_preset", "transition", "motion_preset", "subtitle_style", "fade_seconds")})
     await update.message.reply_text(
         "✨ Auto Edit Profile ရွေးပြီးပါပြီ\n"
         f"Category: {profile['category']}\n"
@@ -2045,6 +2048,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     context.user_data.get("logo_position", "bottom-right"),
                     session.get("subtitle_style", "classic"),
                     session.get("burn_subtitles", False),
+                    session.get("fade_seconds", 0.6),
                 )
             else:
                 single_output = output_dir / ("nexora_recap_" + secrets.token_hex(8) + ".mp4")
@@ -2063,6 +2067,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     logo_position=context.user_data.get("logo_position", "bottom-right"),
                     subtitle_style=session.get("subtitle_style", "classic"),
                     burn_subtitles=session.get("burn_subtitles", False),
+                    fade_seconds=session.get("fade_seconds", 0.6),
                 )
                 output_paths = [single_output]
             now = time.time()
@@ -2157,6 +2162,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     selected_motion = str(previous.get("motion_preset", defaults.get("motion_preset", "none")))
     selected_subtitle_style = str(previous.get("subtitle_style", defaults.get("subtitle_style", "classic")))
     selected_burn_subtitles = bool(previous.get("burn_subtitles", defaults.get("burn_subtitles", False)))
+    selected_fade_seconds = float(previous.get("fade_seconds", defaults.get("fade_seconds", 0.6)))
     selected_effect = str(previous.get("effect_preset", defaults.get("effect_preset", "cinematic")))
     selected_audio = str(previous.get("audio_preset", defaults.get("audio_preset", "voice")))
     chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
@@ -2171,6 +2177,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "motion_preset": selected_motion,
         "subtitle_style": selected_subtitle_style,
         "burn_subtitles": selected_burn_subtitles,
+        "fade_seconds": selected_fade_seconds,
         "source_video": None,
         "source_videos": [],
         "source_video_path": None,
@@ -2268,6 +2275,30 @@ async def voiceprofile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     context.user_data["pending_voice_profile"] = name
     await update.message.reply_text(f"{name} အတွက် ကိုယ်ပိုင်အသံ MP3/M4A/WAV/OGG ဖိုင် (၂၀ MB အောက်) ပို့ပါ။ မလုပ်တော့ပါက /cancel ပို့ပါ။")
+
+
+async def fade_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Set automatic opening/closing fade duration; zero disables fades."""
+    if not update.message:
+        return
+    raw = context.args[0].strip().lower() if context.args else "0.6"
+    if raw in {"off", "none", "0"}:
+        seconds = 0.0
+    else:
+        try:
+            seconds = float(raw)
+        except ValueError:
+            await update.message.reply_text("အသုံးပြုပုံ: /fade 0.6 သို့မဟုတ် /fade off")
+            return
+    if not 0 <= seconds <= 5:
+        await update.message.reply_text("Fade သည် ၀ မှ ၅ စက္ကန့်အတွင်း ဖြစ်ရပါမယ်။")
+        return
+    defaults = context.user_data.setdefault("video_edit_defaults", {})
+    defaults["fade_seconds"] = seconds
+    session = context.user_data.get("video_render")
+    if session is not None:
+        session["fade_seconds"] = seconds
+    await update.message.reply_text("Opening/Closing Fade ပိတ်ထားပါပြီ။" if seconds == 0 else f"Opening/Closing Fade ကို {seconds:.1f} စက္ကန့် သတ်မှတ်ပြီးပါပြီ။")
 
 
 async def substyle_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3567,6 +3598,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("logo", logo_cmd))
     telegram_app.add_handler(CommandHandler("substyle", substyle_cmd))
     telegram_app.add_handler(CommandHandler("subburn", subburn_cmd))
+    telegram_app.add_handler(CommandHandler("fade", fade_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
