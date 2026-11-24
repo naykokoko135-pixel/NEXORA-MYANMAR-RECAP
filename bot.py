@@ -1950,6 +1950,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     batch_dir,
                     platform,
                     session.get("effect_preset", "cinematic"),
+                    session.get("audio_preset", "voice"),
                 )
             else:
                 single_output = output_dir / ("nexora_recap_" + secrets.token_hex(8) + ".mp4")
