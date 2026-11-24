@@ -45,6 +45,9 @@ def render_user_source_video(
     effect_preset: str = "cinematic",
     audio_preset: str = "voice",
     motion_preset: str = "none",
+    background_music: tuple[str, bytes] | None = None,
+    music_volume: float = 0.18,
+    music_ducking: bool = True,
 ) -> Path:
     """Use only the exact uploaded video; loop visuals if needed and replace source audio."""
     import imageio_ffmpeg
@@ -60,6 +63,12 @@ def render_user_source_video(
         video_path = None
     audio_name, audio_data = narration_audio
     srt_name, srt_data = subtitles_srt
+    if background_music is not None:
+        music_name, music_data = background_music
+        if Path(music_name).suffix.lower() not in ALLOWED_AUDIO_SUFFIXES or not music_data or len(music_data) > 20 * 1024 * 1024:
+            raise SourceVideoRenderError("Background Music သည် MP3/M4A/WAV/OGG ၂၀ MB အောက် ဖြစ်ရပါမယ်။")
+    else:
+        music_name, music_data = "", b""
     video_suffix = Path(video_name).suffix.lower()
     audio_suffix = Path(audio_name).suffix.lower()
     if video_suffix not in ALLOWED_VIDEO_SUFFIXES or (video_path is None and not video_data):
@@ -114,6 +123,9 @@ def render_user_source_video(
         render_video_path = video_path if video_path is not None else work / ("source" + video_suffix)
         audio_path = work / ("narration" + audio_suffix)
         srt_path = work / "captions.srt"
+        music_path = work / ("background_music" + Path(music_name).suffix.lower()) if music_data else None
+        if music_path is not None:
+            music_path.write_bytes(music_data)
         if video_path is None:
             render_video_path.write_bytes(video_data)
         audio_path.write_bytes(audio_data)
@@ -136,7 +148,18 @@ def render_user_source_video(
             ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
             *video_input,
             "-i", str(audio_path), "-i", str(srt_path),
-            "-map", "0:v:0", "-map", "1:a:0", "-map", "2:s:0",
+        ]
+        if music_path is not None:
+            command.extend(["-stream_loop", "-1", "-i", str(music_path)])
+            from audio_mix import build_background_music_graph
+            try:
+                audio_graph, audio_label = build_background_music_graph(music_volume, music_ducking)
+            except ValueError as exc:
+                raise SourceVideoRenderError(str(exc)) from exc
+            command.extend(["-filter_complex", audio_graph, "-map", "0:v:0", "-map", audio_label, "-map", "2:s:0"])
+        else:
+            command.extend(["-map", "0:v:0", "-map", "1:a:0", "-map", "2:s:0"])
+        command.extend([
             "-vf",
             video_filter,
             "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
@@ -144,7 +167,7 @@ def render_user_source_video(
             "-c:a", "aac", "-b:a", "160k", "-c:s", "mov_text",
             "-metadata:s:s:0", "language=bur", "-t", f"{duration:.3f}",
             "-shortest", "-movflags", "+faststart", str(target),
-        ]
+        ])
         try:
             result = subprocess.run(command, capture_output=True, text=True, timeout=900, check=False)
         except subprocess.TimeoutExpired as exc:
