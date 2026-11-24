@@ -2018,6 +2018,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     action = context.args[0].lower() if context.args else "start"
     if action == "cancel":
+        context.user_data.pop("creator_voice_assets", None)
         cancelled = context.user_data.pop("video_render", None) or {}
         downloaded_source = cancelled.get("source_video_path")
         if downloaded_source:
@@ -2209,9 +2210,13 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
     safe_chat = re.sub(r"[^0-9-]", "", chat_id) or "unknown"
     clip_dir = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work")) / safe_chat / "source_clips" / secrets.token_hex(8)
+    cached_voice_assets = context.user_data.pop("creator_voice_assets", None) or {}
+    if cached_voice_assets.get("platform") not in {None, platform}:
+        cached_voice_assets = {}
     context.user_data["video_render"] = {
         "mode": "source_video",
         "platform": platform,
+        **cached_voice_assets,
         "effect_preset": selected_effect,
         "audio_preset": selected_audio,
         "transition": selected_transition,
@@ -2224,8 +2229,8 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "source_videos": [],
         "source_video_path": None,
         "source_video_clip_dir": str(clip_dir),
-        "narration_audio": None,
-        "subtitles": None,
+        "narration_audio": cached_voice_assets.get("narration_audio"),
+        "subtitles": cached_voice_assets.get("subtitles"),
     }
     await update.message.reply_text(
         "Source Video Recap စတင်ပါပြီ။ သင်ပိုင်ဆိုင်သော သို့မဟုတ် အသုံးပြုခွင့်ရထားသော Video ကိုသာ ပို့ပါ။\n"
@@ -3382,13 +3387,22 @@ async def recapvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         write_timeout=120,
     )
     subtitle_file = BytesIO(srt_text.encode("utf-8-sig"))
-    subtitle_file.name = "nexora_recap_subtitles_aligned.srt"
+    subtitle_file.name = (
+        "nexora_recap_subtitles_estimated.srt"
+        if preset == "myvoice"
+        else "nexora_recap_subtitles_aligned.srt"
+    )
     if preset == "myvoice":
+        voice_assets = {
+            "narration_audio": ("nexora_recap_voiceover.mp3", audio),
+            "subtitles": (subtitle_file.name, srt_text.encode("utf-8-sig")),
+            "narration_voice": "ကိုယ်ပိုင်အသံ",
+            "platform": context.user_data.get("platform", "youtube"),
+        }
+        context.user_data["creator_voice_assets"] = voice_assets
         render_session = context.user_data.get("video_render")
         if render_session and render_session.get("mode") == "source_video":
-            render_session["narration_audio"] = ("nexora_recap_voiceover.mp3", audio)
-            render_session["subtitles"] = ("nexora_recap_subtitles_aligned.srt", srt_text.encode("utf-8-sig"))
-            render_session["narration_voice"] = "ကိုယ်ပိုင်အသံ"
+            render_session.update(voice_assets)
     await update.message.reply_document(
         document=InputFile(subtitle_file, filename=subtitle_file.name),
         caption=(
