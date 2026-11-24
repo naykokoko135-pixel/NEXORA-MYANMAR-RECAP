@@ -52,6 +52,7 @@ def render_user_source_video(
     logo_position: str = "bottom-right",
     subtitle_style: str = "classic",
     burn_subtitles: bool = False,
+    fade_seconds: float = 0.6,
 ) -> Path:
     """Use only the exact uploaded video; loop visuals if needed and replace source audio."""
     import imageio_ffmpeg
@@ -124,6 +125,15 @@ def render_user_source_video(
         audio_filter = build_audio_filter(audio_preset)
     except ValueError as exc:
         raise SourceVideoRenderError(str(exc)) from exc
+    from fade_effects import build_edge_fade_filters
+    try:
+        video_fade, audio_fade = build_edge_fade_filters(duration, fade_seconds)
+    except ValueError as exc:
+        raise SourceVideoRenderError(str(exc)) from exc
+    if video_fade:
+        video_filter = video_filter + "," + video_fade
+    if audio_fade:
+        audio_filter = audio_filter + "," + audio_fade
 
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
