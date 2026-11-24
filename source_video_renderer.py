@@ -175,7 +175,7 @@ def render_user_source_video(
             command.extend(["-i", str(logo_path)])
             from logo_overlay import build_logo_overlay_graph
             try:
-                logo_graph, _ = build_logo_overlay_graph(logo_input_index, logo_position)
+                logo_graph, _ = build_logo_overlay_graph(logo_input_index, logo_position, video_filter=video_filter)
             except ValueError as exc:
                 raise SourceVideoRenderError(str(exc)) from exc
         if audio_graph or logo_graph:
@@ -190,9 +190,9 @@ def render_user_source_video(
         else:
             command.extend(["-map", "1:a:0"])
         command.extend(["-map", "2:s:0"])
+        if not logo_graph:
+            command.extend(["-vf", video_filter])
         command.extend([
-            "-vf",
-            video_filter,
             "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
             "-af", audio_filter,
             "-c:a", "aac", "-b:a", "160k", "-c:s", "mov_text",
