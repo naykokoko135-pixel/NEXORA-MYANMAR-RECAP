@@ -20,4 +20,4 @@ def build_motion_filter(preset: str, width: int, height: int) -> str:
     if not template:
         return ""
     return template.format(width=int(width), height=int(height),
-                           scaled_width=int(width * 1.12), scaled_height=int(height * 1.12))
+                           scaled_width=(int(width * 1.12) // 2) * 2, scaled_height=(int(height * 1.12) // 2) * 2)
