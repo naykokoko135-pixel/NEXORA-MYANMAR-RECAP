@@ -1887,6 +1887,23 @@ async def audiofx_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def transition_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Choose a cross-clip transition for the active source-video edit."""
+    if not update.message: return
+    from video_transitions import TRANSITIONS
+    selected = context.args[0].strip().lower() if context.args else ""
+    options = ["cut", *sorted(TRANSITIONS)]
+    if not selected or selected == "list":
+        await update.message.reply_text("🎞 NEXORA Transitions\nအသုံးပြုပုံ: /transition <preset>\n" + "\n".join("• " + name for name in options) + "\nDefault: fade (0.6s)")
+        return
+    if selected not in options:
+        await update.message.reply_text("Transition မသိပါ။ /transition list ဖြင့် ကြည့်ပါ။")
+        return
+    session = context.user_data.get("video_render")
+    if session is None: context.user_data["video_render"] = {"transition": selected}
+    else: session["transition"] = selected
+    await update.message.reply_text(f"Transition ရွေးပြီးပါပြီ: {selected}")
+
 async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Accept a creator-owned/licensed source video, narration, and SRT for MP4 rendering."""
     if not update.message:
@@ -1939,7 +1956,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 from source_video_renderer import concatenate_source_video_clips
                 combined_source_path = batch_dir / "combined_source.mp4" if platform in {"youtube", "facebook"} else output_dir / ("nexora_source_" + secrets.token_hex(8) + ".mp4")
                 combined_source_path.parent.mkdir(parents=True, exist_ok=True)
-                await asyncio.to_thread(concatenate_source_video_clips, source_clips, combined_source_path)
+                await asyncio.to_thread(concatenate_source_video_clips, source_clips, combined_source_path, session.get("transition", "fade"))
                 source_video = combined_source_path
             if platform in {"youtube", "facebook"}:
                 output_paths = await asyncio.to_thread(
@@ -2052,6 +2069,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     platform = context.user_data.get("platform", "youtube")
     selected_effect = str(previous.get("effect_preset", "cinematic"))
     selected_audio = str(previous.get("audio_preset", "voice"))
+    selected_transition = str(previous.get("transition", "fade"))
     chat_id = str(update.effective_chat.id if update.effective_chat else "unknown")
     safe_chat = re.sub(r"[^0-9-]", "", chat_id) or "unknown"
     clip_dir = Path(os.getenv("NEXORA_WORK_DIR", "/tmp/nexora-work")) / safe_chat / "source_clips" / secrets.token_hex(8)
@@ -2060,6 +2078,7 @@ async def sourcevideo_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "platform": platform,
         "effect_preset": selected_effect,
         "audio_preset": selected_audio,
+        "transition": selected_transition,
         "source_video": None,
         "source_videos": [],
         "source_video_path": None,
@@ -3313,6 +3332,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("sourcevideo", sourcevideo_cmd))
     telegram_app.add_handler(CommandHandler("effect", effect_cmd))
     telegram_app.add_handler(CommandHandler("audiofx", audiofx_cmd))
+    telegram_app.add_handler(CommandHandler("transition", transition_cmd))
     telegram_app.add_handler(CommandHandler("moviemultisourceresearch", moviemultisourceresearch_cmd))
     telegram_app.add_handler(CommandHandler("movieplotresearch", movieplotresearch_cmd))
     telegram_app.add_handler(CommandHandler("growthpack", growthpack_cmd))
