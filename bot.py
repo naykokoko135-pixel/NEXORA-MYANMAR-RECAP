@@ -692,15 +692,19 @@ async def licensedownload_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
         session_dir.mkdir(parents=True, exist_ok=True)
         output = session_dir / ("licensed_source" + suffix)
         await asyncio.to_thread(download_licensed_source, source, output)
-        selected_effect = str((context.user_data.get("video_render") or {}).get("effect_preset", "cinematic"))
-        selected_audio = str((context.user_data.get("video_render") or {}).get("audio_preset", "voice"))
-        selected_transition = str((context.user_data.get("video_render") or {}).get("transition", "fade"))
+        prior = context.user_data.get("video_render") or {}
+        defaults = context.user_data.get("video_edit_defaults") or {}
+        selected_effect = str(prior.get("effect_preset", defaults.get("effect_preset", "cinematic")))
+        selected_audio = str(prior.get("audio_preset", defaults.get("audio_preset", "voice")))
+        selected_transition = str(prior.get("transition", defaults.get("transition", "fade")))
+        selected_motion = str(prior.get("motion_preset", defaults.get("motion_preset", "none")))
         context.user_data["video_render"] = {
             "mode": "source_video",
             "platform": context.user_data.get("platform", "youtube"),
             "effect_preset": selected_effect,
             "audio_preset": selected_audio,
             "transition": selected_transition,
+            "motion_preset": selected_motion,
             "source_video_path": str(output),
             "source_metadata": {
                 "title": str(source.get("title", "")),
