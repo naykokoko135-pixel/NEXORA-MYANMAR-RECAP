@@ -40,7 +40,7 @@ from recap_partitioner import render_three_part_longform, RecapPartitionError
 from automatic_longform_pipeline import render_licensed_longform_parts
 from clip_source_finder import search_licensed_video, ClipSourceError
 from europeana_video_finder import search_europeana_licensed_video, EuropeanaSearchError, display_media_url
-from youtube_cc_finder import search_youtube_cc_videos, YouTubeCCSearchError
+from youtube_cc_finder import search_youtube_cc_videos, search_official_trailer_references, YouTubeCCSearchError
 from internet_archive_video_finder import search_internet_archive_licensed_video, InternetArchiveSearchError
 from internet_archive_pipeline import render_internet_archive_longform_parts, render_internet_archive_narrated_preview
 from youtube_movie_recap_research import search_youtube_movie_recaps, format_youtube_movie_recaps, YouTubeRecapResearchError
@@ -576,7 +576,7 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Wikimedia Commons၊ Europeana၊ Internet Archive နှင့် YouTube CC BY မှတ်တမ်းများကို ရှာပေးမည်။ YouTube ရှာရန် YOUTUBE_DATA_API_KEY လိုအပ်သည်။"
         )
         return
-    await update.message.reply_text("Commons၊ Europeana နှင့် (API key ရှိပါက) YouTube CC BY မှတ်တမ်းများကို ရှာနေပါတယ်...")
+    await update.message.reply_text("Commons၊ Europeana၊ Internet Archive နှင့် (API key ရှိပါက) YouTube CC BY/Trailer ရည်ညွှန်းလင့်ခ်များကို ရှာနေပါတယ်...")
     results = []
     errors = []
     try:
@@ -619,6 +619,11 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         results.extend(archive_sources)
     except InternetArchiveSearchError as exc:
         errors.append("Internet Archive: " + str(exc))
+    try:
+        trailer_refs = await asyncio.to_thread(search_official_trailer_references, query, 4)
+        results.extend(trailer_refs)
+    except YouTubeCCSearchError as exc:
+        errors.append("YouTube trailer references: " + str(exc))
     if not results:
         detail = ("\n" + "\n".join(errors)) if errors else ""
         await update.message.reply_text(
@@ -629,7 +634,12 @@ async def clipsource_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for item in results[:10]:
         title = str(item.get("title", "Untitled")).replace("File:", "")
         source_name = item.get("source", "Wikimedia Commons")
-        if source_name == "YouTube":
+        if source_name == "YouTube Trailer Reference":
+            download_note = (
+                "Trailer/Clip ရည်ညွှန်းလင့်ခ်သာဖြစ်သည်။ Channel သည် တရားဝင် Official ဖြစ်ကြောင်း အတည်မပြုထားပါ။ "
+                "YouTube stream ကို download/extract မလုပ်ပါ။ MP4 ထဲထည့်ရန် Creator/rights holder ထံမှ သီးခြားခွင့်ပြုချက်နှင့် မူရင်းဖိုင်လိုအပ်သည်။"
+            )
+        elif source_name == "YouTube":
             download_note = (
                 "YouTube CC BY metadata တွေ့ရှိသည်။ Uploader က footage/audio အားလုံး၏ အခွင့်အရေးပိုင်ရှင်ဖြစ်ကြောင်း "
                 "နှင့် CC BY သက်ဆိုင်မှုကို လူကိုယ်တိုင်စစ်ပါ။ NEXORA သည် YouTube stream ကို download/extract မလုပ်ပါ။ "
