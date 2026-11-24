@@ -19,11 +19,11 @@ class CreatorVoiceRecapTests(unittest.TestCase):
         self.assertIn("မင်္ဂလာပါ", srt)
 
     def test_combined_srt_offsets_each_part_and_reindexes(self):
-        first = "1\\n00:00:00,000 --> 00:00:05,000\\nPart one"
-        second = "1\\n00:00:00,000 --> 00:00:07,000\\nPart two"
+        first = "1\n00:00:00,000 --> 00:00:05,000\nPart one"
+        second = "1\n00:00:00,000 --> 00:00:07,000\nPart two"
         combined = combine_estimated_srt_parts([(first, 5), (second, 7)])
-        self.assertIn("1\\n00:00:00,000 --> 00:00:05,000", combined)
-        self.assertIn("2\\n00:00:05,000 --> 00:00:12,000", combined)
+        self.assertIn("1\n00:00:00,000 --> 00:00:05,000", combined)
+        self.assertIn("2\n00:00:05,000 --> 00:00:12,000", combined)
 
     def test_srt_rejects_invalid_duration(self):
         with self.assertRaises(ValueError):
