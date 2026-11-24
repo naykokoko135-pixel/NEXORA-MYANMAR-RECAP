@@ -24,6 +24,7 @@ from tts_builder import VOICE_PRESETS, synthesize_burmese_speech, synthesize_bur
 from local_myanmar_tts import synthesize_local_burmese_speech
 from voxcpm_voice_design import VOICE_DESIGNS, synthesize_designed_burmese_voice
 from voxcpm_voice_clone import synthesize_cloned_burmese_voice
+from creator_voice_recap import synthesize_recap_in_creator_voice
 from scene_tts import parse_scene_script, parse_voice_design_scene_script
 from voice_profiles import normalize_profile_name, store_voice_profile, delete_voice_profile
 from voice_profile_storage import load_voice_profiles, save_voice_profiles
@@ -133,8 +134,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/episodeoutline <Series အမည်> - Episode တစ်ခုအတွက် Recap Script Worksheet ထုတ်ရန်\n"
             "/productionqa <Category>|<Title>|<Platform> - Script အပိုင်း၊ ကြာချိန်နှင့် SRT စစ်ရန်\n"
             "/audioqa <Platform> ကို Audio ဖိုင်အား reply လုပ်၍ တကယ့်ကြာချိန် စစ်ရန်\n"
-            "/recapvoice [preset] - တစ်ဖိုင်တည်း narration MP3 + SRT ထုတ်ရန်\n"
-            "/recapvoice3 [preset] - YouTube/Facebook Script ၃ ပိုင်းမှ MP3/SRT ၃ စုံထုတ်ပြီး Audio ကြာချိန် QA စစ်ရန်\n"
+            "/recapvoice [preset|myvoice] - တစ်ဖိုင်တည်း narration MP3 + SRT ထုတ်ရန်\n"
+            "/recapvoice3 [preset|myvoice] - YouTube/Facebook Script ၃ ပိုင်းမှ MP3/SRT ၃ စုံထုတ်ပြီး Audio ကြာချိန် QA စစ်ရန်\n"
             "/recapvideo <title> - အလိုအလျောက် narration + ခွင့်ပြုထားသော Footage မရှိပါက ရပ်မည်; သင့် Video ကို /sourcevideo ဖြင့် MP4 ထုတ်ရန်\n"
             "/dailyrecap [youtube|facebook|tiktok|all] - ယနေ့ Daily Report ရွေးထားသော ခေါင်းစဉ်များကို Licensed Recap pipeline ဖြင့် စတင်ရန် (default all)\n"
             "/sourcevideo - ကိုယ်ပိုင်/ခွင့်ပြုထားသော Video + မြန်မာအသံ + SRT မှ MP4 ထုတ်ရန်\n"
@@ -3305,17 +3306,28 @@ async def recapvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     try:
         preset, script = parse_recap_voice_request(update.message.text, VOICE_PRESETS)
-        validate_tts_request(script, preset)
+        if preset != "myvoice":
+            validate_tts_request(script, preset)
     except ValueError as exc:
         await update.message.reply_text(str(exc))
         return
 
+    voice_label = "ကိုယ်ပိုင်အသံ" if preset == "myvoice" else VOICE_PRESETS[preset]["label"]
     await update.message.reply_text(
-        f"မြန်မာ narration ကို {VOICE_PRESETS[preset]['label']} preset ဖြင့် ဖန်တီးပြီး "
-        "အသံနှင့်အချိန်ကိုက် SRT ကိုပါ ပြင်ဆင်နေပါတယ်..."
+        f"မြန်မာ narration ကို {voice_label} ဖြင့် ဖန်တီးပြီး SRT ပြင်ဆင်နေပါတယ်..."
     )
+    clone_duration = None
     try:
-        audio, srt_text = await synthesize_burmese_speech_with_srt(script, preset)
+        if preset == "myvoice":
+            profiles = load_voice_profiles(update.effective_user.id)
+            profile = profiles.get("ကိုယ်ပိုင်အသံ")
+            if not profile:
+                raise ValueError("ကိုယ်ပိုင်အသံ Profile မရှိသေးပါ။ /myvoice start → /myvoice confirm → အသံဖိုင်ပို့ပါ။")
+            audio, srt_text, clone_duration = await synthesize_recap_in_creator_voice(
+                script, profile["filename"], profile["audio"]
+            )
+        else:
+            audio, srt_text = await synthesize_burmese_speech_with_srt(script, preset)
     except (ValueError, RuntimeError) as exc:
         await update.message.reply_text(f"Recap အသံ/စာတန်း ဖန်တီးမရပါ: {exc}")
         return
@@ -3333,7 +3345,11 @@ async def recapvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with tempfile.NamedTemporaryFile(prefix="nexora-tiktok-recap-", suffix=".mp3", delete=False) as temp_file:
                 temp_path = temp_file.name
                 temp_file.write(audio)
-            metadata = await asyncio.to_thread(inspect_audio_file, temp_path)
+            metadata = (
+                {"duration_seconds": clone_duration, "audio_stream": "MP3", "decode_ok": True, "file_size_bytes": len(audio)}
+                if clone_duration is not None
+                else await asyncio.to_thread(inspect_audio_file, temp_path)
+            )
             evaluation = evaluate_audio_duration("tiktok", metadata["duration_seconds"])
             duration_report = format_audio_qa_report("tiktok", metadata, evaluation)
             duration_caption = (
@@ -3359,7 +3375,7 @@ async def recapvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_document(
         document=InputFile(audio_file, filename=audio_file.name),
         caption=(
-            f"🎙️ Burmese Recap Voice-over — {VOICE_PRESETS[preset]['label']}\n"
+            f"🎙️ Burmese Recap Voice-over — {voice_label}\n"
             "ကိုယ်တိုင်ရေးထားသော Script မှ ဖန်တီးထားသည်။ အသံထွက်နှင့် အမည်များကို ပြန်စစ်ပါ။" + duration_caption
         ),
         read_timeout=120,
@@ -3369,7 +3385,11 @@ async def recapvoice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     subtitle_file.name = "nexora_recap_subtitles_aligned.srt"
     await update.message.reply_document(
         document=InputFile(subtitle_file, filename=subtitle_file.name),
-        caption="အသံထုတ်လုပ်စဉ် WordBoundary အချိန်မှတ်တမ်းဖြင့် ချိန်ညှိထားသော မြန်မာ SRT ဖြစ်သည်။ ထုတ်ဝေမီ ပြန်စစ်ပါ။",
+        caption=(
+            "ကိုယ်ပိုင်အသံ Clone ၏ တကယ့် MP3 ကြာချိန်အပေါ် စာသားအရှည်အလိုက် ခန့်မှန်းထားသော SRT ဖြစ်သည်။ Word-level sync မဟုတ်ပါ။ ထုတ်ဝေမီ ပြန်ညှိပါ။"
+            if preset == "myvoice"
+            else "အသံထုတ်လုပ်စဉ် WordBoundary အချိန်မှတ်တမ်းဖြင့် ချိန်ညှိထားသော မြန်မာ SRT ဖြစ်သည်။ ထုတ်ဝေမီ ပြန်စစ်ပါ။"
+        ),
     )
 
 
@@ -3386,33 +3406,47 @@ async def recapvoice3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     try:
         preset, parts = parse_recap_voice_parts_request(update.message.text, VOICE_PRESETS)
-        for script in parts.values():
-            validate_tts_request(script, preset)
+        if preset != "myvoice":
+            for script in parts.values():
+                validate_tts_request(script, preset)
     except ValueError as exc:
         await update.message.reply_text(str(exc))
         return
 
+    voice_label = "ကိုယ်ပိုင်အသံ" if preset == "myvoice" else VOICE_PRESETS[preset]["label"]
     await update.message.reply_text(
-        f"{platform.upper()} အတွက် narration ၃ ပိုင်းကို {VOICE_PRESETS[preset]['label']} preset ဖြင့် "
-        "MP3/SRT သီးခြားဖန်တီးပြီး FFmpeg ဖြင့် တကယ့်ကြာချိန်ကို စစ်ဆေးနေပါတယ်..."
+        f"{platform.upper()} အတွက် narration ၃ ပိုင်းကို {voice_label} ဖြင့် MP3/SRT သီးခြားဖန်တီးပြီး "
+        "FFmpeg ဖြင့် တကယ့်ကြာချိန်ကို စစ်ဆေးနေပါတယ်..."
     )
     generated = []
     durations = []
     try:
-        for index in (1, 2, 3):
-            audio, srt_text = await synthesize_burmese_speech_with_srt(parts[index], preset)
-            with tempfile.NamedTemporaryFile(prefix="nexora-recap-part-", suffix=".mp3", delete=False) as temp_file:
-                temp_path = temp_file.name
-                temp_file.write(audio)
-            try:
-                metadata = await asyncio.to_thread(inspect_audio_file, temp_path)
-            finally:
+        if preset == "myvoice":
+            profiles = load_voice_profiles(update.effective_user.id)
+            profile = profiles.get("ကိုယ်ပိုင်အသံ")
+            if not profile:
+                raise ValueError("ကိုယ်ပိုင်အသံ Profile မရှိသေးပါ။ /myvoice start → /myvoice confirm → အသံဖိုင်ပို့ပါ။")
+            for index in (1, 2, 3):
+                audio, srt_text, duration = await synthesize_recap_in_creator_voice(
+                    parts[index], profile["filename"], profile["audio"]
+                )
+                durations.append(duration)
+                generated.append((index, audio, srt_text))
+        else:
+            for index in (1, 2, 3):
+                audio, srt_text = await synthesize_burmese_speech_with_srt(parts[index], preset)
+                with tempfile.NamedTemporaryFile(prefix="nexora-recap-part-", suffix=".mp3", delete=False) as temp_file:
+                    temp_path = temp_file.name
+                    temp_file.write(audio)
                 try:
-                    os.unlink(temp_path)
-                except OSError:
-                    pass
-            durations.append(metadata["duration_seconds"])
-            generated.append((index, audio, srt_text))
+                    metadata = await asyncio.to_thread(inspect_audio_file, temp_path)
+                finally:
+                    try:
+                        os.unlink(temp_path)
+                    except OSError:
+                        pass
+                durations.append(metadata["duration_seconds"])
+                generated.append((index, audio, srt_text))
     except (ValueError, RuntimeError) as exc:
         await update.message.reply_text(
             "Part MP3 ထုတ်လုပ်ခြင်း သို့မဟုတ် FFmpeg တိုင်းတာခြင်း မအောင်မြင်ပါ။ "
@@ -3448,7 +3482,11 @@ async def recapvoice3_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         subtitle_file.name = subtitle_name
         await update.message.reply_document(
             document=InputFile(subtitle_file, filename=subtitle_name),
-            caption=f"Part {index} အတွက် WordBoundary အချိန်မှတ်တမ်းဖြင့် ချိန်ညှိထားသော SRT။ လူကိုယ်တိုင် ပြန်စစ်ပါ။",
+            caption=(
+                f"Part {index} အတွက် Clone MP3 ကြာချိန်အပေါ် စာသားအရှည်အလိုက် ခန့်မှန်းထားသော SRT ဖြစ်သည်။ Word-level sync မဟုတ်ပါ။ လူကိုယ်တိုင် ပြန်ညှိပါ။"
+                if preset == "myvoice"
+                else f"Part {index} အတွက် WordBoundary အချိန်မှတ်တမ်းဖြင့် ချိန်ညှိထားသော SRT။ လူကိုယ်တိုင် ပြန်စစ်ပါ။"
+            ),
         )
 
 
@@ -3754,9 +3792,10 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/settings — လက်ရှိရွေးချယ်မှု\n"
         "/mode free|ai — Mode ရွေးရန် (Paid API ကို အလိုအလျောက် မခေါ်ပါ)\n\n"
         "【Recap အသံထုတ်လုပ်မှု】\n"
-        "/recapvoice [preset] — MP3 တစ်ဖိုင် + WordBoundary အချိန်ကိုက် SRT တစ်ဖိုင်\n"
+        "/recapvoice [preset|myvoice] — MP3 တစ်ဖိုင် + SRT တစ်ဖိုင်\n"
+        "/recapvoice myvoice — သိမ်းထားသော ကိုယ်ပိုင်အသံကို သုံးရန် (GPU host လိုအပ်၊ SRT သည် ကြာချိန်အပေါ် ခန့်မှန်းထားခြင်း)\n"
         "TikTok အတွက် /platform tiktok ကို အရင်ရွေးပါ။ တစ်ဖိုင်တည်း ၄–၇ မိနစ် ဖြစ်ရမည်။ FFmpeg ဖြင့် တကယ့်အသံကြာချိန်ကို စစ်ပြီး QA မအောင်မြင်လျှင် MP3 မထုတ်ပေးပါ။\n"
-        "/recapvoice3 [preset] — YouTube/Facebook အတွက် MP3 သုံးဖိုင် + SRT သုံးဖိုင်\n"
+        "/recapvoice3 [preset|myvoice] — YouTube/Facebook အတွက် MP3 သုံးဖိုင် + SRT သုံးဖိုင်\n"
         "Script ကို Command နဲ့ message တစ်စောင်တည်းတွင် အောက်ပါပုံစံအတိုင်း ထည့်ပါ။\n"
         "/recapvoice3 narrator\n"
         "[PART 1]\nအပိုင်း ၁ Script စာသား...\n"
