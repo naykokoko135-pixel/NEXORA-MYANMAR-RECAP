@@ -8,6 +8,10 @@ class LogoOverlayTests(unittest.TestCase):
             self.assertEqual(output, "[vout]")
             self.assertIn("overlay=x=", graph)
 
+    def test_visual_filter_is_composed_into_same_graph(self):
+        graph, _ = build_logo_overlay_graph(3, video_filter="scale=1280:720,eq=contrast=1.1")
+        self.assertIn("[0:v]scale=1280:720,eq=contrast=1.1[nexora_base]", graph)
+
     def test_opacity_and_input_validation(self):
         self.assertIn("aa=0.50", build_logo_overlay_graph(4, "top-left", 0.5)[0])
         with self.assertRaises(ValueError):
