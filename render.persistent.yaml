@@ -17,6 +17,10 @@ services:
     envVars:
       - key: VOICE_PROFILE_DB_PATH
         value: /var/data/nexora_voice_profiles.sqlite3
+      - key: NEXORA_VOXCPM_GPU_URL
+        sync: false
+      - key: NEXORA_VOXCPM_WORKER_TOKEN
+        sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: ERROR_REPORT_TOKEN
