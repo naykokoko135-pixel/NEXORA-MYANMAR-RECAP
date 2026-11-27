@@ -1,0 +1,47 @@
+name: Verify deployment
+on:
+  push:
+    branches: ["verify/**"]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BASE: https://nexora-myanmar-recap-bot.onrender.com
+    steps:
+      - name: Wake service and wait for /health
+        run: |
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /tmp/h -m 60 -w '%{http_code}' $BASE/health || true); echo "health attempt $i: $code"
+            [ "$code" = "200" ] && break; sleep 15
+          done
+          echo "HEALTH BODY: $(cat /tmp/h)"
+      - name: Check endpoints
+        run: |
+          set +e
+          chk(){ # method path expected-codes [extra curl args]
+            m=$1; p=$2; exp=$3; shift 3
+            out=$(curl -s -o /tmp/body -m 60 -X $m -w '%{http_code} %{content_type}' "$@" $BASE$p)
+            code=${out%% *}
+            case " $exp " in *" $code "*) r=PASS;; *) r=FAIL; echo FAILED >> /tmp/fails;; esac
+            printf '%-5s %-4s %-34s -> %s (expected %s)\n' $r $m "$p" "$out" "$exp"
+          }
+          rm -f /tmp/fails
+          chk GET /health "200"
+          chk GET / "200"
+          chk GET /studio "307 308 200"
+          chk GET /studio/ "200"
+          curl -s -m 60 $BASE/studio/ -o /tmp/index.html
+          echo "TITLE: $(grep -o '<title>[^<]*</title>' /tmp/index.html)"
+          for a in $(grep -oE '(src|href)="[^"#:]+\.(js|css)"' /tmp/index.html | sed -E 's/.*="(.*)"/\1/'); do chk GET /studio/$a "200"; done
+          chk GET /studio/js/app.js "200"
+          chk GET /api/auth/session "200"
+          echo "SESSION BODY: $(curl -s -m 60 $BASE/api/auth/session)"
+          chk GET /api/dashboard "401"
+          chk GET /api/projects "401"
+          chk POST /api/auth/login "400 401 429" -H 'Content-Type: application/json' -d '{"password":"x"}'
+          chk GET /console/session "200"
+          chk GET /studio/..%2f..%2fetc/passwd "400 404" --path-as-is
+          echo "--- security headers on /studio/:"; curl -sI -m 60 $BASE/studio/ | grep -i -E 'content-security|x-frame|x-content-type|referrer|strict-transport' 
+          echo "--- internal tick must reject without token:"; chk POST /api/internal/tick "403"
+          if [ -f /tmp/fails ]; then echo "SOME CHECKS FAILED"; exit 1; fi; echo "ALL CHECKS PASSED"
