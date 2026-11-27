@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+data/
+work/
+out/
+state/
+*.sqlite3*
+
+# local/tooling
+node_modules/
+*.mp4
+*.wav
+!studio/static/**
+acceptance_report.json

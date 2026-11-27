@@ -9,7 +9,12 @@ from .http import get
 _last = [0.0]
 
 
+LLM_HOOK = None  # set by nexora.studio.providers to route generation through OpenAI/Gemini with fallback
+
+
 def llm(prompt, system="", json_mode=True, tries=5):
+    if LLM_HOOK is not None:
+        return LLM_HOOK(prompt, system, json_mode)
     if not config.GEMINI_KEY:
         raise RuntimeError("GEMINI_API_KEY မထည့်ရသေးပါ")
     body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],

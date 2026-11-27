@@ -1,3 +1,56 @@
+# NEXORA Studio — website + fully automatic recap platform
+
+NEXORA Studio is a login-protected website (served at `/studio/`) plus a real background automation engine that runs inside the same
+process as the existing Telegram bot (`bot.py` mounts it; the bot keeps working even if the studio fails to start). The legacy bot
+commands are unchanged; `/studio` was added to report automation status in Telegram.
+
+**Pipeline (per platform, independent queues):** research → script → voice → SRT → assets → timeline → render → QC → publish → notify.
+YouTube and Facebook target 46–60 min (16:9), TikTok 4–7 min (9:16, CTA to the YouTube/Facebook links). Titles and categories are
+distinct across the three platforms each day; Indian titles are excluded; every job is idempotent and state is persisted in SQLite
+(`DATA_DIR/studio.sqlite3`), so queued/running work resumes after a restart.
+
+## Quick start (local)
+```bash
+pip install -r requirements.txt          # ffmpeg + ffprobe must be on PATH
+export NEXORA_ADMIN_PASSWORD='choose-a-long-password'
+export OPENAI_API_KEY=...  # and/or GEMINI_API_KEY; the other is an automatic fallback
+python serve.py                          # http://localhost:10000/studio/
+```
+`serve.py` registers the repo root as the `nexora` package (the code uses relative imports) and starts the bot + website.
+Without `TELEGRAM_BOT_TOKEN` the bot cannot start; the website needs the bot process, so keep it set on the host.
+
+## Using it
+1. Sign in at `/studio/` and open **Automation**. **Start Auto Mode** enables the daily scheduler (default 00:00 `Asia/Bangkok`, configurable);
+   **Run now** starts today's run immediately; **Pause / Resume / Stop** control it. A second "run now" never duplicates the day's job.
+2. Watch **Dashboard** (health, Telegram, AI providers, queues, errors, disk/memory) and **Video Renderer** (render queue, retry/cancel).
+3. Finished projects appear in **Projects** (MP4, MP3/WAV, Burmese + English SRT, script, credits) with download and confirmed delete.
+4. Manual tools remain available: **Recap Studio / AI Research / Script Editor / Voice Studio / Subtitle Studio / Platforms / Settings**.
+5. Publishing: with `AUTO_UPLOAD=1` and official YouTube/Facebook API credentials a video is uploaded and verified; otherwise the project ends as
+   `ready_to_publish` with a publish-ready draft. Nothing is reported "published" until the platform API confirms it. TikTok has no open upload API here, so it is always a draft.
+
+## Honest limits (read before relying on it)
+- **Hosting:** Render Free sleeps when idle and has ephemeral disk and little CPU. The scheduler only runs while the process is awake; call
+  `POST /api/internal/tick` with header `X-NEXORA-Cron-Token: $NEXORA_CRON_TOKEN` from an external cron to wake it. 46–60 min videos need a paid instance
+  with a persistent disk (`render.paid.yaml`, set `DATA_DIR=/var/data`). The dashboard raises alerts for ephemeral storage, low disk, missing AI keys.
+- **Voice:** Burmese narration uses Edge TTS (needs internet). An offline eSpeak fallback exists but is **low quality** and is labelled as such in the project.
+  Uploaded reference audio is stored as a voice profile; true voice cloning needs a GPU host (`VOICE_GPU_URL`), and the UI says so rather than pretending.
+- **Visuals:** only authorised sources are used (Wikimedia Commons with license + attribution checks, Internet Archive/Europeana public domain, user uploads).
+  No DRM bypass and no streaming-service footage. When no authorised footage exists the renderer produces self-generated graphics with subtitles.
+- **Research/AI:** requires outbound internet to Wikipedia/Wikidata/AniList/Kitsu/TVmaze (TMDB optional) and an OpenAI or Gemini key. Scripts are built from retrieved plot sources and marked verified/unverified.
+
+## Tests and acceptance
+```bash
+python -m pytest studio_tests -q                    # 34 studio tests (auth, CSRF, queues, retries, idempotency, QC, API)
+python serve_acceptance.py --platform tiktok        # LIVE end-to-end run (needs internet + AI key); verifies the MP4 with ffprobe/decode
+python serve_acceptance.py --offline-fixture        # sandbox run: research + script text come from a labelled fixture; everything else is real
+```
+The workflow **Studio live acceptance** (Actions tab, manual) runs the live variant on a GitHub runner using repository secrets and uploads the report and MP4.
+The older root-level `test_*.py` files predate the studio; 51 of them fail on `main` independently of this work (stale imports/expectations).
+
+API reference: [`studio/API.md`](studio/API.md). Environment variables: [`.env.example`](.env.example).
+
+---
+
 # NEXORA Myanmar Recap Bot — Free Template Build
 
 A free Telegram bot for Burmese recap-writing worksheets and English subtitle SRT export.

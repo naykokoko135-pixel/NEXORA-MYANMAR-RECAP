@@ -26,7 +26,7 @@ HELP = """🎬 Nexora Recap Bot
 /voiceprofile list|add <name>|delete <name>  (audio ပို့ပြီး caption မှာ /voiceprofile add name)
 /scenetts <text> — TTS စမ်း • /effects • /srt on|off|en|my|both
 /platform <p> • /duration <min> • /mode draft|voice|full • /settings
-/status • /cancel • /retry • /health • /commentstatus"""
+/status • /cancel • /retry • /health • /commentstatus • /studio (website automation status)"""
 
 
 def load_settings(chat):
@@ -265,6 +265,14 @@ async def health(u, c):
     await reply(u, "🩺\n" + "\n".join(f"{'✅' if v else '⚠️'} {k}: {v}" for k, v in chk.items()))
 
 
+async def studio_(u, c):
+    try:
+        from .studio import notifier
+        await reply(u, await asyncio.to_thread(notifier.status_text))
+    except Exception as e:
+        await reply(u, f"❌ Studio မရနိုင်ပါ: {e}")
+
+
 async def effects(u, c):
     await reply(u, "🎞 Effects:\n" + "\n".join("• " + e for e in config.EFFECTS))
 
@@ -280,7 +288,7 @@ def build():
     simple = {"start": start, "help": help_, "settings": settings_, "voices": voices_, "tts_design": tts_design,
               "voiceclone": voiceclone, "voiceprofile": voiceprofile, "scenetts": scenetts, "multisourceresearch": research_cmd,
               "animationepisodes": episodes, "status": status, "cancel": cancel, "retry": retry, "health": health,
-              "effects": effects, "commentstatus": commentstatus, "duration": duration,
+              "effects": effects, "commentstatus": commentstatus, "studio": studio_, "duration": duration,
               "platform": setter("platform", list(config.PLATFORMS)), "mode": setter("mode", ["draft", "voice", "full"]),
               "srt": setter("srt", ["on", "off", "en", "my", "both"])}
     for k, f in simple.items():
@@ -324,6 +332,11 @@ async def serve():
             await app.updater.start_polling()
         wa = web.Application()
         wa.add_routes(routes)
+        try:  # NEXORA Studio website + automation engine; the Telegram bot keeps working even if it cannot start
+            from .studio import api as studio_api
+            studio_api.mount(wa)
+        except Exception as e:  # pragma: no cover - defensive
+            print("studio disabled:", repr(e))
         runner = web.AppRunner(wa)
         await runner.setup()
         await web.TCPSite(runner, "0.0.0.0", port).start()
