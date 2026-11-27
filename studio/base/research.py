@@ -39,8 +39,10 @@ def jikan_fallback():
 
 
 def tmdb(path, **p):
-    if not config.TMDB_KEY:
-        raise RuntimeError("TMDB_API_KEY missing")
+    if not config.TMDB_ENABLED:
+        raise RuntimeError("TMDB_API_KEY / TMDB_API_READ_ACCESS_TOKEN missing")
+    if config.TMDB_TOKEN:
+        return get("https://api.themoviedb.org/3" + path, params=p, headers={"Authorization": f"Bearer {config.TMDB_TOKEN}"})
     return get("https://api.themoviedb.org/3" + path, params={"api_key": config.TMDB_KEY, **p})
 
 
@@ -196,7 +198,7 @@ def resolve_title(title, platform, log=print):
                 break
     except Exception as e:
         log(f"[resolve] anilist: {e}")
-    if not c and config.TMDB_KEY:
+    if not c and config.TMDB_ENABLED:
         for r in tmdb("/search/multi", query=title)["results"]:
             if r.get("media_type") in ("movie", "tv") and norm(r.get("title") or r.get("name")) == norm(title):
                 c = _tm(r, r["media_type"], "film" if r["media_type"] == "movie" else "TV series")
