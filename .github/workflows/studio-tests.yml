@@ -15,7 +15,7 @@ jobs:
           python-version: "3.12"
       - name: Install ffmpeg and espeak-ng
         run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
-      - run: python -m pip install -r requirements.txt
+      - run: python -m pip install -r requirements.txt pytest
       - name: Studio tests
         run: python -m pytest studio_tests -q
       - name: JS syntax check
