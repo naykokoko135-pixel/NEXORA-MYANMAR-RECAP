@@ -1,3 +1,41 @@
+# NEXORA Studio — website + automatic recap platform
+
+A login-protected website at **`/studio/`** with a persistent background automation engine, running inside the same Render service as the Telegram bot
+(`uvicorn bot:web_app`). All existing bot commands are unchanged; `/studio` (owner chat only) reports studio status.
+
+**How it is wired:** the studio (`studio/`) is an aiohttp app bound to loopback inside the bot process; `studio/fastapi_mount.py` proxies `/studio/*`
+and `/api/*` to it. If the studio ever fails to start, the bot keeps running and `/studio` answers 503. The studio's own template helpers live in
+`studio/base/` so no production module is modified.
+
+**Pipeline (per platform, independent queues):** research -> script -> voice -> SRT -> assets -> timeline -> render -> QC -> publish -> notify.
+YouTube/Facebook target 46-60 min (16:9), TikTok 4-7 min (9:16, CTA to the YouTube/Facebook links). Distinct title and category per platform per day,
+Indian titles excluded, idempotent jobs, state persisted in SQLite under `DATA_DIR` (queued/running work resumes after a restart).
+
+## Setup on Render
+1. Environment: set `NEXORA_ADMIN_PASSWORD` (12+ chars), `TELEGRAM_CHAT_ID`, and `OPENAI_API_KEY` and/or `GEMINI_API_KEY` (OpenAI is primary, Gemini the automatic fallback).
+   See `.env.example` for every variable.
+2. Open `https://<your-service>.onrender.com/studio/`, sign in, go to **Automation** and press **Start Auto Mode** (or **Run now**).
+3. Free plan: the instance sleeps when idle. Add repository secrets `STUDIO_URL` and `NEXORA_CRON_TOKEN` (same value as on Render); the workflow
+   `Studio scheduler tick` then wakes it every ~10 minutes so the daily schedule (Asia/Bangkok) fires.
+
+## Honest limits
+- **Storage:** Render Free has an ephemeral disk; projects and job history are lost when the instance is rebuilt. Use a paid plan with a persistent disk and set `DATA_DIR`. The dashboard warns about this.
+- **Rendering:** 46-60 minute videos need far more CPU/RAM than Render Free offers; the Settings page shows what this host can render. TikTok-length videos are feasible on small hosts.
+- **Voice:** Burmese narration uses Edge TTS (needs internet). An eSpeak fallback exists but is low quality and labelled as such. Reference voice upload stores a profile; real cloning needs a GPU host (`VOICE_GPU_URL`); the UI says so.
+- **Visuals:** only authorised sources (Wikimedia Commons, Internet Archive, Europeana public domain, user uploads) with license checks. No DRM bypass, no streaming-service footage.
+- **Publishing:** YouTube/Facebook only through official APIs (`AUTO_UPLOAD=1` + credentials), and "published" is reported only after the platform confirms; TikTok is always a draft.
+
+## Tests
+```bash
+python -m unittest discover          # production suite (520 tests)
+python -m pytest studio_tests -q     # studio suite (34 tests)
+python serve_acceptance.py --platform tiktok            # live end-to-end run (needs internet + AI key)
+python serve_acceptance.py --offline-fixture            # sandbox run: research/script text come from a labelled fixture; the rest is real
+```
+API reference: `studio/API.md`.
+
+---
+
 # NEXORA Myanmar Recap Bot — Free Template Build
 
 A free Telegram bot for Burmese recap-writing worksheets and English subtitle SRT export.

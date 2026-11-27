@@ -234,6 +234,21 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+async def studio_status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """NEXORA Studio website/automation status (owner chat only)."""
+    if not update.message:
+        return
+    try:
+        from studio import notifier
+        owner = notifier.chat_id()
+        if not owner or str(update.effective_chat.id) != owner:
+            await update.message.reply_text("/studio is limited to the owner chat (set TELEGRAM_CHAT_ID on Render).")
+            return
+        await update.message.reply_text(await asyncio.to_thread(notifier.status_text))
+    except Exception as exc:  # noqa: BLE001
+        await update.message.reply_text(f"NEXORA Studio unavailable: {exc}")
+
+
 async def comment_status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
@@ -3931,6 +3946,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/voiceprofile <name> — ကိုယ်ပိုင် Reference အသံဖိုင် သိမ်းရန်\n"
         "/voiceclone <name> — ကိုယ်ပိုင်အသံဖြင့် မြန်မာစာ TTS WAV ထုတ်ရန် (GPU host လိုအပ်)\n"
         "/commentstatus — Comment Auto-Reply အခြေအနေ\n"
+        "/studio — NEXORA Studio website / automation status\n"
         "/commentdraft <platform> <comment> — Reply Draft\n"
         "/help — ဒီအကူအညီစာမျက်နှာ"
     )
@@ -4044,6 +4060,7 @@ async def lifespan(web_app: FastAPI):
     telegram_app.add_handler(CommandHandler("duration", duration_cmd))
     telegram_app.add_handler(CommandHandler("settings", settings_cmd))
     telegram_app.add_handler(CommandHandler("commentstatus", comment_status_cmd))
+    telegram_app.add_handler(CommandHandler("studio", studio_status_cmd))
     telegram_app.add_handler(CommandHandler("commentdraft", comment_draft_cmd))
     telegram_app.add_handler(CommandHandler("help", help_cmd))
     telegram_app.add_error_handler(on_telegram_error, block=False)
@@ -4084,6 +4101,13 @@ async def lifespan(web_app: FastAPI):
 
 
 web_app = FastAPI(title="NEXORA Myanmar Recap Bot", lifespan=lifespan)
+
+try:  # NEXORA Studio website (/studio/) + automation API (/api/); the Telegram bot keeps working even if this fails
+    from studio.fastapi_mount import install as _install_studio
+    _install_studio(web_app, lambda: telegram_app)
+except Exception:  # noqa: BLE001
+    log.exception("NEXORA Studio could not be installed; continuing without it")
+
 
 
 @web_app.get("/")

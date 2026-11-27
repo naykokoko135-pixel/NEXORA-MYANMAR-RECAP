@@ -1,0 +1,38 @@
+name: Studio scheduler tick
+
+# Render Free instances sleep when idle, which would stop the studio's scheduler. This workflow calls the studio's protected
+# tick endpoint every ~10 minutes: it wakes the service, and the engine then starts any due daily run / queued job.
+# Required repository secrets: STUDIO_URL (e.g. https://nexora-myanmar-recap-bot.onrender.com) and NEXORA_CRON_TOKEN (same value as on Render).
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: studio-tick
+  cancel-in-progress: true
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call /api/internal/tick
+        env:
+          STUDIO_URL: ${{ secrets.STUDIO_URL }}
+          NEXORA_CRON_TOKEN: ${{ secrets.NEXORA_CRON_TOKEN }}
+        run: |
+          if [ -z "$STUDIO_URL" ] || [ -z "$NEXORA_CRON_TOKEN" ]; then
+            echo "STUDIO_URL / NEXORA_CRON_TOKEN secrets are not set; skipping."; exit 0
+          fi
+          # first request may take ~50 s while Render wakes the instance
+          for i in 1 2 3; do
+            code=$(curl -sS -m 90 -o /tmp/out.json -w '%{http_code}' -X POST -H "X-NEXORA-Cron-Token: $NEXORA_CRON_TOKEN" "$STUDIO_URL/api/internal/tick" || true)
+            echo "attempt $i -> HTTP $code"
+            [ "$code" = "200" ] && { cat /tmp/out.json; exit 0; }
+            sleep 20
+          done
+          exit 1

@@ -30,3 +30,10 @@ services:
         sync: false
       - key: OPENAI_MODEL
         value: gpt-4.1-mini
+      # --- NEXORA Studio (website at /studio/ + automation engine)
+      - key: NEXORA_ADMIN_PASSWORD
+        sync: false
+      - key: NEXORA_CRON_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false

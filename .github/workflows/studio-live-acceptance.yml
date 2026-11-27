@@ -1,0 +1,40 @@
+name: Studio live acceptance
+
+# Runs ONE real recap through the production pipeline (live research + live AI + real TTS + real ffmpeg render) and verifies the MP4.
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to run
+        default: tiktok
+        type: choice
+        options: [tiktok, youtube, facebook]
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
+      - run: python -m pip install -r requirements.txt
+      - name: Run acceptance
+        run: python serve_acceptance.py --platform "${{ inputs.platform }}" --data-dir "$RUNNER_TEMP/accept" --report "$RUNNER_TEMP/acceptance_report.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acceptance-${{ inputs.platform }}
+          path: |
+            ${{ runner.temp }}/acceptance_report.json
+            ${{ runner.temp }}/accept/data/projects/**/*.mp4
+            ${{ runner.temp }}/accept/data/projects/**/*.srt
