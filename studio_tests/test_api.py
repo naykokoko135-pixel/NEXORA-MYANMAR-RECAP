@@ -87,7 +87,9 @@ class AuthTests(ApiBase):
             r = await self.client.get(path, allow_redirects=False)
             return r.status, r.headers.get("Location")
         self.assertEqual(await loc("/studio/dashboard"), (302, "/studio/#/dashboard"))
-        self.assertEqual(await loc("/studio/projects/12"), (302, "/studio/#/projects/12"))
+        self.assertEqual(await loc("/studio/projects/12"), (302, "/studio/#/projects?project=12"))
+        self.assertEqual(await loc("/studio/dashboard/extra/x"), (302, "/studio/#/dashboard"))
+        self.assertEqual(await loc("/studio/projects/abc"), (302, "/studio/#/projects"))
         self.assertEqual(await loc("/studio/automation/"), (302, "/studio/#/automation"))
         self.assertEqual(await loc("/studio/not-a-page"), (302, "/studio/"))
         status, where = await loc("/studio/projects/%0d%0aSet-Cookie:x")  # header-injection attempt: rejected or neutralised, never echoed

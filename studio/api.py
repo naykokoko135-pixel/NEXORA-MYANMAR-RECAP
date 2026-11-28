@@ -1021,13 +1021,16 @@ _SPA_SAFE = re.compile(r"^[a-z0-9][a-z0-9/_-]{0,120}$")
 
 
 def spa_redirect_target(rel: str) -> str | None:
-    """Deep link such as /studio/projects/12 -> /studio/#/projects/12 (the client uses hash routing and relative asset URLs, so a
+    """Deep link such as /studio/projects/12 -> /studio/#/projects?project=12 (the client uses hash routing and relative asset URLs, so a
     redirect keeps every asset path valid). Unknown route-like paths go to /studio/. Anything with a file extension is a real 404."""
     rel = rel.strip("/")
     if "." in rel.rsplit("/", 1)[-1]:
         return None
-    if _SPA_SAFE.match(rel) and rel.split("/", 1)[0] in SPA_ROUTES:
-        return f"/studio/#/{rel}"
+    parts = rel.split("/")
+    if _SPA_SAFE.match(rel) and parts[0] in SPA_ROUTES:
+        if parts[0] == "projects" and len(parts) > 1 and parts[1].isdigit():
+            return f"/studio/#/projects?project={int(parts[1])}"  # the client's own deep-link format
+        return f"/studio/#/{parts[0]}"  # the client has no nested routes: extra segments are dropped, never a wrong page
     return "/studio/"
 
 
