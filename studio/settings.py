@@ -184,7 +184,7 @@ def effective_publish_mode(platform_mode: str) -> str:
 
 # ------------------------------------------------------------------ AI providers
 OPENAI_MODELS = list(dict.fromkeys(([os.environ["OPENAI_MODEL"]] if os.environ.get("OPENAI_MODEL") else []) + ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini", "gpt-4o"]))
-GEMINI_MODELS = list(dict.fromkeys(config.GEMINI_MODELS + ["gemini-2.0-flash", "gemini-1.5-flash"]))
+GEMINI_MODELS = list(dict.fromkeys(config.GEMINI_MODELS + ["gemini-3.8-flash"]))
 
 
 def ai_settings() -> dict:
@@ -193,6 +193,9 @@ def ai_settings() -> dict:
     s["primary"] = stored.get("primary", s["primary"])
     s["fallback"] = stored.get("fallback", s["fallback"])
     s["models"].update(stored.get("models", {}))
+    # Older deployments may have persisted model IDs that the Gemini API has retired.
+    if s["models"].get("gemini") in {"gemini-2.0-flash", "gemini-1.5-flash"}:
+        s["models"]["gemini"] = GEMINI_MODELS[0]
     return s
 
 

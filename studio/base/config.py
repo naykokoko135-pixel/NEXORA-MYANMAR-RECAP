@@ -9,7 +9,15 @@ for _d in (DATA_DIR, WORK_DIR, OUT_DIR, STATE_DIR):
     _d.mkdir(parents=True, exist_ok=True)
 
 GEMINI_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODELS = [m for m in os.getenv("GEMINI_MODELS", "gemini-2.0-flash,gemini-1.5-flash").split(",") if m]
+# Avoid model IDs retired by the API. Keep a current default even when an old
+# GEMINI_MODELS value is still present in the deployment environment.
+_RETIRED_GEMINI_MODELS = {"gemini-2.0-flash", "gemini-1.5-flash"}
+GEMINI_MODELS = [
+    m.strip() for m in os.getenv("GEMINI_MODELS", "gemini-3.8-flash").split(",")
+    if m.strip() and m.strip() not in _RETIRED_GEMINI_MODELS
+]
+if not GEMINI_MODELS:
+    GEMINI_MODELS = ["gemini-3.8-flash"]
 LLM_DELAY = float(os.getenv("LLM_DELAY", "4.2"))  # free-tier rate limit
 TMDB_KEY = os.getenv("TMDB_API_KEY", "")
 TMDB_TOKEN = os.getenv("TMDB_API_READ_ACCESS_TOKEN", "")  # production name (v4 bearer token); either credential enables TMDB
