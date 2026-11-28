@@ -82,6 +82,24 @@ class AuthTests(ApiBase):
             self.assertEqual((await self.client.get(p)).status, 404, p)
         self.assertEqual((await self.client.get("/studio/js/app.js")).status, 200)
 
+    async def test_spa_deep_links_redirect_instead_of_404(self):
+        async def loc(path):
+            r = await self.client.get(path, allow_redirects=False)
+            return r.status, r.headers.get("Location")
+        self.assertEqual(await loc("/studio/dashboard"), (302, "/studio/#/dashboard"))
+        self.assertEqual(await loc("/studio/projects/12"), (302, "/studio/#/projects?project=12"))
+        self.assertEqual(await loc("/studio/dashboard/extra/x"), (302, "/studio/#/dashboard"))
+        self.assertEqual(await loc("/studio/projects/abc"), (302, "/studio/#/projects"))
+        self.assertEqual(await loc("/studio/automation/"), (302, "/studio/#/automation"))
+        self.assertEqual(await loc("/studio/not-a-page"), (302, "/studio/"))
+        status, where = await loc("/studio/projects/%0d%0aSet-Cookie:x")  # header-injection attempt: rejected or neutralised, never echoed
+        self.assertIn(status, (302, 404))
+        self.assertIn(where, (None, "/studio/"))
+        self.assertEqual((await self.client.get("/studio/missing.css", allow_redirects=False)).status, 404)
+        self.assertEqual((await self.client.get("/studio/css/missing.png", allow_redirects=False)).status, 404)
+        for p in ("/studio/..%2f..%2f__init__.py", "/studio/%2e%2e/%2e%2e/etc/passwd"):
+            self.assertEqual((await self.client.get(p, allow_redirects=False)).status, 404, p)
+
 
 class FrontendContractTests(ApiBase):
     async def test_every_endpoint_the_frontend_calls_exists(self):

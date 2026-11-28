@@ -4,6 +4,7 @@ Mounted into the existing bot web app (see ``mount``), so the Telegram webhook a
 Security: server-side sessions (HttpOnly, SameSite=Strict cookie), CSRF header on every write, role check (viewer = read-only),
 per-IP rate limits, strict upload validation, security headers, and no secret ever leaves the server.
 """
+import re
 import asyncio
 import hmac
 import json
@@ -1014,10 +1015,32 @@ async def spa_index(req):
     return web.FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache"})
 
 
+SPA_ROUTES = frozenset({"dashboard", "recap-studio", "research", "script", "voice", "subtitles", "renderer", "projects", "platforms",
+                        "automation", "analytics", "settings"})  # keep in sync with ROUTES in static/js/app.js
+_SPA_SAFE = re.compile(r"^[a-z0-9][a-z0-9/_-]{0,120}$")
+
+
+def spa_redirect_target(rel: str) -> str | None:
+    """Deep link such as /studio/projects/12 -> /studio/#/projects?project=12 (the client uses hash routing and relative asset URLs, so a
+    redirect keeps every asset path valid). Unknown route-like paths go to /studio/. Anything with a file extension is a real 404."""
+    rel = rel.strip("/")
+    if "." in rel.rsplit("/", 1)[-1]:
+        return None
+    parts = rel.split("/")
+    if _SPA_SAFE.match(rel) and parts[0] in SPA_ROUTES:
+        if parts[0] == "projects" and len(parts) > 1 and parts[1].isdigit():
+            return f"/studio/#/projects?project={int(parts[1])}"  # the client's own deep-link format
+        return f"/studio/#/{parts[0]}"  # the client has no nested routes: extra segments are dropped, never a wrong page
+    return "/studio/"
+
+
 async def spa_file(req):
     rel = req.match_info["path"]
     p = (STATIC / rel).resolve()
     if not core.is_within(p, STATIC.resolve()) or not p.is_file():
+        target = spa_redirect_target(rel)
+        if target and ".." not in rel and "\\" not in rel:
+            raise web.HTTPFound(target)
         raise web.HTTPNotFound()
     return web.FileResponse(p, headers={"Cache-Control": "no-cache"})
 
