@@ -41,6 +41,15 @@ class GeminiModelTests(unittest.TestCase):
             with self.assertRaises(providers.ProviderError):
                 providers._call_gemini("hi", "", "gemini-3.8-flash", False)
 
+    def test_null_collections_in_the_response_become_provider_errors(self):
+        for payload in ({"steps": None}, {"steps": [{"type": "model_output", "content": None}]}):
+            resp = mock.Mock(status_code=200)
+            resp.json.return_value = payload
+            with mock.patch.object(providers, "key_for", return_value="k"), mock.patch.object(config, "LLM_DELAY", 0), \
+                    mock.patch.object(providers.requests, "post", return_value=resp):
+                with self.assertRaises(providers.ProviderError):  # not TypeError: the router must be able to fall back
+                    providers._call_gemini("hi", "", "gemini-3.8-flash", False)
+
 
 if __name__ == "__main__":
     unittest.main()

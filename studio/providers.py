@@ -89,7 +89,7 @@ def _call_gemini(prompt, system, model, json_mode, timeout=GEMINI_TIMEOUT):
         raise ProviderError("gemini", _classify(r.status_code, r.text), f"HTTP {r.status_code} {r.text[:200]}".replace(key, "***"))
     try:
         out = _gemini_text(r.json())
-    except ValueError:
+    except (ValueError, TypeError):  # invalid JSON, or null "steps"/"content" fields
         out = ""
     if not out:
         raise ProviderError("gemini", "bad_request", "unexpected response shape (no model_output text)")
