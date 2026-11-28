@@ -59,6 +59,7 @@ def _call_openai(prompt, system, model, timeout=120):
 
 
 def _call_gemini(prompt, system, model, json_mode, timeout=120):
+    model = config.GEMINI_RETIRED.get(model, model)  # a stored/typed retired model name would otherwise 404 forever
     with _gem_lock:  # free-tier pacing shared by all worker threads
         wait = config.LLM_DELAY - (time.time() - _gem_last[0])
         if wait > 0:

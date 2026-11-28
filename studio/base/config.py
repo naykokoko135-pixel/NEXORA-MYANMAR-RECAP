@@ -9,7 +9,9 @@ for _d in (DATA_DIR, WORK_DIR, OUT_DIR, STATE_DIR):
     _d.mkdir(parents=True, exist_ok=True)
 
 GEMINI_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODELS = [m for m in os.getenv("GEMINI_MODELS", "gemini-2.0-flash,gemini-1.5-flash").split(",") if m]
+GEMINI_DEFAULT_MODEL = "gemini-3.8-flash"  # same default as gemini_script_provider.py / render.yaml; 2.0/1.5/2.5 flash are retired (HTTP 404)
+GEMINI_RETIRED = {"gemini-2.0-flash": GEMINI_DEFAULT_MODEL, "gemini-1.5-flash": GEMINI_DEFAULT_MODEL, "gemini-2.5-flash": GEMINI_DEFAULT_MODEL}
+GEMINI_MODELS = [m.strip() for m in (os.getenv("GEMINI_MODELS") or os.getenv("GEMINI_MODEL") or GEMINI_DEFAULT_MODEL).split(",") if m.strip()]
 LLM_DELAY = float(os.getenv("LLM_DELAY", "4.2"))  # free-tier rate limit
 TMDB_KEY = os.getenv("TMDB_API_KEY", "")
 TMDB_TOKEN = os.getenv("TMDB_API_READ_ACCESS_TOKEN", "")  # production name (v4 bearer token); either credential enables TMDB
