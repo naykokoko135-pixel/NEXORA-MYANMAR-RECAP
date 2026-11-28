@@ -12,7 +12,9 @@ from .base import config
 from . import settings, store, core, db
 
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+# Same endpoint/shape as the production gemini_script_provider.py: newer Flash models are served through the Interactions API.
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
+GEMINI_TIMEOUT = 240
 _gem_lock = threading.Lock()
 _gem_last = [0.0]
 _stats_lock = threading.Lock()
@@ -58,28 +60,40 @@ def _call_openai(prompt, system, model, timeout=120):
         raise ProviderError("openai", "bad_request", "unexpected response shape")
 
 
-def _call_gemini(prompt, system, model, json_mode, timeout=120):
+def _gemini_text(result: dict) -> str:
+    chunks = []
+    for step in result.get("steps", []) if isinstance(result, dict) else []:
+        if isinstance(step, dict) and step.get("type") == "model_output":
+            for part in step.get("content", []):
+                if isinstance(part, dict) and part.get("type") == "text" and part.get("text"):
+                    chunks.append(str(part["text"]).strip())
+    return "\n".join(c for c in chunks if c).strip()
+
+
+def _call_gemini(prompt, system, model, json_mode, timeout=GEMINI_TIMEOUT):
     model = config.GEMINI_RETIRED.get(model, model)  # a stored/typed retired model name would otherwise 404 forever
+    key = key_for("gemini")
     with _gem_lock:  # free-tier pacing shared by all worker threads
         wait = config.LLM_DELAY - (time.time() - _gem_last[0])
         if wait > 0:
             time.sleep(wait)
         _gem_last[0] = time.time()
-    body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}], "generationConfig": {"temperature": 0.7, "maxOutputTokens": 8192}}
-    if system:
-        body["systemInstruction"] = {"parts": [{"text": system}]}
-    if json_mode:
-        body["generationConfig"]["responseMimeType"] = "application/json"
+    text = (f"{system}\n\n" if system else "") + prompt + ("\n\nRespond with raw JSON only, no markdown." if json_mode else "")
+    body = {"model": model, "input": text, "store": False, "generation_config": {"max_output_tokens": 8192}}
     try:
-        r = requests.post(GEMINI_URL.format(model=model), params={"key": key_for("gemini")}, json=body, timeout=timeout)
+        r = requests.post(GEMINI_URL, headers={"x-goog-api-key": key, "Content-Type": "application/json", "Accept": "application/json"},
+                          json=body, timeout=timeout)
     except requests.RequestException as e:
-        raise ProviderError("gemini", "network", str(e).replace(key_for("gemini"), "***")[:200])
+        raise ProviderError("gemini", "network", str(e).replace(key, "***")[:200])
     if r.status_code != 200:
-        raise ProviderError("gemini", _classify(r.status_code, r.text), f"HTTP {r.status_code} {r.text[:200]}")
+        raise ProviderError("gemini", _classify(r.status_code, r.text), f"HTTP {r.status_code} {r.text[:200]}".replace(key, "***"))
     try:
-        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception:
-        raise ProviderError("gemini", "bad_request", "unexpected response shape")
+        out = _gemini_text(r.json())
+    except ValueError:
+        out = ""
+    if not out:
+        raise ProviderError("gemini", "bad_request", "unexpected response shape (no model_output text)")
+    return out
 
 
 def _call(provider, prompt, system, json_mode, model):
