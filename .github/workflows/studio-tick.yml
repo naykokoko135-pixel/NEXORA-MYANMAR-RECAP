@@ -26,7 +26,10 @@ jobs:
           NEXORA_CRON_TOKEN: ${{ secrets.NEXORA_CRON_TOKEN }}
         run: |
           if [ -z "$STUDIO_URL" ] || [ -z "$NEXORA_CRON_TOKEN" ]; then
-            echo "::error::STUDIO_URL and/or NEXORA_CRON_TOKEN repository secrets are not set, so the scheduler is NOT being woken. Add both under Settings > Secrets and variables > Actions."; exit 1
+            msg="STUDIO_URL and/or NEXORA_CRON_TOKEN repository secrets are not set, so the scheduler is NOT being woken. Add both under Settings > Secrets and variables > Actions."
+            echo "::warning::$msg"; echo "### Scheduler tick NOT performed" >> "$GITHUB_STEP_SUMMARY"; echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+            # manual runs fail loudly; scheduled runs only warn (a red run every 10 minutes would flood notifications)
+            [ "${{ github.event_name }}" = "workflow_dispatch" ] && exit 1 || exit 0
           fi
           # first request may take ~50 s while Render wakes the instance
           for i in 1 2 3; do
