@@ -26,7 +26,7 @@ jobs:
           NEXORA_CRON_TOKEN: ${{ secrets.NEXORA_CRON_TOKEN }}
         run: |
           if [ -z "$STUDIO_URL" ] || [ -z "$NEXORA_CRON_TOKEN" ]; then
-            echo "STUDIO_URL / NEXORA_CRON_TOKEN secrets are not set; skipping."; exit 0
+            echo "::error::STUDIO_URL and/or NEXORA_CRON_TOKEN repository secrets are not set, so the scheduler is NOT being woken. Add both under Settings > Secrets and variables > Actions."; exit 1
           fi
           # first request may take ~50 s while Render wakes the instance
           for i in 1 2 3; do
